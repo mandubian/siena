@@ -1,0 +1,30 @@
+
+ To do
+--------
+
++ General
+
+ * Spring integration
+ * Internal documentation
+ * Code Style fixing 
+ * Make an HTTPConnector in order to abstract implementations that use HTTP
+ (siena-gae and siena-remote in the future). Make an implementation using java.net.URL and other using Apache HTTPClient
+
++ siena-jdbc
+
+ * Sequence generator
+ * Generate DDL from classes?
+ * Possibility to use relationship attributes in iter()
+
++ siena-gae
+ 
+ * Unit testing
+ * Implement iter()
+ * Possibility to use String as Id instead of Long
+ * Transactions
+
++ siena-sdb
+
+ * Implement queries
+ * Implement different types support. Currently only Strings are supported
+ * Unit testing

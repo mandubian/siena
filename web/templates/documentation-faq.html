@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block title %}Frequently Asked Questions{% endblock %}
+
+{% block body %}
+<h2>Frequently Asked Questions</h2>
+
+<p>Please find your question here. If don't find the answer, feel free to join
+	<a href="http://groups.google.com/group/siena-discuss">the mailing list</a> and
+	ask your question there.</p>
+
+<dl>
+	<dt><strong>Is siena another ORM?</strong></dt>
+	<dd>Not exactly. It is not an ORM (Object-relational mapping tool) because it is not
+		only intended to be used in relational databases. Siena is a library for persistience
+		that works in relational databases and NoSQL databases as well.</dd>
+	
+	<dt><strong>Does siena support JOINs?</strong></dt>
+	<dd>No. Siena has a common API for both relational and NoSQL databases. So you can
+		write code for NoSQL databases and then port it to a relational database and viceversa.
+		Supporting JOINs will break this compatibility. <br/>
+		Instead of using JOINs you can use denormalization. Siena has some features that will
+		help you with this. Please read the <a href="/documentation-getting-started.html">Getting started guide</a>,
+		the section that talks about "embedded objects".
+	</dd>
+	
+	<dt><strong>How can I implement one-to-many relationships?</strong></dt>
+	<dd>Check the <a href="/documentation-getting-started.html">Getting started guide</a>,
+		the section that talks about "Working with relationships".</dd>
+	
+	
+	<dt><strong>How can I implement many-to-many relationships?</strong></dt>
+	<dd>Just create an intermediate class that represents the many-to-many relationship.
+		Then implement two one-to-many relationships. Check the
+		<a href="/documentation-getting-started.html">Getting started guide</a>,
+		the section that talks about "Working with relationships".</dd>
+	
+	<dt><strong>Does Siena support foreign keys?</strong></dt>
+	<dd>Siena supports relationships and can work in relational databases. But ensuring
+		data consistency depends on your database engine. In relational databases
+		you can create your constraints manually. The <a href="/documentation-jdbc.html">siena implementation
+		for relational databases</a> can create the database schema, but doesn't support
+		creating the foreign keys yet.</dd>
+
+	<dt><strong>Can siena create and update the database schema?</strong></dt>
+	<dd>The <a href="/documentation-jdbc.html">siena implementation
+		for relational databases</a> can generate the SQL needed to keep in sync
+		your data model with your database schema. It creates "CREATE TABLE" and "ALTER TABLE", etc.
+		when needed.</dd>
+
+
+	<dt><strong>Does siena support connection pooling?</strong></dt>
+	<dd>The <a href="/documentation-jdbc.html">siena implementation
+		for relational databases</a> supports pluggable <code>siena.jdbc.ConnectionManager</code>.
+		You can implement your own. If you are using the Play! framework the best idea is to
+		implement a ConnectionManager that uses the pooling feature from the framework.
+		<a href="http://code.google.com/p/siena/wiki/PlayIntegration">Read how</a>.</dd>
+
+</dl>
+	
+	
+
+{% endblock %}

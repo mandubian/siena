@@ -1,0 +1,75 @@
+/*
+
+	project: interactive media (free css template)
+	author: luka cvrk (www.solucija.com)
+	
+*/
+   
+* { margin:0; padding:0; }
+body { font: 72.5%/1.7em "Lucida Grande", "Lucida Sans Unicode", verdana, geneva, sans-serif; color:#555; background: #fff url(../images/headerbg.gif) repeat-x; }
+
+/* general styling */
+a { color:#007898; background: inherit; border-bottom:1px dotted #ccc; text-decoration:none; }
+a:hover { border-bottom:1px solid #ccc; color: #808080; background: inherit; }
+a:focus { outline: 0; }
+ul { margin:10px 10px 10px 0; padding:0 0 0 15px; }
+li { margin:0 0 0 10px; padding:3px; }
+img { border: 0; text-decoration: none; }
+
+/* content */
+.wrap { padding:0 10px 10px 10px; width:860px; margin:0 auto; }
+#logo {float:left; margin: 26px 20px 14px 5px; color:#768998; }
+h1 { margin: 0 0 10px; letter-spacing: 1px; font-size: 2em; }
+h1 a { color: #fff; }
+h1 a:hover { color: #FFFCB3; }
+	
+/* main navigation */
+#nav { float:right; border:none; padding:0; margin: 47px 10px 60px 0; }
+#nav li { float:left; list-style:none; margin:0 4px 0 0; padding:0; font-size: 1.1em; }
+#nav li a { display:block; padding: 10px 12px 15px; color:#768998; text-decoration:none; border: 0; margin:0 1px 0 0; }
+#nav li a:hover, #nav li a.current { background: url(../images/barbg.gif) no-repeat bottom center; color:#fff; }	
+	.akey { border-bottom: 1px dotted #4B5761; }
+
+/* main content */
+#left { float: left; width: 570px; margin: 0 0 20px 0; }
+	#left h2 { float: left; font: 2.1em "Trebuchet MS", Arial; background: url(../images/h2bg.gif) repeat-x bottom; color:#121212; letter-spacing:-1px; margin: 0px 0 20px 0; clear:left; }
+	#left h2 a { color:#121212; text-decoration:none; border: 0; }
+	#left p { clear: both; margin: 5px 0 20px 0; font-size:110%; line-height:21px; }
+	
+/* sidebar */
+#right {	width:230px; float:right; margin: 0 0 20px 0; }
+	#right h2 { color:#fff; margin: 0 0 5px 0; font: bold 1.2em "Trebuchet MS", Arial; background: #fff url(../images/sideh2bg.gif) repeat-x; padding: 4px 10px; border-bottom: 2px solid #000; }
+	#right ul { list-style:none; 	border-top:1px solid #eee; border:none; padding:0; margin:0 0 15px 0; }
+	#right ul li { border-bottom:1px solid #eee; padding:5px; margin:0; }
+	#right ul li a { border: 0; }
+
+	#tagcloud { margin: 0 0 20px; }
+	#tagcloud a { margin: 0 5px 0 0; color: #25771F; }
+	#tagcloud a:hover { background: #E7FEE5; color: #007898; }
+	
+	#info { border: 1px solid #ccc; padding: 3px 5px; margin: 0 0 10px; }
+
+#footer { clear: both; border-top: 1px solid #ccc; padding: 20px 0; color:#808080; }
+#footer p { line-height: 2.5em; } 
+
+.str{color:#080}.kwd{color:#008}.com{color:#800}.typ{color:#606}.lit{color:#066}.pun{color:#660}.pln{color:#000}.tag{color:#008}.atn{color:#606}.atv{color:#080}.dec{color:#606}pre.prettyprint{padding:2px;padding-left:20px;border:1px solid #888}@media print{.str{color:#060}.kwd{color:#006;font-weight:bold}.com{color:#600;font-style:italic}.typ{color:#404;font-weight:bold}.lit{color:#044}.pun{color:#440}.pln{color:#000}.tag{color:#006;font-weight:bold}.atn{color:#404}.atv{color:#060}}
+
+pre {
+	border: 1px solid #eee;
+	background: #ffd;
+	margin: 2em 0;
+	overflow: auto;
+	font-size: 12px;
+}
+
+code {
+}
+
+pre, code {
+	font-family: Monaco,"Courier New",monospace
+}
+
+
+dd {
+	margin-bottom: 20px;
+}

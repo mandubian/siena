@@ -1,0 +1,66 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+	<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+	<link rel="stylesheet" href="/static/css/main.css" type="text/css" media="screen, projection" />
+	<title>{% block title %}siena project &middot; the scalable persistence tier for Java{% endblock %}</title>
+	{% block head %}{% endblock %}
+</head>
+<body id="home">
+	<div class="wrap">
+		<div id="logo">
+			<h1><a href="." title="Home">siena project</a></h1>
+			<p>the scalable persistence tier for Java</p>
+		</div>
+		<ul id="nav">
+			<li><a {% ifequal tab 'ind' %}class="current"{% endifequal %} href="/index.html" accesskey="h">
+					<span class="akey">H</span>ome</a></li>
+			<li><a {% ifequal tab 'doc' %}class="current"{% endifequal %} href="/documentation.html" accesskey="a">
+					<span class="akey">D</span>ocumentation</a></li>
+			<li><a {% ifequal tab 'dow' %}class="current"{% endifequal %} href="/download.html" accesskey="r">
+					<span class="akey">D</span>ownload</a></li>
+			<li><a {% ifequal tab 'hac' %}class="current"{% endifequal %} href="/hacking.html" accesskey="c">
+					<span class="akey">H</span>acking</a></li>
+		</ul>
+	</div>
+	<div class="wrap">
+		<div id="left">
+			{% block body %}{% endblock %}
+		</div>
+		<div id="right">
+			<h2>Main topics</h2>
+			<ul>
+				<li><a href="/documentation-faq.html">Frequently Asked Questions</a></li>
+				<li><a href="/documentation-getting-started.html">Getting started guide</a></li>
+				<li><a href="/documentation-jdbc.html">Relational databases: JDBC</a></li>
+				<li><a href="/documentation-gae.html">Google App Engine datastore</a></li>
+				<li><a href="/documentation-sdb.html">Amazon's SimpleDB</a></li>
+				<li><a href="/documentation-remote.html">Siena-remote</a></li>
+				<li><a href="/documentation-json.html">Json support</a></li>
+			</ul>
+			<h2>Related links</h2>
+			<ul>
+				<li><a href="http://code.google.com/p/siena/">Siena at Google Code</a></li>
+				<li><a href="http://groups.google.com/group/siena-discuss">Siena at Google Groups</a></li>
+				<li><a href="http://www.apache.org/licenses/LICENSE-2.0">Apache License 2.0</a></li>
+			</ul>
+		</div>
+		<div id="footer">
+			<p><strong>Siena at Google code:</strong> <a href="http://code.google.com/p/siena/">Project overview</a> &middot; <a href="http://code.google.com/p/siena/source/checkout">Checkout source code</a> &middot; <a href="http://code.google.com/p/siena/source/list">Latest changes</a> &middot; <a href="http://code.google.com/p/siena/issues/list">Issues list</a></p>
+			<p><strong>Siena at Google Groups:</strong> <a href="http://groups.google.com/group/siena-discuss">Siena-discuss group home page</a> &middot;  <a href="http://groups.google.com/group/siena-discuss/topics">Latest topics</a> &middot;  <a href="http://groups.google.com/group/siena-discuss/subscribe">Subscribe</a></p>
+			<p>Design: <a href="http://www.solucija.com/">Luka Cvrk</a> &middot; Sponsored by <a href="http://webpoint.wordpress.com/">B4Contact</a> &middot; Released under a <a href="http://creativecommons.org/licenses/by-nc-sa/3.0/">Creative Commons Licence</a></p>
+		</div>		
+	</div>
+	<script src="/static/js/prettify.js" type="text/javascript" charset="utf-8"></script>
+	<script type="text/javascript" charset="utf-8">prettyPrint();</script>
+	<script type="text/javascript">
+	var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+	document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+	</script>
+	<script type="text/javascript">
+	try {
+	var pageTracker = _gat._getTracker("UA-10182757-1");
+	pageTracker._trackPageview();
+	} catch(err) {}</script>
+</body>
+</html>

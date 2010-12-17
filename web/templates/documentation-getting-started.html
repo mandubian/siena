@@ -1,0 +1,314 @@
+{% extends "base.html" %}
+
+{% block title %}Getting started guide{% endblock %}
+
+{% block body %}
+<h2>Getting started guide</h2>
+
+<p>Using siena is very easy. You just create your model classes and start to use them.
+	The only configuration is the annotation in your clases and a simple properties file.
+	The model classes must follow some constraints:</p>
+
+<ol>
+	<li>The class can extend <code>siena.Model</code>. See the examples bellow for more information.</li>
+	<li>To perform queries easily is strongly recommended to implement an <code>all()</code>
+		method like in the example. Nevertheless this is an optional step.</li>
+	<li>You can add an <code>@Table</code> annotation. The meaning of this annotation
+		will depend on the underlying siena implementation. This will be the table
+		name in a relational database, the entity name in the Google App Engine datastore,
+		the domain name in Amazon's SimpleDB,... The annotation is just named <em>table</em>
+		because is an easy to recognize nomenclature.</li>
+	<li>You can add <code>@Column</code> annotations to the fields. This is very similar
+		to the <code>@Table</code> annotation. The meaning of the annotation value
+		will depend on the underlying siena implementation. </li>
+	<li>You must mark your primary key fields with an <code>@Id</code> annotation. Some keys can be generated
+		automatically by the application or the database. See the example.</li>
+	<li>Note: in the example the fields are public for simplicity but they can be private or whatever you want. </li>
+</ol>
+
+<pre class="prettyprint">import siena.*;
+import static siena.Json.*;
+
+@Table("employees")
+public class Employee extends Model {
+	
+	@Id(Generator.AUTO_INCREMENT)
+	public Long id;
+	
+	@Column("first_name")
+	@Max(200) @NotNull
+	public String firstName;
+	
+	@Column("last_name")
+	@Max(200) @NotNull
+	public String lastName;
+	
+	@Column("contact_info")
+	public Json contactInfo;
+	
+	@Column("boss") @Index("boss_index")
+	public Employee boss;
+	
+	@Filter("boss")
+	public Query&lt;Employee&gt; employees;
+	
+	public static Query&lt;Employee&gt; all() {
+		return Model.all(Employee.class);
+	}
+
+}</pre>
+
+<p>Now you just need to write a simple configuration file. In siena all the classes in the same package
+	are configured with the same <code>PersistenceManager</code>. The configuration file must be
+	called <code>siena.properties</code> and must be placed in the same package than the model classes.</p>
+
+<p>The parameters in this configuration file depend on the siena implementation. The only shared
+	configuration parameter is the <em>implementation</em> parameter. With that parameter
+	you set what siena implementation will be used for the classes in that pacakge.
+	Example:</p>
+
+<pre class="prettyprint">implementation = siena.jdbc.JdbcPersistenceManager
+driver = com.mysql.jdbc.Driver
+url = jdbc:mysql://localhost/siena-example
+user = root
+password = 1234</pre>
+
+<p>The example has configured the siena-jdbc implementation. As you can see the siena-jdbc
+	implementation requires some other configuration parameters. You can learn more about
+	each siena implementation in the specific documentation for each implementation.</p>
+
+<p>Now that your model is created and configured you can start using siena.</p>
+
+<h3>Querying objects</h3>
+
+<p>First of all an example:</p>
+
+<pre class="prettyprint">List&lt;Employee&gt; employees = Employee.all()
+	.filter(&quot;firstName&quot;, &quot;Mark&quot;)
+	.order(&quot;-lastName&quot;)
+	.fetch(10);</pre>
+
+<p>The <code>all()</code> method is a good starting point for executing queries.
+	That method returns a <code>Query</code> object that is a representation of
+	a query. The <code>Query</code> interface has four main methods:
+	<code>filter()</code>, <code>order()</code>, <code>fetch()</code> and
+	<code>get()</code>.</p>
+
+<h4>The <code>filter()</code> method</h4>
+
+<p>This method puts restrictions to the query.
+It requires two parameters: the field name (optionally
+with an operator) and the restricted value. If no opeartor is specified
+then "=" is assumed. You can use other operators: &lt;, &gt;, &lt;= or &gt;=. You
+can call <code>filter()</code> several times. The query will only return
+those objects that match all restrictions. There is no way to specify
+that the query will return objects that match some restrictions or others.
+Comparing to SQL the <code>filter()</code> method is like an <code>AND</code>
+operator in a <code>WHERE</code> clause and there is no support for
+a <code>OR</code> operator.</p>
+
+<h4>The <code>order()</code> method</h4>
+
+<p>This is the method you will use for sorting. It requires one parameter
+	that is the name of the field that will be used for sorting.
+	You can concatenate a "-" before the field name for descending sort.
+	You can call this method several times.</p>
+	
+<h4>The <code>fetch()</code> method</h4>
+
+<p>This method will return a list of objects that match the given
+	constraints sorted by the given fields. There are three versions
+	of this method to implement pagination. If you pass no arguments
+	all the objects that match the constraints will be returned.
+	Be careful with that because if you have several objects stored.
+	You can limit the maximum size of returned objects with the first
+	argument. And optionally you can define an <code>offset</code>
+	as second argument.</p>
+
+<h4>The <code>get()</code> method</h4>
+
+<p>If you just want the first result of the query you can use
+	<code>get()</code>. This method will return <code>null</code>
+	if there query returns no objects.</p>
+
+<h4>Important note</h4>
+
+<p>It is important to note that nothing is really queried until you call
+	<code>fetch()</code> or <code>get()</code>. The methods
+	<code>all()</code>, <code>filter()</code> and <code>order()</code>
+	just prepare the query but they don't execute it.</p>
+
+<h3>Working with single objects</h3>
+
+<p>The Siena API is very easy. If your model classes inherith the methods
+	of the <code>siena.Model</code> class. These methods will let
+	you insert, update, delete or load single objects. If you don't want
+	to use inheritance because you can't or you want to follow the POJO
+	philosophy you can use the methods of the <code>PersistenceManager</code>
+	class instead of using the methods of the <code>siena.Model</code> class.
+	For example:</p>
+	
+<pre class="prettyprint">Employee e = getSomeEmployee();
+// retrieve the configured PersistenceManager:
+PersistenceManager pm = PersistenceManagerFactory.getPersistenceManager(Employee.class);
+// the following two lines are equivalent:
+pm.update(e); // you will use it if you don't extend siena.Model
+e.update(); // if Employee extends siena.Model</pre>
+
+<p>Note: all the examples bellow use the <code>siena.Model</code> methods but you will
+	find equivalent methods in the <code>PersistenceManager</code> class.</p>
+
+<h4>Loading an object</h4>
+
+<p>If you have the primary keys of an object and you want to load
+	all its fields you just need to create an empty object,
+	put the primary key field values and call <code>get()</code>.</p>
+
+<pre class="prettyprint">Employee e = new Employee();
+e.id = 123; // we know the primary keys
+e.get(); // this loads the object
+System.out.println(e.firstName);</pre>
+
+<p>If no object is found with those primary keys then a <code>SienaException</code>
+	will be thrown.</p>
+
+<p>If you don't want to handle exceptions you can use the <code>Query</code> interface.
+	Example:</p>
+
+<pre class="prettyprint">Employee e = Employee.all().filter("id", 123).get();
+System.out.println(e.firstName);</pre>
+
+<p>This way you will get <code>null</code> instead of an exception if there is no such object.</p>
+
+<p>You can even create your own static method:</p>
+
+<pre class="prettyprint">public static Employee get(long id) {
+	return Employee.all().filter("id", 123).get();
+}</pre>
+
+<h4>Inserting a new object</h4>
+
+<p>Inserting an object is very simple. Just load the fields with the appropiate values
+	and then call <code>insert()</code>. If your object has some generated primary keys
+	you will be able to get them just after inserting the object.</p>
+
+<pre class="prettyprint">Employee e = new Employee();
+e.firstName = &quot;John&quot;;
+e.lastName = &quot;Smith&quot;;
+e.insert();
+System.out.println(e.id); // the generated key is available</pre>
+
+<h4>Updating an object</h4>
+
+<p>The <code>update()</code> method lets you update an object in the persistence storage.</p>
+
+<pre class="prettyprint">Employee e = Employee.get(123);
+e.firstName = &quot;Mark&quot;;
+e.update();</pre>
+
+<h4>Deleting an object</h4>
+
+<p>Finally you can delete an object using the <code>delete()</code> method.</p>
+
+<pre class="prettyprint">Employee e = Employee.get(123);
+e.delete();</pre>
+
+<p>The <code>delete()</code> method only needs the primary keys to be loaded. So if you know
+	them you don't even need to execute a query to previously load the object.</p>
+
+
+<h3>Working with relationships</h3>
+
+<p>In order to create a one-to-many relationship you just need to create a reference from the child class
+	to the parent class. Example:</p>
+	
+<pre class="prettyprint">public class Pet extends Model {
+	
+	@Column("owner")
+	public Person owner; // each pet has an owner
+	
+	// more fields
+	
+}</pre>
+
+<p>It is strongly recommended to use the <code>@Column</code> annotation when declaring relationships
+	if you are using sinea-jdbc.</p>
+
+<p>To fetch all the pets of a given person you can just query filtering by that field.</p>
+
+<pre class="prettyprint">Person p = somePerson();
+Query&lt;Pet&gt; pets = Pet.all().filter("owner", p);
+List&lt;Pet&gt; somePets = pets.fetch(10);</pre>
+
+<p>Or you can also create an <em>automatic-query</em> in the <code>Person</code> class.</p>
+
+<pre class="prettyprint">public class Person extends Model {
+	
+	@Filter("owner")
+	public Query&lt;Pet&gt; pets; // this is called an "automatic-query"
+	
+	// more fields
+	
+}</pre>
+
+<pre class="prettyprint">Person p = somePerson();
+List&lt;Pet&gt; somePets = p.pets.fetch(10);</pre>
+
+<p>As you can see the <code>@Filter</code> annotation tells which field must be used to query against the
+	<code>Pet</code> class.</p>
+
+<h3>Embedded objects</h3>
+
+<p>In the first example at this page you can see that a <code>Json</code> field has been used to store complex
+	data structures into one field. Well, there is another way to store complex data strctures into
+	one field: using embedded objects. Suppose you have a web page whose users have "profile images". Each image
+	has a filename, a title and a counter that counts how many times the image has been displayed.</p>
+
+<pre class="prettyprint">public class User extends Model {
+	@Embedded
+	public List&lt;Image&gt; profileImages;
+
+	// more fields
+}</pre>
+
+<p>You just need to put the <code>@Embedded</code> annotation to the field that will store the embedded data.
+	This field can be an object, a <code>java.util.List</code> or a <code>java.util.Map</code>.
+	However the sotored objects must be of a class properly annotated. Let's see how:</p>
+
+<pre class="prettyprint">@EmbeddedMap
+public class Image {
+	public String filename;
+	public String title;
+	public int views;
+}</pre>
+
+<p>You have annotate your embeddec classes either with <code>@EmbedMap</code> or <code>@EmbedList</code>.
+	The embedded object will be serialized into JSON when inserted in the database. An example of
+	how the <code>profileImages</code> field could be serialized:</p>
+
+<pre class="prettyprint">[{"title": "Example 1", "views": 2, "filename": "1.jpg"},
+	{"title": "Example 2", "views": 20, "filename": "2.jpg"}]</pre>
+
+<p>When using <code>@EmbedList</code> the object will be serialized into a JSON list. In this case
+	you must annotate the fields using <code>@At</code>. This is an example:</p>
+
+<pre class="prettyprint">@EmbeddedList
+public class Image {
+	@At(0) public String filename;
+	@At(1) public String title;
+	@At(2) public int views;
+}</pre>
+
+<p>The fields must be in order as well. This is how the object would be serialized:</p>
+
+<pre class="prettyprint">[["1.jpg", "Example 1", 2],
+	["2.jpg", "Example 2", 20]]</pre>
+
+<p>The JSON result is shorter but harder to understand.</p>
+
+<p>The "embedded objects" feature is very powerful because you can nest embedded objects into other embedded
+	objects. So for example the <code>Image</code> class could have other objects nested or other lists or maps
+	inside it. This feature also has de avantaje of knowing the structure of the data at compile time.</p>
+
+
+{% endblock %}

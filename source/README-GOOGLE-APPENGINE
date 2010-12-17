@@ -1,0 +1,16 @@
+To install the libraries of Google Engine in Maven, please refer to those links;
+
+English:
+http://shalinsays.blogspot.com/2009/04/google-app-engine-and-maven.html
+
+Spanish:
+http://renidev.javabolivia.com/2009/04/19/hola-mundo-con-google-app-engine-y-maven/
+
+
+cd appengine-java-sdk-1.2.8
+mvn install:install-file -Dfile=lib/appengine-tools-api.jar -DgroupId=com.google -DartifactId=appengine-tools -Dversion=1.2.8 -Dpackaging=jar -DgeneratePom=true
+mvn install:install-file -Dfile=lib/shared/appengine-local-runtime-shared.jar -DgroupId=com.google -DartifactId=appengine-local-runtime-shared -Dversion=1.2.8 -Dpackaging=jar -DgeneratePom=true
+mvn install:install-file -Dfile=lib/user/appengine-api-1.0-sdk-1.2.8.jar -DgroupId=com.google -DartifactId=appengine-sdk-1.2.8-api -Dversion=1.2.8 -Dpackaging=jar -DgeneratePom=true
+mvn install:install-file -Dfile=lib/impl/appengine-local-runtime.jar -DgroupId=com.google -DartifactId=appengine-local-runtime -Dversion=1.2.8 -Dpackaging=jar -DgeneratePom=true
+mvn install:install-file -Dfile=lib/impl/appengine-api-stubs.jar -DgroupId=com.google -DartifactId=appengine-api-stubs -Dversion=1.2.8 -Dpackaging=jar -DgeneratePom=true
+mvn install:install-file -Dfile=lib/impl/appengine-api-labs.jar -DgroupId=com.google -DartifactId=appengine-api-labs -Dversion=1.2.8 -Dpackaging=jar -DgeneratePom=true

@@ -1,0 +1,244 @@
+package siena.embed;
+
+import static siena.Json.list;
+import static siena.Json.map;
+
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import siena.Json;
+import siena.SienaException;
+
+public class JsonSerializer {
+	
+	public static Json serialize(Object obj) {
+		return serialize(obj, null);
+	}
+	
+	public static Json serialize(Object obj, Field f) {
+		if(obj == null) return new Json(null);
+		
+		if(obj instanceof Map<?, ?>) {
+			Map<?, ?> map = (Map<?, ?>) obj;
+			Json result = map();
+			for (Map.Entry<?, ?> entry : map.entrySet()) {
+				String key = entry.getKey().toString();
+				Json value = serialize(entry.getValue(), null);
+				result.put(key, value);
+			}
+			return result;
+		}
+
+		if(obj instanceof Collection<?>) {
+			Json result = list();
+			Collection<?> col = (Collection<?>) obj;
+			for (Object object : col) {
+				result.add(serialize(object));
+			}
+			return result;
+		}
+
+		try {
+			EmbeddedList list = obj.getClass().getAnnotation(EmbeddedList.class);
+			if(list != null) {
+				return serializeList(obj);
+			}
+
+			EmbeddedMap map = obj.getClass().getAnnotation(EmbeddedMap.class);
+			if(map != null) {
+				return serializeMap(obj);
+			}
+		} catch(SienaException e) {
+			throw e;
+		} catch(Exception e) {
+			throw new SienaException(e);
+		}
+		
+		if(f != null) {
+			Format format = f.getAnnotation(Format.class);
+			if(format != null) {
+				if(obj.getClass() == Date.class) {
+					Date date = (Date) obj;
+					SimpleDateFormat sdf = new SimpleDateFormat(format.value());
+					return new Json(sdf.format(date));
+				}
+			}
+		}
+		
+		return new Json(obj);
+	}
+	
+	private static Json serializeMap(Object obj) throws Exception {
+		Field[] fields = obj.getClass().getDeclaredFields();
+		Json result = map();
+		for (Field f : fields) {
+			if(mustIgnore(f)) continue;
+			
+			Key k = f.getAnnotation(Key.class);
+			if(k != null) {
+				result.put(k.value(), serialize(f.get(obj), f));
+			} else {
+				result.put(f.getName(), serialize(f.get(obj), f));
+			}
+		}
+		return result;
+	}
+	
+	private static Json serializeList(Object obj) throws Exception {
+		Field[] fields = obj.getClass().getDeclaredFields();
+		Json result = list();
+		for (Field f : fields) {
+			if(mustIgnore(f)) continue;
+			
+			At at = f.getAnnotation(At.class);
+			if(at == null) throw new SienaException("Field "+obj.getClass()+"."+f.getName()+" must be annotated with @At(n)");
+			result.addAt(at.value(), serialize(f.get(obj), f));
+		}
+		return result;
+	}
+	
+	private static Class<?> getGenericClass(Field f, int n) {
+		Type genericFieldType = f.getGenericType();
+		if(genericFieldType instanceof ParameterizedType){
+		    ParameterizedType aType = (ParameterizedType) genericFieldType;
+		    Type[] fieldArgTypes = aType.getActualTypeArguments();
+		    return (Class<?>) fieldArgTypes[n];
+		}
+		return null;
+	}
+	
+	public static Object deserialize(Class<?> clazz, Json data) {
+		try {
+			EmbeddedList list = clazz.getAnnotation(EmbeddedList.class);
+			if(list != null) {
+				if(!data.isList()) {
+					throw new SienaException("Error while deserializating class "+clazz
+							+". A Json list is needed but found: "+data);
+				}
+				Object obj = clazz.newInstance();
+				Field[] fields = clazz.getDeclaredFields();
+				for (Field f : fields) {
+					if(mustIgnore(f)) continue;
+					
+					At at = f.getAnnotation(At.class);
+					if(at == null) throw new SienaException("Field "+obj.getClass()+"."+f.getName()+" must be annotated with @At(n)");
+					Json value = data.at(at.value());
+					f.set(obj, deserialize(f, value));
+				}
+				return obj;
+			}
+
+			EmbeddedMap map = clazz.getAnnotation(EmbeddedMap.class);
+			if(map != null) {
+				if(!data.isMap()) {
+					throw new SienaException("Error while deserializating class "+clazz
+							+". A Json map is needed but found: "+data);
+				}
+				Object obj = clazz.newInstance();
+				Field[] fields = clazz.getDeclaredFields();
+				for (Field f : fields) {
+					if(mustIgnore(f)) continue;
+					
+					Key key = f.getAnnotation(Key.class);
+					if(key != null)
+						f.set(obj, deserialize(f, data.get(key.value())));
+					else
+						f.set(obj, deserialize(f, data.get(f.getName())));
+				}
+				return obj;
+			}
+			
+			return deserializePlain(clazz, data);
+		} catch(Exception e) {
+			throw new SienaException(e);
+		}
+	}
+	
+	private static boolean mustIgnore(Field field) {
+		boolean b = (field.getModifiers() & Modifier.TRANSIENT) == Modifier.TRANSIENT ||
+			(field.getModifiers() & Modifier.STATIC) == Modifier.STATIC;
+		
+		if(!field.isAccessible())
+			field.setAccessible(true);
+		
+		return b;
+	}
+	
+	public static Object deserialize(Field f, Json data) {
+		if(data == null || data.isNull()) return null;
+		
+		Class<?> clazz = f.getType();
+		if(clazz == Map.class) {
+			if(!data.isMap()) {
+				throw new SienaException("Error while deserializating field "+f.getDeclaringClass()
+						+"."+f.getName()+" of type "+clazz
+						+". A Json map is needed but found: "+data);
+			}
+			Map<String, Object> map = new HashMap<String, Object>();
+			for (String key : data.keys()) {
+				map.put(key, deserialize(getGenericClass(f, 1), data.get(key)));
+			}
+			return map;
+		}
+		if(clazz == Collection.class || clazz == List.class || clazz == Set.class) {
+			if(!data.isList()) {
+				throw new SienaException("Error while deserializating field "+f.getDeclaringClass()
+						+"."+f.getName()+" of type "+clazz
+						+". A Json list is needed but found: "+data);
+			}
+			Collection<Object> collection = null;
+			if(clazz == List.class) {
+				collection = new ArrayList<Object>(data.size());
+			} else {
+				collection = new HashSet<Object>();
+			}
+			for (Json value : data) {
+				collection.add(deserialize(getGenericClass(f, 0), value));
+			}
+			return collection;
+		}
+		
+		Format format = f.getAnnotation(Format.class);
+		if(format != null) {
+			if(f.getType() == Date.class) {
+				SimpleDateFormat sdf = new SimpleDateFormat(format.value());
+				try {
+					return sdf.parse(data.str());
+				} catch (ParseException e) {
+					throw new SienaException(e);
+				}
+			}
+		}
+		
+		return deserialize(clazz, data);
+	}
+	
+	private static Object deserializePlain(Class<?> type, Json data) {
+		if(Boolean.class == type || boolean.class == type) {
+			return data.asBoolean();
+		}
+		if(type == Byte.class         || type == Byte.TYPE)    return data.asBoolean();
+		else if(type == Short.class   || type == Short.TYPE)   return data.asShort();
+		else if(type == Integer.class || type == Integer.TYPE) return data.asInt();
+		else if(type == Long.class    || type == Long.TYPE)    return data.asLong();
+		else if(type == Float.class   || type == Float.TYPE)   return data.asFloat();
+		else if(type == Double.class  || type == Double.TYPE)  return data.asDouble();
+		else if(type == String.class)  return data.str();
+		else if(type.isEnum()) return Enum.valueOf((Class<Enum>) type, data.str());
+		
+		return null;
+	}
+
+}

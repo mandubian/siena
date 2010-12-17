@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block title %}Relational databases: JDBC{% endblock %}
+
+{% block body %}
+<h2>Relational databases: JDBC</h2>
+
+<p>Siena-JDBC lets you use the Siena API using a relational database as underlaying persistence mechanism.</p>
+
+<h3>Generate and update the database schema</h3>
+
+<p>Optionally you can generate or update the database schema using
+	<code>siena.jdbc.ddl.DdlGenerator</code>. You must use the following annotations to
+	define the tables, columns and indexes of your database:</p>
+	
+<ul>
+	<li><code>@NotNull</code>. A field annotated with <code>@NotNull</code> will have a restriction of
+		<code>NOT NULL</code> in the database. Fields that are primitive types (<code>int</code>,
+		<code>boolean</code>,...) and fields annotated with
+		<code>@Id</code> are <code>NOT NULL</code> by default.</li>
+	<li><code>@Max</code> defines the maximum number of characters of a <code>String</code> field.
+		<code>@Max(100)</code> will create a column of type <code>VARCHAR(100)</code>.</li>
+	<li><code>@Text</code>. Fields of type <code>String</code> must be annotated with <code>@Max</code>
+		or with <code>@Text</code>. A field annotated with <code>@Text</code> will create a
+		column of type <code>java.sql.Types.LONGVARCHAR</code></li>
+	<li>Fields of type <code>Json</code> will create columns of type <code>java.sql.Types.LONGVARCHAR</code>.</li>
+	<li><code>java.util.Date</code> fields can be annotated with one of these:
+		<code>@DateTime</code>, <code>@SimpleDate</code> or <code>@Time</code>. This will create
+		columns of type <code>DATETIME</code>, <code>DATE</code> or <code>TIME</code>
+		respectively. By default a <code>java.util.Date</code> field will create a
+		<code>DATETIME</code> column.</li>
+	<li>The <code>@Index</code> annotation lets you define indexes. Indexes have a mandatory name.
+		You can create an index on multiple columns: you just need to put the <code>@Index</code>
+		annotatio with the same index name in multiple fields. If you need a column to be
+		in more than one index you have to pass a <code>String</code> array to the annotation. Exmample:
+		<code>@Index({"index_1", "index_2"}) public String someColumn;</code>.</li>
+	<li>The <code>@Unique</code> has the same usage than the <code>@Index</code> annotation
+		except that it will generate unique indexes.</li>
+</ul>
+
+<p>The DDL generation is made using <a href="http://db.apache.org/ddlutils/">Apache DdlUtils</a> so
+	you will need to have Apache DdlUtils downloaded and added to your classpath.
+	The following is an example of how to use <code>DdlGenerator</code> and Apache DdlUtils.</p>
+
+<pre class="prettyprint">DdlGenerator generator = new DdlGenerator();
+
+// add all your classes
+generator.addTable(Employee.class);
+
+// get the Database model
+Database database = generator.getDatabase();
+
+Platform platform = PlatformFactory.createNewPlatformInstance("mysql");
+Class.forName("com.mysql.jdbc.Driver");
+Connection connection = DriverManager.
+	getConnection("jdbc:mysql://localhost/database_name", "user", "pass");
+
+// if you want to print the SQL that will be executed
+String sql = platform.getAlterTablesSql(connection, database);
+System.out.println(sql);
+
+// this will perform the database changes
+platform.alterTables(connection, database, true);
+
+connection.close();</pre>
+
+<p>The following is a possible output of the example code:</p>
+
+<pre class="prettyprint">CREATE TABLE employees
+(
+    id BIGINT NOT NULL AUTO_INCREMENT,
+    first_name VARCHAR(200) NOT NULL,
+    last_name VARCHAR(200) NOT NULL,
+    contact_info MEDIUMTEXT NULL,
+    boss BIGINT,
+    PRIMARY KEY (id)
+);
+
+CREATE INDEX boss_index ON employees (boss);</pre>
+
+<p>Apache DdlUtils has the ability not only to create the tables but also to synchronize them.
+	So if you add or remove something in your model classes DdlUtils will execute 
+	<code>ALTER TABLE</code> statements. But be careful because some changes may cause
+	the data to be lost. For example if you add a mandatory column the data could not be
+	retained. Make always a backup of the important data before synchronizing the database schema.</p>
+
+<p>If you want to add or remove some constraints on the database model you can manipulate the
+	<code>Database</code> object before executing the synchronization. In addition you should
+	know that the <code>addTable()</code> method returns a <code>Table</code> object. And
+	finally you can access a certain table by using <code>ddlGenerator.getTable(tableName)</code>.</p>
+
+<p>Note: foreign keys are not supported yet (this will be fixed soon).</p>
+    
+{% endblock %}

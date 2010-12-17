@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<project name="siena" default="pack" basedir=".">
+
+	<property name="version" value="0.5" />
+
+	<target name="compile">
+		<javac srcdir="src" destdir="bin" />
+	</target>
+
+	<target name="pack" depends="compile">
+		<delete dir="pack" />
+		<mkdir dir="pack" />
+		<jar destfile="pack/siena-bin-${version}.jar">
+			<fileset dir="bin" />
+		</jar>
+		<jar destfile="pack/siena-src-${version}.jar">
+			<fileset dir="src" />
+		</jar>
+	</target>
+
+</project>

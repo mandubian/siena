@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block body %}
+<h2>Welcome to siena project!</h2>
+
+<p>Siena is a persitence API for Java inspired on the Google App Engine Python Datastore API. Example usage:</p>
+
+<pre class="prettyprint">List&lt;Employee&gt; someEmployees = Employee.all()
+		.filter("firstName", "Mark")
+		.order("-lastName")
+		.fetch(10);</pre>
+		
+
+<p>Siena is a single API with many implementations. You can use siena with
+	<a href="/documentation-jdbc.html">relational databases</a>, with the
+	<a href="/documentation-gae.html">Google App Engine's datastore</a> or with 
+	<a href="/documentation-sdb.html">Amazon's SimpleDB</a>.
+	There is also an implementation called
+	<a href="/documentation-remote.html">siena-remote</a> very useful if you want to use
+	the Google App Engine's datastore remotely. Other implmenetations are planned such as:
+	HBase, DBSLayer,...</p>
+
+<p>Siena is Open Source and is released under the <a href="http://www.apache.org/licenses/LICENSE-2.0">Apache License 2.0</a>.</p>
+
+<h3>Advanced features</h3>
+
+<p>Siena has several features including built-int <a href="/documentation-json.html">JSON support</a>
+	for easily storing complex data structures in a single field.
+	It also has automatic queries and database schema creation / synchronization for relational databases.</p>
+
+<pre class="prettyprint">import siena.*;
+import static siena.Json.*;
+
+@Table("employees")
+public class Employee extends Model {
+	
+	@Id(Generator.AUTO_INCREMENT)
+	public Long id;
+	
+	@Column("first_name")
+	@Max(200) @NotNull
+	public String firstName;
+	
+	@Column("last_name")
+	@Max(200) @NotNull
+	public String lastName;
+	
+	@Column("contact_info")
+	public Json contactInfo;
+	
+	@Column("boss") @Index("boss_index")
+	public Employee boss;
+	
+	@Filter("boss")
+	public Query&lt;Employee&gt; employees;
+	
+	public static void main(String[] args) {
+		Employee e = new Employee();
+		e.firstName = "John";
+		e.lastName = "Smith";
+		e.contactInfo = map()
+			.put("email", "john.smith@example.com")
+			.put("telephone", list("xxx", "yyy"));
+		e.insert();
+		
+		System.out.println(e.contactInfo);
+	}
+	
+	public static Query&lt;Employee&gt; all() {
+		return Model.all(Employee.class);
+	}
+
+}</pre>
+
+<p>This example shows a class with an auto-increment primary key, some simple fields, a
+	field called <code>contactInfo</code> that may will contain a complex data structure
+	and finally there is a special <code>employees</code> field that will let
+	query those employees whos boss is the current employee. The <code>main()</code>
+	method creates a new <code>Employee</code> and prints its contact info. This is the output:</p>
+	
+<pre class="prettyprint">{"email": "john.smith@example.com", "telephone": ["xxx", "yyy"]}</pre>
+
+<p>The example also shows how to use some annotations such as <code>@NotNull</code> or <code>@Index</code> that will
+	be used to generate the database schema if you are using a relational database.</p>
+
+<p>The <code>all()</code> method is not mandatory but is strongly recommended.</p>
+
+<p>Now that you have taken a brief look at what Siena does it's time to read the
+	<a href="/documentation-getting-started.html">Getting started guide</a>.</p>
+
+{% endblock %}

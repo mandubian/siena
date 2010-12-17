@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block title %}Siena JSON support{% endblock %}
+
+{% block body %}
+<h2>Siena JSON support</h2>
+
+<p>Siena comes with a JSON implementation. This implementation is contained in a sigle class:
+	<code>siena.Json</code>. A <code>Json</code> object wraps any kind of JSON structure. This is, a Json
+	object can contain a boolean value, a String, a Map, a List, a number or <code>null</code>. You can
+	know wich type of object is wrapped using its <code>isXXX()</code> methods:
+	<code>isString()</code>, <code>isNumber()</code>, <code>isBoolean()</code>, <code>isMap()</code>, 
+	<code>isList()</code> or <code>isNull()</code>.</p>
+	
+<p>If you like the siena's JSON implementation you can use it individually. If you want to persist complex
+	data structures into a database using siena you can use <code>Json</code> objects directly in your
+	persistent classes. Siena will care about serializating and deserializating the object into Strings.</p>
+
+<p>To start using <code>siena.Json</code> the best is to import the class and all its members: </p>
+
+<pre class="prettyprint">import siena.Json;
+import static siena.Json.*;</pre>
+
+<h3>Basic usage</h3>
+
+<p>Create a map: </p>
+
+<pre class="prettyprint">Json json = map().put(&quot;key1&quot;, 1234)
+	.put(&quot;key2&quot;, true)
+	.put(&quot;key3&quot;, null)
+	.put(&quot;key4&quot;, &quot;foo&quot;);
+System.out.println(json);</pre>
+
+<p>The output: </p>
+
+<pre class="prettyprint">{&quot;key1&quot;: 1234, &quot;key2&quot;: true, &quot;key3&quot;: null, &quot;key4&quot;: &quot;foo&quot;}</pre>
+
+<p>Retrieving data from previous map: </p>
+
+<pre class="prettyprint">int value1 = json.get(&quot;key1&quot;).asInt();</pre>
+
+<p>You have several asXXX() methods.</p>
+
+<p>Create a list: </p>
+
+<pre class="prettyprint">Json json = list(&quot;foo&quot;, &quot;bar&quot;, &quot;baz&quot;, true, false, null, 1234);</pre>
+
+<p>The output: </p>
+
+<pre class="prettyprint">[&quot;foo&quot;, &quot;bar&quot;, &quot;baz&quot;, true, false, null, 1234]</pre>
+
+<p>Retrieving data from previous list: </p>
+
+<pre class="prettyprint">int size = json.size();
+boolean b = json.at(3).bool();</pre>
+
+<p>Complex example: </p>
+
+<pre class="prettyprint">Json json = list(&quot;foo&quot;, &quot;bar&quot;, &quot;baz&quot;,
+	map().put(&quot;key1&quot;, true)
+		.put(&quot;key2&quot;, false)
+		.put(&quot;key3&quot;, list(1, 2, 3, 4)));
+System.out.println(json);</pre>
+
+<p>The output: </p>
+
+<pre class="prettyprint">[&quot;foo&quot;, &quot;bar&quot;, &quot;baz&quot;, {&quot;key1&quot;: true, &quot;key2&quot;: false, &quot;key3&quot;: [1, 2, 3, 4]}]</pre>
+
+<h3>Loading data</h3>
+
+<pre class="prettyprint">Json json = loads(&quot;[true, false, null, {}]&quot;);
+System.out.println(json);</pre>
+
+<p>The output: </p>
+
+<pre class="prettyprint">[true, false, null, {}]</pre>
+
+<h3>Converting from arrays and collections</h3>
+
+<p>The buit-in siena JSON implementaiton lets you create <code>Json</code> objects from
+	plain Java arrays or collections. The <code>Json</code> constructor accepts
+	arrays, collections and maps. Examples:</p>
+
+<pre class="prettyprint">Json fromArray = new Json(new Object[]{1, 2, 3});</pre>
+
+<pre class="prettyprint">Json fromCollection = new Json(Arrays.asList(new Object[]{1, 2, 3}));</pre>
+
+<pre class="prettyprint">Map&lt;String, Object&gt; m = new HashMap&lt;String, Object&gt;();
+m.put("foo", 1);
+Json fromMap = new Json(m);</pre>
+
+{% endblock %}

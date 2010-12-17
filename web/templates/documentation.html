@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block title %}Siena documentation{% endblock %}
+
+{% block body %}
+<h2>Documentation</h2>
+
+<p>You should read first the <a href="/documentation-getting-started.html">getting started guide</a>
+	that covers the main concepts and usage of Siena.
+	Then you should read the specific documentation of the implementations you are interested in.
+	These are the available implementations of Siena:</p>
+
+<ul>
+	<li><a href="/documentation-jdbc.html">JDBC implementation</a>. You can use siena in a relational
+		database with this implementation. The siena-jdbc implementation
+		has some specific features not supported on other implementations. For example:
+		auto-database-schema update and FULL-TEXT support.</li>
+	<li><a href="/documentation-gae.html">Google App Engine implementation</a>. You can use
+		siena on Google App Engine.</li>
+	<li><a href="/documentation-sdb.html">SimpleDB implementation</a>. Experimental implementation
+		using Amazon's SimlpleDB</li>
+	<li><a href="/documentation-remote.html">Siena-remote implementation</a>. This implementation
+		lets you use a remote Siena implementation. For example you can use datastore of Google
+		App Engine through this implementation.</li>
+</ul>
+
+<h3>Other related topics</h3>
+
+<p>Siena has built-in <a href="/documentation-json.html">JSON support</a>. You can save complex
+	data structures (maps, lists or any arbitrary combination or both) into a single field/column using JSON.</p>
+
+{% endblock %}

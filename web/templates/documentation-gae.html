@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block title %}Google App Engine implementation{% endblock %}
+
+{% block body %}
+<h2>Google App Engine implementation</h2>
+
+<p>The Google App Engine implementation only supports one primary key for each class, and also
+	this primary key field must be of type <code>long</code> or <code>java.lang.Long</code>.
+	Any other annotation but <code>@Id</code> is ignored.</p>
+
+<p>The only thing you have to do to use the Google App Engine implementation is write the
+	<code>siena.properties</code> file with the following content in the same directory than
+	your model classes:</p>
+
+<pre class="prettyprint">
+implementation = siena.gae.GaePersistenceManager
+</pre>
+
+{% endblock %}
