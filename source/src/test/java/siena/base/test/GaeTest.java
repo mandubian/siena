@@ -1,16 +1,16 @@
 package siena.base.test;
 
-import java.io.File;
 import java.util.List;
-
-import com.google.appengine.api.datastore.dev.LocalDatastoreService;
-import com.google.appengine.tools.development.ApiProxyLocalImpl;
-import com.google.apphosting.api.ApiProxy;
 
 import siena.PersistenceManager;
 import siena.gae.GaePersistenceManager;
 
+import com.google.appengine.tools.development.testing.LocalDatastoreServiceTestConfig;
+import com.google.appengine.tools.development.testing.LocalServiceTestHelper;
+
 public class GaeTest extends BaseTest {
+	private final LocalServiceTestHelper helper =
+        new LocalServiceTestHelper(new LocalDatastoreServiceTestConfig());
 
 	@Override
 	public PersistenceManager createPersistenceManager(List<Class<?>> classes)
@@ -37,21 +37,23 @@ public class GaeTest extends BaseTest {
 
     @Override
     public void setUp() throws Exception {
-		ApiProxy.setEnvironmentForCurrentThread(new TestEnvironment());
+		/*ApiProxy.setEnvironmentForCurrentThread(new TestEnvironment());
 		ApiProxy.setDelegate(new ApiProxyLocalImpl(new File(".")){});
         ApiProxyLocalImpl proxy = (ApiProxyLocalImpl) ApiProxy.getDelegate();
-        proxy.setProperty(LocalDatastoreService.NO_STORAGE_PROPERTY, Boolean.TRUE.toString());
+        proxy.setProperty(LocalDatastoreService.NO_STORAGE_PROPERTY, Boolean.TRUE.toString());*/
+    	helper.setUp();
         super.setUp();
     }
 
     @Override
     public void tearDown() throws Exception {
         super.tearDown();
-        ApiProxyLocalImpl proxy = (ApiProxyLocalImpl) ApiProxy.getDelegate();
+        /*ApiProxyLocalImpl proxy = (ApiProxyLocalImpl) ApiProxy.getDelegate();
         LocalDatastoreService datastoreService = (LocalDatastoreService) proxy.getService("datastore_v3");
         datastoreService.clearProfiles();
 		ApiProxy.setDelegate(null);
-		ApiProxy.setEnvironmentForCurrentThread(null);
+		ApiProxy.setEnvironmentForCurrentThread(null);*/
+        helper.tearDown();
     }
 
 }

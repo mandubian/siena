@@ -168,7 +168,8 @@ public class JsonSerializer {
 	
 	private static boolean mustIgnore(Field field) {
 		boolean b = (field.getModifiers() & Modifier.TRANSIENT) == Modifier.TRANSIENT ||
-			(field.getModifiers() & Modifier.STATIC) == Modifier.STATIC;
+			(field.getModifiers() & Modifier.STATIC) == Modifier.STATIC || 
+			field.isSynthetic();
 		
 		if(!field.isAccessible())
 			field.setAccessible(true);

@@ -5,11 +5,15 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.Scanner;
-import org.apache.hadoop.hbase.io.BatchUpdate;
-import org.apache.hadoop.hbase.io.RowResult;
+import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import siena.ClassInfo;
@@ -22,10 +26,10 @@ import siena.SienaException;
 
 public class HBasePersistenceManager implements PersistenceManager {
 	
-	private HBaseConfiguration config;
+	private Configuration config;
 	
 	public HBasePersistenceManager() {
-		config = new HBaseConfiguration();
+		config = HBaseConfiguration.create();
 	}
 
 	public void beginTransaction(int isolationLevel) {
@@ -54,7 +58,8 @@ public class HBasePersistenceManager implements PersistenceManager {
 			HTable table = new HTable(config, info.tableName);
 			Field id = ClassInfo.getIdField(clazz);
 			id.setAccessible(true);
-			table.deleteAll(id.get(obj).toString());
+			Delete d = new Delete(Bytes.toBytes(id.get(obj).toString()));
+			table.delete(d);
 		} catch(Exception e) {
 			throw new SienaException(e);
 		}
@@ -68,7 +73,8 @@ public class HBasePersistenceManager implements PersistenceManager {
 			Field id = ClassInfo.getIdField(clazz);
 			id.setAccessible(true);
 			
-			RowResult rowResult = table.getRow(id.get(obj).toString());
+			Get g = new Get(Bytes.toBytes(id.get(obj).toString()));			
+			Result rowResult = table.get(g);
 			if(rowResult.isEmpty()) throw new SienaException("No such object");
 			mapObject(clazz, obj, rowResult);
 		} catch(Exception e) {
@@ -88,14 +94,15 @@ public class HBasePersistenceManager implements PersistenceManager {
 			Field id = ClassInfo.getIdField(clazz);
 			id.setAccessible(true);
 			
-			BatchUpdate batchUpdate = new BatchUpdate(id.get(obj).toString());
+			Put p = new Put(Bytes.toBytes(id.get(obj).toString()));
 			
 			List<Field> fields = info.insertFields;
 			for (Field field : fields) {
-				batchUpdate.put("string:"+ClassInfo.getColumnNames(field)[0], 
+				p.add(Bytes.toBytes("string"), 
+						Bytes.toBytes(ClassInfo.getColumnNames(field)[0]), 
 						Bytes.toBytes(field.get(obj).toString()));
 			}
-			table.commit(batchUpdate);
+			table.put(p);
 		} catch(Exception e) {
 			throw new SienaException(e);
 		}
@@ -110,13 +117,17 @@ public class HBasePersistenceManager implements PersistenceManager {
 		insert(obj);
 	}
 	
-	private <T> void mapObject(Class<T> clazz, Object obj, RowResult rowResult) {
+	private <T> void mapObject(Class<T> clazz, Object obj, Result result) {
 		try {
-			String id = Bytes.toString(rowResult.getRow());
+			String id = Bytes.toString(result.getRow());
 			ClassInfo info = ClassInfo.getClassInfo(clazz);
 			for (Field field : info.insertFields) {
 				String column = "string:"+ClassInfo.getColumnNames(field)[0];
-				String value = Bytes.toString(rowResult.get(column).getValue());
+				String value = 
+					Bytes.toString(
+							result.getValue(
+									Bytes.toBytes("string"), 
+									Bytes.toBytes(ClassInfo.getColumnNames(field)[0])));
 				field.setAccessible(true);
 				field.set(obj, value);
 			}
@@ -126,7 +137,7 @@ public class HBasePersistenceManager implements PersistenceManager {
 		}
 	}
 	
-	private <T> T mapObject(Class<T> clazz, RowResult rowResult) {
+	private <T> T mapObject(Class<T> clazz, Result rowResult) {
 		try {
 			T obj = clazz.newInstance();
 			mapObject(clazz, obj, rowResult);
@@ -168,22 +179,26 @@ public class HBasePersistenceManager implements PersistenceManager {
 
 		@Override
 		public List<T> fetch() {
-			Scanner scanner = null;
+			ResultScanner scanner = null;
 			try {
 				HTable table = new HTable(config, info.tableName);
 				List<Field> fields = info.insertFields;
 				List<String> names = new ArrayList<String>();
+				
+				Scan s = new Scan();
 				for (Field field : fields) {
-					names.add("string:"+ClassInfo.getColumnNames(field)[0]);
+					s.addColumn(
+							Bytes.toBytes("string"), 
+							Bytes.toBytes(ClassInfo.getColumnNames(field)[0]));
 				}
-				
-				String[] namesArray = names.toArray(new String[names.size()]);
-				
-				scanner = table.getScanner(namesArray);
+								
+				scanner = table.getScanner(s);
 				List<T> results = new ArrayList<T>();
-				for (RowResult rowResult : scanner) {
-					results.add(mapObject(clazz, rowResult));
+				for (Result rr = scanner.next(); rr != null; rr = scanner.next()) {
+					// print out the row we found and the columns we were looking for
+					results.add(mapObject(clazz, rr));
 				}
+
 				return results;
 			} catch(SienaException e) {
 				throw e;
@@ -193,6 +208,7 @@ public class HBasePersistenceManager implements PersistenceManager {
 				scanner.close();
 			}
 		}
+
 
 		@Override
 		public List<T> fetch(int limit) {
