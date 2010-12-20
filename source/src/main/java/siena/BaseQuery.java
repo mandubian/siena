@@ -100,10 +100,12 @@ public class BaseQuery<T> implements Query<T> {
 		return pm.count(this);
 	}
 
+	@Deprecated
 	public int count(int limit) {
 		return pm.count(this, limit);
 	}
 
+	@Deprecated
 	public int count(int limit, Object offset) {
 		return pm.count(this, limit, offset);
 	}

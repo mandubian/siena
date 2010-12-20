@@ -295,6 +295,12 @@
 			<version>${gae.version}</version>
 			<scope>test</scope>
 		</dependency>
+		<dependency>
+			<groupId>com.google.appengine</groupId>
+			<artifactId>appengine-api-stubs</artifactId>
+			<version>${gae.version}</version>
+			<scope>test</scope>
+		</dependency>
 		
 		<!-- Hbase dependencies -->
 		<dependency>
@@ -305,5 +311,32 @@
 		</dependency>
 
 	</dependencies>
+
+	<profiles>
+		<profile>
+			<id>GAE</id>
+			<build>
+				<plugins>
+					<!-- Test cases -->
+					<plugin>
+						<artifactId>maven-surefire-plugin</artifactId>
+						<configuration>
+							<excludes>
+								<exclude>**/BaseTest.java</exclude>
+								<exclude>**/TestAll.java</exclude>
+								<exclude>**/Person.java</exclude>
+								<exclude>**/Message.java</exclude>
+								<exclude>**/Discovery.java</exclude>
+							</excludes>
+							<includes>
+								<include>**/GaeTest.java</include>
+							</includes>
+						</configuration>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+	
+	</profiles>
 
 </project>
