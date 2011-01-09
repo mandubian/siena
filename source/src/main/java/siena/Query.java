@@ -66,7 +66,13 @@ public interface Query<T> {
 
 	public List<T> fetchKeys(int limit, Object offset);
 	
-	public Iterable<T> iter(String field, int max);
+	public Iterable<T> iter();
+	public Iterable<T> iter(int limit);
+	public Iterable<T> iter(int limit, Object offset);
+
+	public Iterable<T> iter(String field);
+	public Iterable<T> iter(String field, int limit);
+	public Iterable<T> iter(String field, int limit, Object offset);
 	
 	public Query<T> clone();
 	

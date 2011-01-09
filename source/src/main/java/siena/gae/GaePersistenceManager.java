@@ -15,17 +15,14 @@
  */
 package siena.gae;
 
-import static com.google.appengine.api.datastore.FetchOptions.Builder.withChunkSize;
-import static com.google.appengine.api.datastore.FetchOptions.Builder.withLimit;
-
 import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-
-import org.apache.commons.lang.NotImplementedException;
 
 import siena.AbstractPersistenceManager;
 import siena.ClassInfo;
@@ -38,6 +35,7 @@ import siena.Util;
 import siena.embed.Embedded;
 import siena.embed.JsonSerializer;
 
+import com.google.appengine.api.datastore.Blob;
 import com.google.appengine.api.datastore.DatastoreService;
 import com.google.appengine.api.datastore.DatastoreServiceFactory;
 import com.google.appengine.api.datastore.Entity;
@@ -88,7 +86,7 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 		setKey(ClassInfo.getIdField(clazz), obj, entity.getKey());
 	}
 	
-	private void setKey(Field f, Object obj, Key key) {
+	protected static void setKey(Field f, Object obj, Key key) {
 		try {
 			Object value = key.getId();
 			if(f.getType() == String.class)
@@ -105,9 +103,7 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 
 	public void update(Object obj) {
 		try {
-			//			Entity entity = new Entity(getEntityName(obj.getClass()));
-			//			entity.setProperty(Entity.KEY_RESERVED_PROPERTY, getKey(obj));
-			Entity entity = ds.get(getKey(obj)); // FIXME don't read again
+			Entity entity = new Entity(getKey(obj));
 			fillEntity(obj, entity);
 			ds.put(entity);
 		} catch(SienaException e) {
@@ -117,7 +113,7 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 		}
 	}
 
-	public Key getKey(Object obj) {
+	protected static Key getKey(Object obj) {
 		try {
 			Field f = ClassInfo.getIdField(obj.getClass());
 			Object value = f.get(obj);
@@ -129,7 +125,7 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 		}
 	}
 
-	private Object readField(Object object, Field field) {
+	private static Object readField(Object object, Field field) {
 		field.setAccessible(true);
 		try {
 			return field.get(object);
@@ -138,7 +134,7 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 		}
 	}
 
-	private void fillEntity(Object obj, Entity entity) {
+	protected static void fillEntity(Object obj, Entity entity) {
 		Class<?> clazz = obj.getClass();
 
 		for (Field field : ClassInfo.getClassInfo(clazz).updateFields) {
@@ -160,6 +156,12 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 						String s = (String) value;
 						if(s.length() > 500)
 							value = new Text(s);
+					} else if(value instanceof byte[]) {
+						byte[] arr = (byte[]) value;
+						// GAE Blob doesn't accept more than 1MB
+						if(arr.length<1000000)
+							value = new Blob(arr);						
+						else value = new Blob(Arrays.copyOf(arr, 1000000));
 					} else if(field.getAnnotation(Embedded.class) != null) {
 						value = JsonSerializer.serialize(value).toString();
 						String s = (String) value;
@@ -177,7 +179,7 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 		}
 	}
 
-	private void fillModel(Object obj, Entity entity) {
+	protected static void fillModel(Object obj, Entity entity) {
 		Class<?> clazz = obj.getClass();
 
 		for (Field field : ClassInfo.getClassInfo(clazz).updateFields) {
@@ -202,10 +204,13 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 		}
 	}
 	
-	private void setFromObject(Object object, Field f, Object value)
+	protected static void setFromObject(Object object, Field f, Object value)
 		throws IllegalArgumentException, IllegalAccessException {
 		if(value instanceof Text)
 			value = ((Text) value).getValue();
+		else if(value instanceof Blob) {
+			value = ((Blob) value).getBytes();
+		}
 		Util.setFromObject(object, f, value);
 	}
 
@@ -213,7 +218,7 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 		return ds;
 	}
 
-	protected <T> List<T> mapEntities(List<Entity> entities, Class<T> clazz) {
+	protected static <T> List<T> mapEntities(List<Entity> entities, Class<T> clazz) {
 		Field id = ClassInfo.getIdField(clazz);
 		List<T> list = new ArrayList<T>(entities.size());
 		for (Entity entity : entities) {
@@ -232,11 +237,27 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 		return list;
 	}
 	
-	private <T> PreparedQuery prepare(Query<T> query) {
-		Class<?> clazz = query.getQueriedClass();
-		com.google.appengine.api.datastore.Query q = new com.google.appengine.api.datastore.Query(
-				ClassInfo.getClassInfo(clazz).tableName);
-		
+	protected static <T> List<T> mapEntitiesKeysOnly(List<Entity> entities, Class<T> clazz) {
+		Field id = ClassInfo.getIdField(clazz);
+		List<T> list = new ArrayList<T>(entities.size());
+		for (Entity entity : entities) {
+			T obj;
+			try {
+				obj = clazz.newInstance();
+				list.add(obj);
+				setKey(id, obj, entity.getKey());
+			} catch (SienaException e) {
+				throw e;
+			} catch (Exception e) {
+				throw new SienaException(e);
+			}
+		}
+		return list;
+	}
+	
+	protected static <T> com.google.appengine.api.datastore.Query addFiltersOrders(
+			Query<T> query, com.google.appengine.api.datastore.Query q) 
+	{
 		List<QueryFilter> filters = query.getFilters();
 		for (QueryFilter filter : filters) {
 			Field f = filter.field;
@@ -252,7 +273,7 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 					if(value instanceof String) {
 						value = Long.parseLong(value.toString());
 					}
-					Key key = KeyFactory.createKey(ClassInfo.getClassInfo(clazz).tableName, (Long) value);
+					Key key = KeyFactory.createKey(q.getKind(), (Long) value);
 					q.addFilter(Entity.KEY_RESERVED_PROPERTY, op, key);
 				} else {
 					q.addFilter(propertyName, op, value);
@@ -270,61 +291,150 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 			}
 		}
 		
-		return ds.prepare(q);
+		return q;
+	}
+	
+	private <T> PreparedQuery prepare(Query<T> query) {
+		Class<?> clazz = query.getQueriedClass();
+		com.google.appengine.api.datastore.Query q = new com.google.appengine.api.datastore.Query(
+				ClassInfo.getClassInfo(clazz).tableName);
+		
+		return ds.prepare(addFiltersOrders(query, q));
+	}
+	
+	private <T> PreparedQuery prepareKeysOnly(Query<T> query) {
+		Class<?> clazz = query.getQueriedClass();
+		com.google.appengine.api.datastore.Query q = new com.google.appengine.api.datastore.Query(
+				ClassInfo.getClassInfo(clazz).tableName);
+		
+		return ds.prepare(addFiltersOrders(query, q).setKeysOnly());
 	}
 	
 	@SuppressWarnings("unchecked")
-	private <T> List<T> map(Query<T> query, int offset, List<Entity> entities) {
+	protected static <T> List<T> map(Query<T> query, int offset, List<Entity> entities) {
 		Class<?> clazz = query.getQueriedClass();
 		List<T> result = (List<T>) mapEntities(entities, clazz);
 		query.setNextOffset(offset + result.size());
 		return result;
 	}
 
+	@SuppressWarnings("unchecked")
+	protected static <T> List<T> mapKeysOnly(Query<T> query, int offset, List<Entity> entities) {
+		Class<?> clazz = query.getQueriedClass();
+		List<T> result = (List<T>) mapEntitiesKeysOnly(entities, clazz);
+		query.setNextOffset(offset + result.size());
+		return result;
+	}
+	
 	@Override
 	public <T> List<T> fetch(Query<T> query) {
-		return map(query, 0, prepare(query).asList(withChunkSize(FetchOptions.DEFAULT_CHUNK_SIZE)));
+		return map(query, 0, prepare(query).asList(FetchOptions.Builder.withDefaults()));
 	}
 
 	@Override
 	public <T> List<T> fetch(Query<T> query, int limit) {
-		return map(query, 0, prepare(query).asList(withLimit(limit)));
+		return map(query, 0, prepare(query).asList(FetchOptions.Builder.withLimit(limit)));
 	}
 
 	@Override
 	public <T> List<T> fetch(Query<T> query, int limit, Object offset) {
-		return map(query, (Integer) offset, prepare(query).asList(withLimit(limit).offset((Integer) offset)));
+		return map(query, (Integer) offset, prepare(query).asList(FetchOptions.Builder.withLimit(limit).offset((Integer) offset)));
 	}
 
 	@Override
 	public <T> int count(Query<T> query) {
-		return prepare(query).countEntities();
+		return prepare(query).countEntities(FetchOptions.Builder.withDefaults());
 	}
 
 	@Override
 	public <T> int delete(Query<T> query) {
-		throw new NotImplementedException();
+		final ArrayList<Key> keys = new ArrayList<Key>();
+		
+		for (final Entity entity: prepareKeysOnly(query).asIterable(FetchOptions.Builder.withDefaults())) {
+			keys.add(entity.getKey());
+		}
+		
+		ds.delete(keys);
+		
+		return keys.size();
 	}
 
 	@Override
 	public <T> List<T> fetchKeys(Query<T> query) {
-		throw new NotImplementedException();
+		return mapKeysOnly(
+			query,
+			0,
+			prepareKeysOnly(query).asList(FetchOptions.Builder.withDefaults())
+		);		
 	}
 
 	@Override
 	public <T> List<T> fetchKeys(Query<T> query, int limit) {
-		throw new NotImplementedException();
+		return mapKeysOnly(
+			query,
+			0,
+			prepareKeysOnly(query).asList(FetchOptions.Builder.withLimit(limit))
+		);	
 	}
 
 	@Override
 	public <T> List<T> fetchKeys(Query<T> query, int limit, Object offset) {
-		throw new NotImplementedException();
+		return mapKeysOnly(
+			query,
+			0,
+			prepareKeysOnly(query).asList(
+				FetchOptions.Builder.withLimit(limit).offset((Integer)offset))
+		);	
+	}
+	
+	@Override
+	public <T> Iterable<T> iter(Query<T> query) {
+		return new SienaGaeIterable<T>(
+			prepare(query).asIterable(FetchOptions.Builder.withDefaults()),
+			query.getQueriedClass()
+		);
+	}
+
+	@Override
+	public <T> Iterable<T> iter(Query<T> query, int limit) {
+		return new SienaGaeIterable<T>(
+			prepare(query).asIterable(FetchOptions.Builder.withLimit(limit)),
+			query.getQueriedClass()
+		);
+	}
+	
+	@Override
+	public <T> Iterable<T> iter(Query<T> query, int limit, Object offset) {
+		return new SienaGaeIterable<T>(
+			prepare(query).asIterable(FetchOptions.Builder.withLimit(limit).offset((Integer)offset)),
+			query.getQueriedClass()
+		);
+	}
+
+	@Override
+	// TODO
+	public <T> Iterable<T> iter(Query<T> query, String field) {
+		return null;
+	}
+
+	@Override
+	// TODO
+	public <T> Iterable<T> iter(Query<T> query, String field, int limit) {
+		return null;
+	}
+
+	@Override
+	// TODO
+	public <T> Iterable<T> iter(Query<T> query, String field, int limit,
+			Object offset) {
+		return null;
 	}
 
 	private static final Map<String, FilterOperator> operators = new HashMap<String, FilterOperator>() {
 		private static final long serialVersionUID = 1L;
 		{
 			put("=",  FilterOperator.EQUAL);
+			put("!=",  FilterOperator.NOT_EQUAL);
 			put("<",  FilterOperator.LESS_THAN);
 			put(">",  FilterOperator.GREATER_THAN);
 			put("<=", FilterOperator.LESS_THAN_OR_EQUAL);
@@ -344,4 +454,69 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 		return supportedOperators;
 	}
 
+	/**
+	 * @author mandubian
+	 * 
+	 * A Siena Iterable<Model> encapsulating a GAE Iterable<Entity> 
+	 * with its Iterator<Model>...
+	 */
+	public class SienaGaeIterable<Model> implements Iterable<Model> {
+		Iterable<Entity> 	gaeIterable;
+		Class<Model>		clazz;
+		
+		SienaGaeIterable(Iterable<Entity> gaeIterable, Class<Model> clazz)
+		{
+			this.gaeIterable = gaeIterable;
+			this.clazz = clazz;
+		}
+		
+		@Override
+		public Iterator<Model> iterator() {
+			return new SienaGaeIterator<Model>(gaeIterable.iterator(), clazz);
+		}
+
+		public class SienaGaeIterator<T> implements Iterator<T> {
+			Iterator<Entity>	gaeIterator;
+			Class<T>			clazz;
+			Field 				id;
+			
+			SienaGaeIterator(Iterator<Entity> gaeIterator, Class<T> clazz)
+			{
+				this.gaeIterator = gaeIterator;
+				this.clazz = clazz;
+				this.id = ClassInfo.getIdField(clazz);
+			}
+			
+			@Override
+			public boolean hasNext() {
+				return gaeIterator.hasNext();
+			}
+
+			@Override
+			public T next() {
+				T obj;
+				
+				try {
+					obj = clazz.newInstance();
+					Entity entity = gaeIterator.next();
+					fillModel(obj, entity);
+					setKey(id, obj, entity.getKey());
+					
+					return obj;					
+				} catch (SienaException e) {
+					throw e;
+				} catch (Exception e) {
+					throw new SienaException(e);
+				}
+			}
+
+			@Override
+			public void remove() {
+				gaeIterator.remove();
+			}
+			
+		}
+		
+	}
+	
 }

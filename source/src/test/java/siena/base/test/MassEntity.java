@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2010 Alberto Gimeno <gimenete at gmail.com>
+ * Copyright 2008-2010 Alberto Gimeno <gimenete at gmail.com>
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -19,14 +19,44 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
+import siena.Column;
 import siena.Generator;
 import siena.Id;
 import siena.Json;
 import siena.Max;
+import siena.Table;
 import siena.embed.Embedded;
 
-public class DataTypes {
+@Table("massentity")
+public class MassEntity {
+
+	@Id(Generator.AUTO_INCREMENT)
+	public String id;
 	
+	public byte 		typeByte;
+	public short 		typeShort;
+	public int 			typeInt;
+	public long 		typeLong;
+	public float 		typeFloat;
+	public double 		typeDouble;
+
+	@Max(100)
+	public String 		typeString;
+	@Max(1000)
+	public String 		typeLargeString;
+	
+	public Date 		typeDate;
+	
+	public Json 		typeJson;
+
+	public byte[] 		typeBlob;
+	
+	@Embedded
+	public Map<String, Contact> contacts;
+	
+	@Embedded
+	public List<Address> addresses;
+
 	@Override
 	public String toString() {
 		return "DataTypes [id=" + id + ", typeByte=" + typeByte + ", typeDate="
@@ -36,32 +66,6 @@ public class DataTypes {
 				+ typeLong + ", typeShort=" + typeShort + ", typeString="
 				+ typeString + ", typeBlob.length=" + typeBlob.length + "]";
 	}
-
-	@Id(Generator.UUID) @Max(36)
-	public String id;
 	
-	public byte typeByte;
-	public short typeShort;
-	public int typeInt;
-	public long typeLong;
-	public float typeFloat;
-	public double typeDouble;
-
-	@Max(100)
-	public String typeString;
-	@Max(1000)
-	public String typeLargeString;
-	
-	public Date typeDate;
-	
-	public Json typeJson;
-	
-	@Embedded
-	public Map<String, Contact> contacts;
-	
-	@Embedded
-	public List<Address> addresses;
-
-	public byte[] typeBlob;
 
 }

@@ -170,6 +170,36 @@ public class MockPersistenceManager implements PersistenceManager {
 		}
 
 		@Override
+		public Iterable<T> iter() {
+			// TODO Auto-generated method stub
+			return null;
+		}
+
+		@Override
+		public Iterable<T> iter(int limit) {
+			// TODO Auto-generated method stub
+			return null;
+		}
+
+		@Override
+		public Iterable<T> iter(int limit, Object offset) {
+			// TODO Auto-generated method stub
+			return null;
+		}
+
+		@Override
+		public Iterable<T> iter(String field) {
+			// TODO Auto-generated method stub
+			return null;
+		}
+
+		@Override
+		public Iterable<T> iter(String field, int limit, Object offset) {
+			// TODO Auto-generated method stub
+			return null;
+		}
+
+		@Override
 		public List<QueryFilter> getFilters() {
 			// TODO Auto-generated method stub
 			return null;
@@ -269,6 +299,43 @@ public class MockPersistenceManager implements PersistenceManager {
 
 	@Override
 	public <T> List<T> fetchKeys(Query<T> query, int limit, Object offset) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public <T> Iterable<T> iter(Query<T> query) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public <T> Iterable<T> iter(Query<T> query, int limit) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public <T> Iterable<T> iter(Query<T> query, int limit, Object offset) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public <T> Iterable<T> iter(Query<T> query, String field) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public <T> Iterable<T> iter(Query<T> query, String field, int limit) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public <T> Iterable<T> iter(Query<T> query, String field, int limit,
+			Object offset) {
 		// TODO Auto-generated method stub
 		return null;
 	}

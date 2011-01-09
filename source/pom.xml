@@ -323,6 +323,7 @@
 						<configuration>
 							<excludes>
 								<exclude>**/BaseTest.java</exclude>
+								<exclude>**/BaseMassTest.java</exclude>
 								<exclude>**/TestAll.java</exclude>
 								<exclude>**/Person.java</exclude>
 								<exclude>**/Message.java</exclude>
@@ -330,6 +331,7 @@
 							</excludes>
 							<includes>
 								<include>**/GaeTest.java</include>
+								<include>**/GaeMassTest.java</include>
 							</includes>
 						</configuration>
 					</plugin>

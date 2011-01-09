@@ -134,8 +134,28 @@ public class BaseQuery<T> implements Query<T> {
 		return pm.fetchKeys(this, limit, offset);
 	}
 	
-	public Iterable<T> iter(String field, int max) {
-		throw new NotImplementedException();
+	public Iterable<T> iter() {
+		return pm.iter(this);
+	}
+	
+	public Iterable<T> iter(int limit) {
+		return pm.iter(this, limit);
+	}
+	
+	public Iterable<T> iter(int limit, Object offset) {
+		return pm.iter(this, limit, offset);
+	}
+	
+	public Iterable<T> iter(String field) {
+		return pm.iter(this, field);
+	}
+	
+	public Iterable<T> iter(String field, int limit) {
+		return pm.iter(this, field, limit);
+	}
+	
+	public Iterable<T> iter(String field, int limit, Object offset) {
+		return pm.iter(this, field, limit, offset);
 	}
 	
 	public Query<T> clone() {

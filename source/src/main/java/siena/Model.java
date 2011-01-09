@@ -178,8 +178,28 @@ public abstract class Model {
 			return createQuery().get();
 		}
 
-		public Iterable<T> iter(String field, int max) {
-			return createQuery().iter(field, max);
+		public Iterable<T> iter() {
+			return createQuery().iter();
+		}
+		
+		public Iterable<T> iter(int limit) {
+			return createQuery().iter(limit);
+		}
+		
+		public Iterable<T> iter(int limit, Object offset) {
+			return createQuery().iter(limit, offset);
+		}
+		
+		public Iterable<T> iter(String field) {
+			return createQuery().iter(field);
+		}
+		
+		public Iterable<T> iter(String field, int limit) {
+			return createQuery().iter(field, limit);
+		}
+		
+		public Iterable<T> iter(String field, int limit, Object offset) {
+			return createQuery().iter(field, limit, offset);
 		}
 
 		public Query<T> order(String fieldName) {

@@ -128,10 +128,16 @@ public interface PersistenceManager {
 	public <T> int delete(Query<T> query);
 
 	public <T> List<T> fetchKeys(Query<T> query);
-
 	public <T> List<T> fetchKeys(Query<T> query, int limit);
-
 	public <T> List<T> fetchKeys(Query<T> query, int limit, Object offset);
+	
+	public <T> Iterable<T> iter(Query<T> query);
+	public <T> Iterable<T> iter(Query<T> query, int limit);
+	public <T> Iterable<T> iter(Query<T> query, int limit, Object offset);
+
+	public <T> Iterable<T> iter(Query<T> query, String field);
+	public <T> Iterable<T> iter(Query<T> query, String field, int limit);
+	public <T> Iterable<T> iter(Query<T> query, String field, int limit, Object offset);
 	
 	public String[] supportedOperators();
 
