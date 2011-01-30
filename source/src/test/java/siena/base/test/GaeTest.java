@@ -3,6 +3,7 @@ package siena.base.test;
 import java.util.List;
 
 import siena.PersistenceManager;
+import siena.SienaRestrictedApiException;
 import siena.gae.GaePersistenceManager;
 
 import com.google.appengine.tools.development.testing.LocalDatastoreServiceTestConfig;
@@ -102,6 +103,18 @@ public class GaeTest extends BaseTest {
 	public void testFilterOperatorEqual() {
 		// TODO Auto-generated method stub
 		super.testFilterOperatorEqual();
+	}
+
+	@Override
+	public void testFetchOrderOnId() {
+		// TODO Auto-generated method stub
+		super.testFetchOrderOnId();
+	}
+
+	@Override
+	public void testFetchOrderOnIdDesc() {
+		// TODO Auto-generated method stub
+		super.testFetchOrderOnIdDesc();
 	}
 
 	@Override
@@ -297,6 +310,29 @@ public class GaeTest extends BaseTest {
 	public void testQueryDeleteFiltered() {
 		// TODO Auto-generated method stub
 		super.testQueryDeleteFiltered();
+	}
+
+	@Override
+	public void testJoin() {
+		// TODO Auto-generated method stub
+		super.testJoin();
+	}
+
+	@Override
+	public void testJoinSortFields() {
+		try {
+			super.testJoinSortFields();
+		}catch(SienaRestrictedApiException ex){
+			return;
+		}
+		
+		fail();
+	}
+
+	@Override
+	public void testJoinAnnotation() {
+		// TODO Auto-generated method stub
+		super.testJoinAnnotation();
 	}
 
 

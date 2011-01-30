@@ -27,53 +27,40 @@ import java.util.List;
 public interface Query<T> {
 	
 	public List<QueryFilter> getFilters();
-
 	public List<QueryOrder> getOrders();
-
 	public List<QuerySearch> getSearches();
-
+	public List<QueryJoin> getJoins();
+	
 	public Query<T> filter(String fieldName, Object value);
-
 	public Query<T> order(String fieldName);
-
 	public Query<T> search(String match, boolean inBooleanMode, String index);
+	public Query<T> join(String field, String... sortFields);
 
 	public T get();
 
 	public List<T> fetch();
-
 	public List<T> fetch(int limit);
-
 	public List<T> fetch(int limit, Object offset);
 
 	public int count();
-
 	@Deprecated
 	public int count(int limit);
-
 	@Deprecated
 	public int count(int limit, Object offset);
 	
 	public Object nextOffset();
-	
 	public void setNextOffset(Object nextOffset);
 	
 	public int delete();
 
 	public List<T> fetchKeys();
-
 	public List<T> fetchKeys(int limit);
-
 	public List<T> fetchKeys(int limit, Object offset);
-	
+
 	public Iterable<T> iter();
 	public Iterable<T> iter(int limit);
 	public Iterable<T> iter(int limit, Object offset);
-
-	public Iterable<T> iter(String field);
-	public Iterable<T> iter(String field, int limit);
-	public Iterable<T> iter(String field, int limit, Object offset);
-	
+		
 	public Query<T> clone();
 	
 	public Class<T> getQueriedClass();

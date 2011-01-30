@@ -608,26 +608,6 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 		return null;
 	}
 
-	@Override
-	public <T> Iterable<T> iter(Query<T> query, String field) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public <T> Iterable<T> iter(Query<T> query, String field, int limit) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public <T> Iterable<T> iter(Query<T> query, String field, int limit,
-			Object offset) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-
 	private static final String[] supportedOperators = new String[]{ "<", ">", ">=", "<=", "=", " IN" };
 
 	@Override

@@ -15,7 +15,8 @@ public class BaseQuery<T> implements Query<T> {
 
 	private List<QueryOrder> orders;
 	private List<QuerySearch> searches;
-	
+	private List<QueryJoin> joins;
+
 	private Object nextOffset;
 	
 	public BaseQuery(PersistenceManager pm, Class<T> clazz) {
@@ -25,6 +26,7 @@ public class BaseQuery<T> implements Query<T> {
 		filters = new ArrayList<QueryFilter>();
 		orders = new ArrayList<QueryOrder>();
 		searches = new ArrayList<QuerySearch>();
+		joins = new ArrayList<QueryJoin>();
 	}
 	
 	public List<QueryFilter> getFilters() {
@@ -39,6 +41,10 @@ public class BaseQuery<T> implements Query<T> {
 		return searches;
 	}
 
+	public List<QueryJoin> getJoins() {
+		return joins;
+	}
+	
 	public Query<T> filter(String fieldName, Object value) {
 		String op = "=";
 		for (String s : pm.supportedOperators()) {
@@ -80,6 +86,17 @@ public class BaseQuery<T> implements Query<T> {
 		return this;
 	}
 
+	@Override
+	public Query<T> join(String fieldName, String... sortFields) {
+		try {
+			Field field = clazz.getDeclaredField(fieldName);
+			joins.add(new QueryJoin(field, sortFields));
+			return this;
+		} catch(Exception e) {
+			throw new SienaException(e);
+		}
+	}
+	
 	public T get() {
 		return pm.get(this);
 	}
@@ -144,18 +161,6 @@ public class BaseQuery<T> implements Query<T> {
 	
 	public Iterable<T> iter(int limit, Object offset) {
 		return pm.iter(this, limit, offset);
-	}
-	
-	public Iterable<T> iter(String field) {
-		return pm.iter(this, field);
-	}
-	
-	public Iterable<T> iter(String field, int limit) {
-		return pm.iter(this, field, limit);
-	}
-	
-	public Iterable<T> iter(String field, int limit, Object offset) {
-		return pm.iter(this, field, limit, offset);
 	}
 	
 	public Query<T> clone() {

@@ -23,6 +23,7 @@ import java.util.Properties;
 import siena.PersistenceManager;
 import siena.Query;
 import siena.QueryFilter;
+import siena.QueryJoin;
 import siena.QueryOrder;
 import siena.QuerySearch;
 
@@ -188,18 +189,6 @@ public class MockPersistenceManager implements PersistenceManager {
 		}
 
 		@Override
-		public Iterable<T> iter(String field) {
-			// TODO Auto-generated method stub
-			return null;
-		}
-
-		@Override
-		public Iterable<T> iter(String field, int limit, Object offset) {
-			// TODO Auto-generated method stub
-			return null;
-		}
-
-		@Override
 		public List<QueryFilter> getFilters() {
 			// TODO Auto-generated method stub
 			return null;
@@ -231,6 +220,18 @@ public class MockPersistenceManager implements PersistenceManager {
 
 		@Override
 		public Class<T> getQueriedClass() {
+			// TODO Auto-generated method stub
+			return null;
+		}
+
+		@Override
+		public List<QueryJoin> getJoins() {
+			// TODO Auto-generated method stub
+			return null;
+		}
+
+		@Override
+		public Query<T> join(String field, String... sortFields) {
 			// TODO Auto-generated method stub
 			return null;
 		}
@@ -317,25 +318,6 @@ public class MockPersistenceManager implements PersistenceManager {
 
 	@Override
 	public <T> Iterable<T> iter(Query<T> query, int limit, Object offset) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public <T> Iterable<T> iter(Query<T> query, String field) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public <T> Iterable<T> iter(Query<T> query, String field, int limit) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public <T> Iterable<T> iter(Query<T> query, String field, int limit,
-			Object offset) {
 		// TODO Auto-generated method stub
 		return null;
 	}

@@ -250,24 +250,6 @@ public class RemotePersistenceManager extends AbstractPersistenceManager {
 		throw new NotImplementedException();
 	}
 
-	@Override
-	public <T> Iterable<T> iter(Query<T> query, String field) {
-		// TODO!
-		throw new NotImplementedException();
-	}
-
-	@Override
-	public <T> Iterable<T> iter(Query<T> query, String field, int limit) {
-		// TODO!
-		throw new NotImplementedException();
-	}
-
-	@Override
-	public <T> Iterable<T> iter(Query<T> query, String field, int limit,
-			Object offset) {
-		// TODO!
-		throw new NotImplementedException();
-	}
 
 	@Override
 	public String[] supportedOperators() {

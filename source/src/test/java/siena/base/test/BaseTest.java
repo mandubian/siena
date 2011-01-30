@@ -107,6 +107,28 @@ public abstract class BaseTest extends TestCase {
 		assertEquals(CURIE.id, people.get(2).id);
 	}
 	
+	public void testFetchOrderOnId() {
+		List<Person> people = queryPersonOrderBy("id", "", false).fetchKeys();
+
+		assertNotNull(people);
+		assertEquals(3, people.size());
+
+		assertEquals(TESLA.id, people.get(0).id);
+		assertEquals(CURIE.id, people.get(1).id);
+		assertEquals(EINSTEIN.id, people.get(2).id);
+	}
+		
+	public void testFetchOrderOnIdDesc() {
+		List<Person> people = queryPersonOrderBy("id", "", true).fetchKeys();
+
+		assertNotNull(people);
+		assertEquals(3, people.size());
+
+		assertEquals(EINSTEIN.id, people.get(0).id);
+		assertEquals(CURIE.id, people.get(1).id);
+		assertEquals(TESLA.id, people.get(2).id);
+	}
+	
 	public void testFilterOperatorEqual() {
 		Person person = pm.createQuery(Person.class).filter("firstName", "Albert").get();
 		assertNotNull(person);
@@ -566,12 +588,97 @@ public abstract class BaseTest extends TestCase {
 		assertEquals(2, n);
 	}
 
+	public void testJoin() {
+		Discovery radioactivity = new Discovery("Radioactivity", CURIE);
+		Discovery relativity = new Discovery("Relativity", EINSTEIN);
+		Discovery foo = new Discovery("Foo", EINSTEIN);
+		Discovery teslaCoil = new Discovery("Tesla Coil", TESLA);
+		
+		pm.insert(radioactivity);
+		pm.insert(relativity);
+		pm.insert(foo);
+		pm.insert(teslaCoil);
+		
+		List<Discovery> res = pm.createQuery(Discovery.class).join("discoverer").fetch();
+		assertEquals(4, res.size());
+		assertEquals(radioactivity, res.get(0));
+		assertEquals(relativity, res.get(1));
+		assertEquals(foo, res.get(2));
+		assertEquals(teslaCoil, res.get(3));
+		
+		assertEquals(CURIE, res.get(0).discoverer);
+		assertEquals(EINSTEIN, res.get(1).discoverer);
+		assertEquals(EINSTEIN, res.get(2).discoverer);
+		assertEquals(TESLA, res.get(3).discoverer);
+	}
+	
+	public void testJoinSortFields() {
+		Discovery radioactivity = new Discovery("Radioactivity", CURIE);
+		Discovery relativity = new Discovery("Relativity", EINSTEIN);
+		Discovery foo = new Discovery("Foo", EINSTEIN);
+		Discovery teslaCoil = new Discovery("Tesla Coil", TESLA);
+		
+		pm.insert(radioactivity);
+		pm.insert(relativity);
+		pm.insert(foo);
+		pm.insert(teslaCoil);
+		
+		List<Discovery> res = pm.createQuery(Discovery.class).join("discoverer", "firstName").fetch();
+		assertEquals(4, res.size());
+		assertEquals(radioactivity, res.get(0));
+		assertEquals(relativity, res.get(1));
+		assertEquals(foo, res.get(2));
+		assertEquals(teslaCoil, res.get(3));
+		
+		assertEquals(CURIE, res.get(0).discoverer);
+		assertEquals(EINSTEIN, res.get(1).discoverer);
+		assertEquals(EINSTEIN, res.get(2).discoverer);
+		assertEquals(TESLA, res.get(3).discoverer);
+	}
+	
+	
+	public void testJoinAnnotation() {
+		Discovery4Join radioactivity = new Discovery4Join("Radioactivity", CURIE, TESLA);
+		Discovery4Join relativity = new Discovery4Join("Relativity", EINSTEIN, TESLA);
+		Discovery4Join foo = new Discovery4Join("Foo", EINSTEIN, EINSTEIN);
+		Discovery4Join teslaCoil = new Discovery4Join("Tesla Coil", TESLA, CURIE);
+		
+		pm.insert(radioactivity);
+		pm.insert(relativity);
+		pm.insert(foo);
+		pm.insert(teslaCoil);
+		
+		List<Discovery4Join> res = pm.createQuery(Discovery4Join.class).fetch();
+		assertEquals(4, res.size());
+		assertEquals(radioactivity, res.get(0));
+		assertEquals(relativity, res.get(1));
+		assertEquals(foo, res.get(2));
+		assertEquals(teslaCoil, res.get(3));
+		
+		assertEquals(CURIE, res.get(0).discovererJoined);
+		assertEquals(EINSTEIN, res.get(1).discovererJoined);
+		assertEquals(EINSTEIN, res.get(2).discovererJoined);
+		assertEquals(TESLA, res.get(3).discovererJoined);
+
+		assertEquals(TESLA.id, res.get(0).discovererNotJoined.id);
+		assertEquals(TESLA.id, res.get(1).discovererNotJoined.id);
+		assertEquals(EINSTEIN.id, res.get(2).discovererNotJoined.id);
+		assertEquals(CURIE.id, res.get(3).discovererNotJoined.id);
+		
+		assertTrue(res.get(0).discovererNotJoined.isOnlyIdFilled());
+		assertTrue(res.get(1).discovererNotJoined.isOnlyIdFilled());
+		assertTrue(res.get(2).discovererNotJoined.isOnlyIdFilled());
+		assertTrue(res.get(3).discovererNotJoined.isOnlyIdFilled());
+	}
+
+	
 	private Person getPerson(String id) {
 		Person p = new Person();
 		p.id = id;
 		pm.get(p);
 		return p;
 	}
+
 	
 	@Override
 	protected void setUp() throws Exception {
@@ -583,6 +690,7 @@ public abstract class BaseTest extends TestCase {
 		if(supportsMultipleKeys())
 			classes.add(MultipleKeys.class);
 		classes.add(Discovery.class);
+		classes.add(Discovery4Join.class);
 		classes.add(DataTypes.class);
 		pm = createPersistenceManager(classes);
 		

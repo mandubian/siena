@@ -26,4 +26,18 @@ public class Discovery {
 	public Discovery() {
 	}
 
+	@Override
+	public boolean equals(Object obj) {
+		if (obj == null || getClass() != obj.getClass())
+			return false;
+
+		Discovery other = (Discovery) obj;
+		
+		if(other.name != null && other.name.equals(name))
+			return true;
+		if(other.discoverer != null && other.discoverer.equals(discoverer))
+			return true;
+		
+		return false;
+	}
 }

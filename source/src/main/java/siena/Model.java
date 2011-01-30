@@ -174,6 +174,18 @@ public abstract class Model {
 			return createQuery().filter(fieldName, value);
 		}
 
+		public Query<T> order(String fieldName) {
+			return createQuery().order(fieldName);
+		}
+
+		public Query<T> search(String match, boolean inBooleanMode, String index) {
+			return createQuery().search(match, inBooleanMode, index);
+		}
+		
+		public Query<T> join(String field, String... sortFields) {
+			return createQuery().join(field, sortFields);
+		}
+
 		public T get() {
 			return createQuery().get();
 		}
@@ -189,80 +201,54 @@ public abstract class Model {
 		public Iterable<T> iter(int limit, Object offset) {
 			return createQuery().iter(limit, offset);
 		}
-		
-		public Iterable<T> iter(String field) {
-			return createQuery().iter(field);
-		}
-		
-		public Iterable<T> iter(String field, int limit) {
-			return createQuery().iter(field, limit);
-		}
-		
-		public Iterable<T> iter(String field, int limit, Object offset) {
-			return createQuery().iter(field, limit, offset);
-		}
-
-		public Query<T> order(String fieldName) {
-			return createQuery().order(fieldName);
-		}
 
 		public ProxyQuery<T> clone() {
 			return new ProxyQuery<T>(clazz, filter, obj);
 		}
 
-		@Override
 		public Object nextOffset() {
 			return null; // TODO
 		}
 
-		@Override
 		public int delete() {
 			return createQuery().delete();
 		}
 
-		@Override
 		public List<T> fetchKeys() {
 			return createQuery().fetchKeys();
 		}
 
-		@Override
 		public List<T> fetchKeys(int limit) {
 			return createQuery().fetchKeys(limit);
 		}
 
-		@Override
 		public List<T> fetchKeys(int limit, Object offset) {
 			return createQuery().fetchKeys(limit, offset);
 		}
 
-		@Override
 		public List<QueryFilter> getFilters() {
-			return Collections.emptyList();
+			return createQuery().getFilters();
 		}
 
-		@Override
 		public List<QueryOrder> getOrders() {
-			return Collections.emptyList();
+			return createQuery().getOrders();
 		}
 
-		@Override
 		public List<QuerySearch> getSearches() {
-			return Collections.emptyList();
+			return createQuery().getSearches();
 		}
 
-		@Override
-		public Query<T> search(String match, boolean inBooleanMode, String index) {
-			return createQuery().search(match, inBooleanMode, index);
+		public List<QueryJoin> getJoins() {
+			return createQuery().getJoins();
 		}
 
-		@Override
 		public void setNextOffset(Object nextOffset) {
 		}
 
-		@Override
 		public Class<T> getQueriedClass() {
 			return clazz;
 		}
+		
 	}
 
 }

@@ -24,6 +24,9 @@ import java.util.Date;
 import java.util.Iterator;
 import java.util.TimeZone;
 
+import com.google.appengine.api.datastore.Blob;
+import com.google.appengine.api.datastore.Text;
+
 import siena.embed.Embedded;
 import siena.embed.JsonSerializer;
 
@@ -177,11 +180,21 @@ public class Util {
 			else if(type == Long.class    || type == Long.TYPE)    value = number.longValue();
 			else if(type == Float.class   || type == Float.TYPE)   value = number.floatValue();
 			else if(type == Double.class  || type == Double.TYPE)  value = number.doubleValue();
-		} else if(value instanceof String && type == Json.class) {
+		} 
+		else if(value instanceof Text)
+			value = ((Text) value).getValue();
+		else if(value instanceof Blob && type == byte[].class) {
+			value = ((Blob) value).getBytes();
+		}
+		else if(value instanceof String && type == Json.class) {
 			value = Json.loads((String) value);
-		} else if(field.getAnnotation(Embedded.class) != null && value instanceof String) {
+		} 
+		else if(field.getAnnotation(Embedded.class) != null && value instanceof String) {
 			Json data = Json.loads((String) value);
 			value = JsonSerializer.deserialize(field, data);
+		}
+		else if(value instanceof String && Enum.class.isAssignableFrom(type)) {
+			value = Enum.valueOf((Class<Enum>) type, (String)value);
 		}
 		return value;
 	}

@@ -112,16 +112,12 @@ public interface PersistenceManager {
 	public <T> T get(Query<T> query);
 
 	public <T> List<T> fetch(Query<T> query);
-
 	public <T> List<T> fetch(Query<T> query, int limit);
-
 	public <T> List<T> fetch(Query<T> query, int limit, Object offset);
 
 	public <T> int count(Query<T> query);
-
 	@Deprecated
 	public <T> int count(Query<T> query, int limit);
-
 	@Deprecated
 	public <T> int count(Query<T> query, int limit, Object offset);
 	
@@ -135,10 +131,11 @@ public interface PersistenceManager {
 	public <T> Iterable<T> iter(Query<T> query, int limit);
 	public <T> Iterable<T> iter(Query<T> query, int limit, Object offset);
 
-	public <T> Iterable<T> iter(Query<T> query, String field);
+	/*public <T> Iterable<T> iter(Query<T> query, String field);
 	public <T> Iterable<T> iter(Query<T> query, String field, int limit);
 	public <T> Iterable<T> iter(Query<T> query, String field, int limit, Object offset);
 	
+	public <T> List<T> join(Query<T> query, String field, String... sortFields);*/
+	
 	public String[] supportedOperators();
-
 }

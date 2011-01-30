@@ -34,6 +34,7 @@ public class ClassInfo {
 	public List<Field> updateFields = new ArrayList<Field>();
 	public List<Field> generatedKeys = new ArrayList<Field>();
 	public List<Field> allFields = new ArrayList<Field>();
+	public List<Field> joinFields = new ArrayList<Field>();
 
 	private ClassInfo(Class<?> clazz) {
 		tableName = getTableName(clazz);
@@ -55,9 +56,17 @@ public class ClassInfo {
 					insertFields.add(field);
 				}
 				keys.add(field);
-			} else {
+			} 
+			else {
 				updateFields.add(field);
 				insertFields.add(field);
+			}
+			
+			if(field.getAnnotation(Join.class) != null){
+				if (!ClassInfo.isModel(field.getType())){
+					throw new SienaException("Join not possible: Field "+field.getName()+" is not a relation field");
+				}
+				else joinFields.add(field);
 			}
 			allFields.add(field);
 		}

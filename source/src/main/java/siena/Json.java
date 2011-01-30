@@ -162,6 +162,10 @@ public class Json implements Iterable<Json> {
 	}
 	
 	public Json at(int index) {
+		// it prevents from generating any exception in case the model has changed dynamically
+		// by adding fields to the json embedded list
+		if(index >= list.size())
+			return new Json();
 		return list.get(index);
 	}
 	

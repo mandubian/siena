@@ -100,4 +100,13 @@ public class Person {
 		return true;
 	}
 
+	public boolean isOnlyIdFilled() {
+		if(this.id != null 
+			&& this.firstName == null
+			&& this.lastName == null
+			&& this.city == null
+			&& this.n == 0
+		) return true;
+		return false;
+	}
 }

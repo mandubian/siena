@@ -341,25 +341,6 @@ public class SdbPersistenceManager extends AbstractPersistenceManager {
 	}
 
 	@Override
-	public <T> Iterable<T> iter(Query<T> query, String field) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public <T> Iterable<T> iter(Query<T> query, String field, int limit) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public <T> Iterable<T> iter(Query<T> query, String field, int limit,
-			Object offset) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
 	public String[] supportedOperators() {
 		return supportedOperators;
 	}
