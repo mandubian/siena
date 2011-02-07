@@ -10,6 +10,9 @@ import java.util.List;
 
 import junit.framework.TestCase;
 import siena.PersistenceManager;
+import siena.base.test.model.Address;
+import siena.base.test.model.Contact;
+import siena.base.test.model.MassEntity;
 
 public abstract class BaseMassTest extends TestCase {
 	

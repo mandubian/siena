@@ -1,4 +1,4 @@
-package siena.base.test;
+package siena.base.test.model;
 
 import siena.Column;
 import siena.Id;

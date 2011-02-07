@@ -47,13 +47,15 @@ public class SienaRestrictedApiException extends RuntimeException {
 		super("Siena[db=" + db + "]" +
 				"[api=" + api + "] " +
 				"Restricted Usage", cause);
+		this.db = db;
+		this.api = api;
 	}
 
-	@Override
+	/*@Override
 	public String getMessage() {
 		return 	"Siena[db=" + db + "]" +
 				"[api=" + api + "] " +
 				"Restricted Usage - Message:" + super.getMessage();
-	}
+	}*/
 	
 }

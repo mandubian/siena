@@ -17,8 +17,10 @@ package siena;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
+import java.lang.reflect.ParameterizedType;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -39,7 +41,8 @@ public class ClassInfo {
 	private ClassInfo(Class<?> clazz) {
 		tableName = getTableName(clazz);
 
-		Field[] fields = clazz.getDeclaredFields();
+		Field[] fields = clazz.getDeclaredFields();	
+
 		for (Field field : fields) {
 			
 			Class<?> type = field.getType();
@@ -95,11 +98,14 @@ public class ClassInfo {
 	}
 
 	public static boolean isModel(Class<?> type) {
-		if(type.getSuperclass() == Model.class)
+		// this way is much better in Java syntax
+		if(Model.class.isAssignableFrom(type)) /*if(type.getSuperclass() == Model.class)*/
 			return true;
 		// TODO: this needs to be tested
 		if(type.getName().startsWith("java.")) return false;
-		if(type == Json.class) return false;
+		
+		/*if(type == Json.class)*/
+		if(Json.class.isAssignableFrom(type)) return false;
 		return !ClassInfo.getClassInfo(type).keys.isEmpty();
 	}
 
@@ -121,6 +127,19 @@ public class ClassInfo {
 		return keys.get(0);
 	}
 
+	/**
+	 * Useful for those PersistenceManagers that only support one @Id
+	 * @param clazz
+	 * @return
+	 */
+	public Field getIdField() {
+		if(keys.isEmpty())
+			throw new SienaException("No valid @Id defined in class "+tableName);
+		if(keys.size() > 1)
+			throw new SienaException("Multiple @Id defined in class "+tableName);
+		return keys.get(0);
+	}
+	
 	public static ClassInfo getClassInfo(Class<?> clazz) {
 		ClassInfo ci = infoClasses.get(clazz);
 		if(ci == null) {
@@ -129,5 +148,6 @@ public class ClassInfo {
 		}
 		return ci;
 	}
+
 
 }

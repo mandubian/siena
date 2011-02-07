@@ -3,7 +3,9 @@ package siena.base.test;
 import java.util.List;
 
 import siena.PersistenceManager;
+import siena.Query;
 import siena.SienaRestrictedApiException;
+import siena.base.test.model.PersonUUID;
 import siena.gae.GaePersistenceManager;
 
 import com.google.appengine.tools.development.testing.LocalDatastoreServiceTestConfig;
@@ -17,6 +19,7 @@ public class GaeTest extends BaseTest {
 	public PersistenceManager createPersistenceManager(List<Class<?>> classes)
 			throws Exception {
 		GaePersistenceManager pm = new GaePersistenceManager();
+		//PersistenceManagerFactory.install(pm, Discovery4GeneratorNone.class);
 		pm.init(null);
 		return pm;
 	}
@@ -56,6 +59,18 @@ public class GaeTest extends BaseTest {
 		ApiProxy.setEnvironmentForCurrentThread(null);*/
         helper.tearDown();
     }
+    
+// SPECIAL OVERRIDE    
+	@Override
+	public void testJoinSortFields() {
+		try {
+			super.testJoinSortFields();
+		}catch(SienaRestrictedApiException ex){
+			return;
+		}
+		
+		fail();
+	}
 
 	@Override
 	public void testCount() {
@@ -100,27 +115,153 @@ public class GaeTest extends BaseTest {
 	}
 
 	@Override
-	public void testFilterOperatorEqual() {
+	public void testFetchOrderOnLongAutoId() {
 		// TODO Auto-generated method stub
-		super.testFilterOperatorEqual();
+		super.testFetchOrderOnLongAutoId();
 	}
 
 	@Override
-	public void testFetchOrderOnId() {
+	public void testFetchOrderOnLongManualId() {
 		// TODO Auto-generated method stub
-		super.testFetchOrderOnId();
+		super.testFetchOrderOnLongManualId();
 	}
 
 	@Override
-	public void testFetchOrderOnIdDesc() {
+	public void testFetchOrderOnStringId() {
 		// TODO Auto-generated method stub
-		super.testFetchOrderOnIdDesc();
+		super.testFetchOrderOnStringId();
 	}
 
 	@Override
-	public void testFilterOperatorNotEqual() {
+	public void testFetchOrderOnUUID() {
 		// TODO Auto-generated method stub
-		super.testFilterOperatorNotEqual();
+		super.testFetchOrderOnUUID();
+	}
+
+	@Override
+	public void testFetchOrderOnLongAutoIdDesc() {
+		// TODO Auto-generated method stub
+		super.testFetchOrderOnLongAutoIdDesc();
+	}
+
+	@Override
+	public void testFetchOrderOnLongManualIdDesc() {
+		// TODO Auto-generated method stub
+		super.testFetchOrderOnLongManualIdDesc();
+	}
+
+	@Override
+	public void testFetchOrderOnStringIdDesc() {
+		// TODO Auto-generated method stub
+		super.testFetchOrderOnStringIdDesc();
+	}
+
+	@Override
+	public void testFetchOrderOnUUIDDesc() {
+		// TODO Auto-generated method stub
+		super.testFetchOrderOnUUIDDesc();
+	}
+
+	@Override
+	public void testFilterOperatorEqualString() {
+		// TODO Auto-generated method stub
+		super.testFilterOperatorEqualString();
+	}
+
+	@Override
+	public void testFilterOperatorEqualInt() {
+		// TODO Auto-generated method stub
+		super.testFilterOperatorEqualInt();
+	}
+
+	@Override
+	public void testFilterOperatorEqualUUID() {
+		// TODO Auto-generated method stub
+		super.testFilterOperatorEqualUUID();
+	}
+
+	@Override
+	public void testFilterOperatorEqualLongAutoID() {
+		// TODO Auto-generated method stub
+		super.testFilterOperatorEqualLongAutoID();
+	}
+
+	@Override
+	public void testFilterOperatorEqualLongManualID() {
+		// TODO Auto-generated method stub
+		super.testFilterOperatorEqualLongManualID();
+	}
+
+	@Override
+	public void testFilterOperatorNotEqualString() {
+		// TODO Auto-generated method stub
+		super.testFilterOperatorNotEqualString();
+	}
+
+	@Override
+	public void testFilterOperatorNotEqualInt() {
+		// TODO Auto-generated method stub
+		super.testFilterOperatorNotEqualInt();
+	}
+
+	@Override
+	public void testFilterOperatorNotEqualUUID() {
+		// TODO Auto-generated method stub
+		super.testFilterOperatorNotEqualUUID();
+	}
+
+	@Override
+	public void testFilterOperatorNotEqualLongAutoID() {
+		// TODO Auto-generated method stub
+		super.testFilterOperatorNotEqualLongAutoID();
+	}
+
+	@Override
+	public void testFilterOperatorNotEqualLongManualID() {
+		// TODO Auto-generated method stub
+		super.testFilterOperatorNotEqualLongManualID();
+	}
+
+	@Override
+	public void testFilterOperatorNotEqualStringID() {
+		// TODO Auto-generated method stub
+		super.testFilterOperatorNotEqualStringID();
+	}
+
+	@Override
+	public void testFilterOperatorIn() {
+		// TODO Auto-generated method stub
+		super.testFilterOperatorIn();
+	}
+
+	@Override
+	public void testFilterOperatorInOrder() {
+		// TODO Auto-generated method stub
+		super.testFilterOperatorInOrder();
+	}
+
+	@Override
+	public void testFilterOperatorInForUUID() {
+		// TODO Auto-generated method stub
+		super.testFilterOperatorInForUUID();
+	}
+
+	@Override
+	public void testFilterOperatorInForLongAutoID() {
+		// TODO Auto-generated method stub
+		super.testFilterOperatorInForLongAutoID();
+	}
+
+	@Override
+	public void testFilterOperatorInForLongManualID() {
+		// TODO Auto-generated method stub
+		super.testFilterOperatorInForLongManualID();
+	}
+
+	@Override
+	public void testFilterOperatorInForStringID() {
+		// TODO Auto-generated method stub
+		super.testFilterOperatorInForStringID();
 	}
 
 	@Override
@@ -130,9 +271,57 @@ public class GaeTest extends BaseTest {
 	}
 
 	@Override
+	public void testFilterOperatorLessThanForUUID() {
+		// TODO Auto-generated method stub
+		super.testFilterOperatorLessThanForUUID();
+	}
+
+	@Override
+	public void testFilterOperatorLessThanForLongAutoID() {
+		// TODO Auto-generated method stub
+		super.testFilterOperatorLessThanForLongAutoID();
+	}
+
+	@Override
+	public void testFilterOperatorLessThanForLongManualID() {
+		// TODO Auto-generated method stub
+		super.testFilterOperatorLessThanForLongManualID();
+	}
+
+	@Override
+	public void testFilterOperatorLessThanForStringID() {
+		// TODO Auto-generated method stub
+		super.testFilterOperatorLessThanForStringID();
+	}
+
+	@Override
 	public void testFilterOperatorLessThanOrEqual() {
 		// TODO Auto-generated method stub
 		super.testFilterOperatorLessThanOrEqual();
+	}
+
+	@Override
+	public void testFilterOperatorLessThanOrEqualForUUID() {
+		// TODO Auto-generated method stub
+		super.testFilterOperatorLessThanOrEqualForUUID();
+	}
+
+	@Override
+	public void testFilterOperatorLessThanOrEqualForLongAutoID() {
+		// TODO Auto-generated method stub
+		super.testFilterOperatorLessThanOrEqualForLongAutoID();
+	}
+
+	@Override
+	public void testFilterOperatorLessThanOrEqualForLongManualID() {
+		// TODO Auto-generated method stub
+		super.testFilterOperatorLessThanOrEqualForLongManualID();
+	}
+
+	@Override
+	public void testFilterOperatorLessThanOrEqualForStringID() {
+		// TODO Auto-generated method stub
+		super.testFilterOperatorLessThanOrEqualForStringID();
 	}
 
 	@Override
@@ -142,9 +331,57 @@ public class GaeTest extends BaseTest {
 	}
 
 	@Override
+	public void testFilterOperatorMoreThanForUUID() {
+		// TODO Auto-generated method stub
+		super.testFilterOperatorMoreThanForUUID();
+	}
+
+	@Override
+	public void testFilterOperatorMoreThanForLongAutoID() {
+		// TODO Auto-generated method stub
+		super.testFilterOperatorMoreThanForLongAutoID();
+	}
+
+	@Override
+	public void testFilterOperatorMoreThanForLongManualID() {
+		// TODO Auto-generated method stub
+		super.testFilterOperatorMoreThanForLongManualID();
+	}
+
+	@Override
+	public void testFilterOperatorMoreThanForStringID() {
+		// TODO Auto-generated method stub
+		super.testFilterOperatorMoreThanForStringID();
+	}
+
+	@Override
 	public void testFilterOperatorMoreThanOrEqual() {
 		// TODO Auto-generated method stub
 		super.testFilterOperatorMoreThanOrEqual();
+	}
+
+	@Override
+	public void testFilterOperatorMoreThanOrEqualForUUID() {
+		// TODO Auto-generated method stub
+		super.testFilterOperatorMoreThanOrEqualForUUID();
+	}
+
+	@Override
+	public void testFilterOperatorMoreThanOrEqualForLongAutoID() {
+		// TODO Auto-generated method stub
+		super.testFilterOperatorMoreThanOrEqualForLongAutoID();
+	}
+
+	@Override
+	public void testFilterOperatorMoreThanOrEqualForLongManualID() {
+		// TODO Auto-generated method stub
+		super.testFilterOperatorMoreThanOrEqualForLongManualID();
+	}
+
+	@Override
+	public void testFilterOperatorMoreThanOrEqualForStringID() {
+		// TODO Auto-generated method stub
+		super.testFilterOperatorMoreThanOrEqualForStringID();
 	}
 
 	@Override
@@ -154,9 +391,57 @@ public class GaeTest extends BaseTest {
 	}
 
 	@Override
+	public void testCountFilterUUID() {
+		// TODO Auto-generated method stub
+		super.testCountFilterUUID();
+	}
+
+	@Override
+	public void testCountFilterLongAutoID() {
+		// TODO Auto-generated method stub
+		super.testCountFilterLongAutoID();
+	}
+
+	@Override
+	public void testCountFilterLongManualID() {
+		// TODO Auto-generated method stub
+		super.testCountFilterLongManualID();
+	}
+
+	@Override
+	public void testCountFilterStringID() {
+		// TODO Auto-generated method stub
+		super.testCountFilterStringID();
+	}
+
+	@Override
 	public void testFetchLimit() {
 		// TODO Auto-generated method stub
 		super.testFetchLimit();
+	}
+
+	@Override
+	public void testFetchLimitUUID() {
+		// TODO Auto-generated method stub
+		super.testFetchLimitUUID();
+	}
+
+	@Override
+	public void testFetchLimitLongAutoID() {
+		// TODO Auto-generated method stub
+		super.testFetchLimitLongAutoID();
+	}
+
+	@Override
+	public void testFetchLimitLongManualID() {
+		// TODO Auto-generated method stub
+		super.testFetchLimitLongManualID();
+	}
+
+	@Override
+	public void testFetchLimitStringID() {
+		// TODO Auto-generated method stub
+		super.testFetchLimitStringID();
 	}
 
 	@Override
@@ -178,66 +463,141 @@ public class GaeTest extends BaseTest {
 	}
 
 	@Override
-	public void testInsert() {
+	public void testInsertUUID() {
 		// TODO Auto-generated method stub
-		super.testInsert();
+		super.testInsertUUID();
 	}
 
 	@Override
-	public void testGet() {
+	public void testInsertLongAutoID() {
 		// TODO Auto-generated method stub
-		super.testGet();
+		super.testInsertLongAutoID();
 	}
 
 	@Override
-	public void testUpdate() {
+	public void testInsertLongManualID() {
 		// TODO Auto-generated method stub
-		super.testUpdate();
+		super.testInsertLongManualID();
 	}
 
 	@Override
-	public void testDelete() {
+	public void testInsertStringID() {
 		// TODO Auto-generated method stub
-		super.testDelete();
+		super.testInsertStringID();
 	}
 
 	@Override
-	public void testIter1() {
+	public void testGetUUID() {
 		// TODO Auto-generated method stub
-		super.testIter1();
+		super.testGetUUID();
 	}
 
 	@Override
-	public void testIter2() {
+	public void testGetLongAutoID() {
 		// TODO Auto-generated method stub
-		super.testIter2();
-	}
-
-	
-	@Override
-	public void testIterFull() {
-		// TODO Auto-generated method stub
-		super.testIterFull();
-	}
-	
-	
-
-	@Override
-	public void testIterLimit() {
-		// TODO Auto-generated method stub
-		super.testIterLimit();
+		super.testGetLongAutoID();
 	}
 
 	@Override
-	public void testOrderId() {
+	public void testGetLongManualID() {
 		// TODO Auto-generated method stub
-		super.testOrderId();
+		super.testGetLongManualID();
 	}
 
 	@Override
-	public void testIterLimitOffset() {
+	public void testGetStringID() {
 		// TODO Auto-generated method stub
-		super.testIterLimitOffset();
+		super.testGetStringID();
+	}
+
+	@Override
+	public void testUpdateUUID() {
+		// TODO Auto-generated method stub
+		super.testUpdateUUID();
+	}
+
+	@Override
+	public void testUpdateLongAutoID() {
+		// TODO Auto-generated method stub
+		super.testUpdateLongAutoID();
+	}
+
+	@Override
+	public void testDeleteUUID() {
+		// TODO Auto-generated method stub
+		super.testDeleteUUID();
+	}
+
+	@Override
+	public void testIterFullUUID() {
+		// TODO Auto-generated method stub
+		super.testIterFullUUID();
+	}
+
+	@Override
+	public void testIterFullLongAutoID() {
+		// TODO Auto-generated method stub
+		super.testIterFullLongAutoID();
+	}
+
+	@Override
+	public void testIterFullLongManualID() {
+		// TODO Auto-generated method stub
+		super.testIterFullLongManualID();
+	}
+
+	@Override
+	public void testIterFullLongStringID() {
+		// TODO Auto-generated method stub
+		super.testIterFullLongStringID();
+	}
+
+	@Override
+	public void testIterLimitUUID() {
+		// TODO Auto-generated method stub
+		super.testIterLimitUUID();
+	}
+
+	@Override
+	public void testIterLimitLongAutoID() {
+		// TODO Auto-generated method stub
+		super.testIterLimitLongAutoID();
+	}
+
+	@Override
+	public void testIterLimitLongManualID() {
+		// TODO Auto-generated method stub
+		super.testIterLimitLongManualID();
+	}
+
+	@Override
+	public void testIterLimitLongStringID() {
+		// TODO Auto-generated method stub
+		super.testIterLimitLongStringID();
+	}
+
+	@Override
+	public void testIterLimitOffsetUUID() {
+		// TODO Auto-generated method stub
+		super.testIterLimitOffsetUUID();
+	}
+
+	@Override
+	public void testIterLimitOffsetLongAutoID() {
+		// TODO Auto-generated method stub
+		super.testIterLimitOffsetLongAutoID();
+	}
+
+	@Override
+	public void testIterLimitOffsetLongManualID() {
+		// TODO Auto-generated method stub
+		super.testIterLimitOffsetLongManualID();
+	}
+
+	@Override
+	public void testIterLimitOffsetLongStringID() {
+		// TODO Auto-generated method stub
+		super.testIterLimitOffsetLongStringID();
 	}
 
 	@Override
@@ -256,6 +616,24 @@ public class GaeTest extends BaseTest {
 	public void testIterFilterLimitOffset() {
 		// TODO Auto-generated method stub
 		super.testIterFilterLimitOffset();
+	}
+
+	@Override
+	public void testOrderLongAutoId() {
+		// TODO Auto-generated method stub
+		super.testOrderLongAutoId();
+	}
+
+	@Override
+	public void testOrderLongManualId() {
+		// TODO Auto-generated method stub
+		super.testOrderLongManualId();
+	}
+
+	@Override
+	public void testOrderStringId() {
+		// TODO Auto-generated method stub
+		super.testOrderStringId();
 	}
 
 	@Override
@@ -319,22 +697,10 @@ public class GaeTest extends BaseTest {
 	}
 
 	@Override
-	public void testJoinSortFields() {
-		try {
-			super.testJoinSortFields();
-		}catch(SienaRestrictedApiException ex){
-			return;
-		}
-		
-		fail();
-	}
-
-	@Override
 	public void testJoinAnnotation() {
 		// TODO Auto-generated method stub
 		super.testJoinAnnotation();
 	}
 
-
-    
+	
 }

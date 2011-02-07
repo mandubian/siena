@@ -1,4 +1,4 @@
-package siena.base.test;
+package siena.base.test.model;
 
 import siena.Column;
 import siena.Generator;
@@ -9,16 +9,16 @@ import siena.Table;
 @Table("discoveries")
 public class Discovery {
 
-	@Id(Generator.UUID) @Max(36)
-	public String id;
+	@Id(Generator.AUTO_INCREMENT)
+	public Long id;
 	
 	@Max(100)
 	public String name;
 	
 	@Column("discoverer")
-	public Person discoverer;
+	public PersonLongAutoID discoverer;
 
-	public Discovery(String name, Person discoverer) {
+	public Discovery(String name, PersonLongAutoID discoverer) {
 		this.name = name;
 		this.discoverer = discoverer;
 	}

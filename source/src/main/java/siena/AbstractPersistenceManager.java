@@ -25,5 +25,6 @@ public abstract class AbstractPersistenceManager implements PersistenceManager {
 	public <T> int count(Query<T> query, int limit, Object offset) {
 		return fetch(query, limit, offset).size();
 	}
+
 	
 }

@@ -13,7 +13,7 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-package siena.base.test;
+package siena.base.test.model;
 
 import java.util.Date;
 import java.util.List;
@@ -34,7 +34,9 @@ public class DataTypes {
 				+ typeFloat + ", typeInt=" + typeInt + ", typeJson=" + typeJson
 				+ ", typeLargeString=" + typeLargeString + ", typeLong="
 				+ typeLong + ", typeShort=" + typeShort + ", typeString="
-				+ typeString + ", typeBlob.length=" + typeBlob.length + "]";
+				+ typeString + ", typeBlob.length=" + typeBlob.length 
+				+ ", typeEnum=" + typeEnum.name()+"("+typeEnum.getCode()+")"
+				+ "]";
 	}
 
 	@Id(Generator.UUID) @Max(36)
@@ -64,4 +66,25 @@ public class DataTypes {
 
 	public byte[] typeBlob;
 
+    public static enum EnumLong {
+        ALPHA(0x1234),
+        BETA (0x123),
+        DELTA (0x12345),
+        GAMMA (0xABCDE),
+        EPSILON (0xABC);
+       
+        private long code;
+       
+        private EnumLong(long code){
+            this.code = code;
+        }
+        
+        public long getCode(){
+            return this.code;
+        }
+    }
+
+    public EnumLong typeEnum;
+
+	
 }

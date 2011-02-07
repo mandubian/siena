@@ -13,7 +13,7 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-package siena.base.test;
+package siena.base.test.model;
 
 import siena.Column;
 import siena.Generator;
@@ -21,11 +21,11 @@ import siena.Id;
 import siena.Max;
 import siena.Table;
 
-@Table("people")
-public class Person {
+@Table("people_long_manual")
+public class PersonLongManualID {
 
-	@Id(Generator.UUID) @Max(36)
-	public String id;
+	@Id(Generator.NONE)
+	public Long id;
 	
 	@Column("first_name") @Max(100)
 	public String firstName;
@@ -38,10 +38,11 @@ public class Person {
 	
 	public int n;
 
-	public Person() {
+	public PersonLongManualID() {
 	}
 
-	public Person(String firstName, String lastName, String city, int n) {
+	public PersonLongManualID(Long id, String firstName, String lastName, String city, int n) {
+		this.id = id;
 		this.firstName = firstName;
 		this.lastName = lastName;
 		this.city = city;
@@ -74,7 +75,7 @@ public class Person {
 			return false;
 		if (getClass() != obj.getClass())
 			return false;
-		Person other = (Person) obj;
+		PersonLongManualID other = (PersonLongManualID) obj;
 		if (city == null) {
 			if (other.city != null)
 				return false;

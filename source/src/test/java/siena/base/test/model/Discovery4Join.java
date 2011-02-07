@@ -1,4 +1,4 @@
-package siena.base.test;
+package siena.base.test.model;
 
 import siena.Column;
 import siena.Generator;
@@ -7,23 +7,23 @@ import siena.Join;
 import siena.Max;
 import siena.Table;
 
-@Table("discoveries")
+@Table("discoveries4Join")
 public class Discovery4Join {
 
-	@Id(Generator.UUID) @Max(36)
-	public String id;
+	@Id(Generator.AUTO_INCREMENT)
+	public Long id;
 	
 	@Max(100)
 	public String name;
 	
 	@Column("discoverer_joined")
 	@Join
-	public Person discovererJoined;
+	public PersonLongAutoID discovererJoined;
 
 	@Column("discoverer_not_joined")
-	public Person discovererNotJoined;
+	public PersonLongAutoID discovererNotJoined;
 	
-	public Discovery4Join(String name, Person discovererJoined, Person discovererNotJoined) {
+	public Discovery4Join(String name, PersonLongAutoID discovererJoined, PersonLongAutoID discovererNotJoined) {
 		this.name = name;
 		this.discovererJoined = discovererJoined;
 		this.discovererNotJoined = discovererNotJoined;

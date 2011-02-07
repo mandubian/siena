@@ -18,14 +18,19 @@ package siena.gae;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.UUID;
 
 import siena.AbstractPersistenceManager;
 import siena.ClassInfo;
+import siena.Generator;
+import siena.Id;
 import siena.Json;
 import siena.Query;
 import siena.QueryFilter;
@@ -52,6 +57,8 @@ import com.google.appengine.api.datastore.Text;
 public class GaePersistenceManager extends AbstractPersistenceManager {
 
 	private DatastoreService ds;
+	
+	public static final String DB = "GAE";
 
 	public void beginTransaction(int isolationLevel) {
 	}
@@ -82,22 +89,88 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 
 	public void insert(Object obj) {
 		Class<?> clazz = obj.getClass();
-		Entity entity = new Entity(ClassInfo.getClassInfo(clazz).tableName);
+		ClassInfo info = ClassInfo.getClassInfo(clazz);
+		Field idField = info.getIdField();
+		Entity entity = createEntityInstance(idField, info, obj);
 		fillEntity(obj, entity);
 		ds.put(entity);
-		setKey(ClassInfo.getIdField(clazz), obj, entity.getKey());
+		setKey(idField, obj, entity.getKey());
 	}
 
-	protected static void setKey(Field f, Object obj, Key key) {
-		try {
-			Object value = key.getId();
-			if (f.getType() == String.class)
-				value = value.toString();
-			f.setAccessible(true);
-			f.set(obj, value);
-		} catch (Exception e) {
-			throw new SienaException(e);
+	protected static Entity createEntityInstance(Field idField, ClassInfo info, Object obj){
+		Entity entity = null;
+		Id id = idField.getAnnotation(Id.class);
+		if(id != null){
+			switch(id.value()) {
+			case NONE:
+				Object idVal = null;
+				try {
+					idVal = idField.get(obj);
+				}catch(Exception ex){
+					throw new SienaException("Id Field " + idField.getName() + " access error", ex);
+				}
+				if(idVal == null)
+					throw new SienaException("Id Field " + idField.getName() + " value null");
+				String keyVal = Util.toString(idField, idVal);				
+				entity = new Entity(info.tableName, keyVal);
+				break;
+			case AUTO_INCREMENT:
+				entity = new Entity(info.tableName);
+				break;
+			case UUID:
+				entity = new Entity(info.tableName, UUID.randomUUID().toString());
+				break;
+			default:
+				throw new SienaRestrictedApiException("DB", "createEntityInstance", "Id Generator "+id.value()+ " not supported");
+			}
 		}
+		else throw new SienaException("Field " + idField.getName() + " is not an @Id field");
+		
+		return entity;
+	}
+	
+	protected static void setKey(Field idField, Object obj, Key key) {
+		Id id = idField.getAnnotation(Id.class);
+		if(id != null){
+			switch(id.value()) {
+			case NONE:
+				idField.setAccessible(true);
+				Object val = null;
+				if (idField.getType().isAssignableFrom(String.class))
+					val = key.getName();
+				else if (idField.getType().isAssignableFrom(Long.class))
+					val = Long.parseLong((String) key.getName());
+				else
+					throw new SienaRestrictedApiException("DB", "setKey", "Id Type "+idField.getType()+ " not supported");
+					
+				try {
+					idField.set(obj, val);
+				}catch(Exception ex){
+					throw new SienaException("Field " + idField.getName() + " access error", ex);
+				}
+				break;
+			case AUTO_INCREMENT:
+				// Long value means key.getId()
+				try {
+					idField.setAccessible(true);
+					idField.set(obj, key.getId());
+				}catch(Exception ex){
+					throw new SienaException("Field " + idField.getName() + " access error", ex);
+				}
+				break;
+			case UUID:
+				try {
+					idField.setAccessible(true);
+					idField.set(obj, key.getName());					
+				}catch(Exception ex){
+					throw new SienaException("Field " + idField.getName() + " access error", ex);
+				}
+				break;
+			default:
+				throw new SienaException("Id Generator "+id.value()+ " not supported");
+			}
+		}
+		else throw new SienaException("Field " + idField.getName() + " is not an @Id field");
 	}
 
 	public void rollbackTransaction() {
@@ -114,14 +187,36 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 	}
 
 	protected static Key getKey(Object obj) {
+		Class<?> clazz = obj.getClass();
+		ClassInfo info = ClassInfo.getClassInfo(clazz);
+		
 		try {
-			Field f = ClassInfo.getIdField(obj.getClass());
-			Object value = f.get(obj);
-			if (value instanceof String)
-				value = Long.parseLong((String) value);
-			return KeyFactory.createKey(
-					ClassInfo.getClassInfo(obj.getClass()).tableName,
-					(Long) value);
+			Field idField = info.getIdField();
+			Object value = idField.get(obj);
+			
+			if(idField.isAnnotationPresent(Id.class)){
+				Id id = idField.getAnnotation(Id.class);
+				switch(id.value()) {
+				case NONE:
+					// long or string goes toString
+					return KeyFactory.createKey(
+							ClassInfo.getClassInfo(clazz).tableName,
+							value.toString());
+				case AUTO_INCREMENT:
+					if (value instanceof String)
+						value = Long.parseLong((String) value);
+					return KeyFactory.createKey(
+							ClassInfo.getClassInfo(clazz).tableName,
+							(Long)value);
+				case UUID:
+					return KeyFactory.createKey(
+							ClassInfo.getClassInfo(clazz).tableName,
+							value.toString());
+				default:
+					throw new SienaException("Id Generator "+id.value()+ " not supported");
+				}
+			}
+			else throw new SienaException("Field " + idField.getName() + " is not an @Id field");
 		} catch (Exception e) {
 			throw new SienaException(e);
 		}
@@ -283,11 +378,84 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 				q.addFilter(propertyName, op, key);
 			} else {
 				if (ClassInfo.isId(f)) {
-					if (value instanceof String) {
-						value = Long.parseLong(value.toString());
+					Id id = f.getAnnotation(Id.class);
+					switch(id.value()) {
+					case NONE:
+						if(!Collection.class.isAssignableFrom(value.getClass())){
+							// long or string goes toString
+							Key key = KeyFactory.createKey(
+									q.getKind(),
+									value.toString());
+							q.addFilter(Entity.KEY_RESERVED_PROPERTY, op, key);
+						}else {
+							List<Key> keys = new ArrayList<Key>();
+							for(Object val: (Collection<?>)value) {
+								keys.add(KeyFactory.createKey(q.getKind(), val.toString()));
+							}
+							q.addFilter(Entity.KEY_RESERVED_PROPERTY, op, keys);
+						}
+						break;
+					case AUTO_INCREMENT:
+						if(!Collection.class.isAssignableFrom(value.getClass())){
+							if (value instanceof String)
+								value = Long.parseLong((String) value);
+							Key key = KeyFactory.createKey(
+									q.getKind(),
+									(Long)value);
+							q.addFilter(Entity.KEY_RESERVED_PROPERTY, op, key);
+						}else {
+							List<Key> keys = new ArrayList<Key>();
+							for(Object val: (Collection<?>)value) {
+								if (value instanceof String)
+									val = Long.parseLong((String) val);
+								keys.add(KeyFactory.createKey(q.getKind(), (Long)val));
+							}
+							q.addFilter(Entity.KEY_RESERVED_PROPERTY, op, keys);
+						}
+						break;
+					case UUID:
+						if(!Collection.class.isAssignableFrom(value.getClass())){
+							// long or string goes toString
+							Key key = KeyFactory.createKey(
+									q.getKind(),
+									value.toString());
+							q.addFilter(Entity.KEY_RESERVED_PROPERTY, op, key);
+						}else {
+							List<Key> keys = new ArrayList<Key>();
+							for(Object val: (Collection<?>)value) {
+								keys.add(KeyFactory.createKey(q.getKind(), val.toString()));
+							}
+							q.addFilter(Entity.KEY_RESERVED_PROPERTY, op, keys);
+						}
+						break;
+					default:
+						throw new SienaException("Id Generator "+id.value()+ " not supported");
 					}
-					Key key = KeyFactory.createKey(q.getKind(), (Long) value);
-					q.addFilter(Entity.KEY_RESERVED_PROPERTY, op, key);
+					
+					/*if(value instanceof Long){
+						Key key = KeyFactory.createKey(q.getKind(), (Long)value);
+						q.addFilter(Entity.KEY_RESERVED_PROPERTY, op, key);
+					}
+					else if (value instanceof String) {
+						Key key = KeyFactory.createKey(q.getKind(), (String)value);
+						q.addFilter(Entity.KEY_RESERVED_PROPERTY, op, key);
+					}
+					// the IN operator provides a list of long/string
+					else if(Collection.class.isAssignableFrom(value.getClass())){
+						List<Key> keys = new ArrayList<Key>();
+						for(Object val: (Collection<?>)value) {
+							if(val instanceof Long){
+								keys.add(KeyFactory.createKey(q.getKind(), (Long)val));
+							}
+							else if (val instanceof String) {
+								keys.add(KeyFactory.createKey(q.getKind(), (String)val));
+							}
+						}
+						q.addFilter(Entity.KEY_RESERVED_PROPERTY, op, keys);
+					}*/
+				} else if (Enum.class.isAssignableFrom(f.getType())) {
+					value = value.toString();
+					q.addFilter(propertyName, op, value);
 				} else {
 					q.addFilter(propertyName, op, value);
 				}
@@ -339,6 +507,8 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 				if (!ClassInfo.isModel(field.getType())){
 					throw new SienaException("Join not possible: Field "+field.getName()+" is not a relation field");
 				}
+				else if(join.sortFields!=null && join.sortFields.length!=0)
+					throw new SienaRestrictedApiException(DB, "join", "Join not allowed with sort fields");
 				fieldMap.put(field, new ArrayList<Key>());
 			}
 			
@@ -390,7 +560,7 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 				}
 			}
 			return models;
-		} catch(Exception ex){
+		} catch(IllegalAccessException ex){
 			throw new SienaException(ex);
 		}		
 	}

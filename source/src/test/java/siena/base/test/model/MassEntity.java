@@ -13,7 +13,7 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-package siena.base.test;
+package siena.base.test.model;
 
 import java.util.Date;
 import java.util.List;

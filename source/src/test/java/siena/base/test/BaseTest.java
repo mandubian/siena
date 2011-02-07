@@ -4,23 +4,48 @@ import static siena.Json.map;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 
 import junit.framework.TestCase;
-import siena.Json;
 import siena.PersistenceManager;
 import siena.Query;
+import siena.base.test.model.Address;
+import siena.base.test.model.AutoInc;
+import siena.base.test.model.Contact;
+import siena.base.test.model.DataTypes;
+import siena.base.test.model.DataTypes.EnumLong;
+import siena.base.test.model.Discovery;
+import siena.base.test.model.Discovery4Join;
+import siena.base.test.model.MultipleKeys;
+import siena.base.test.model.PersonLongAutoID;
+import siena.base.test.model.PersonLongManualID;
+import siena.base.test.model.PersonStringID;
+import siena.base.test.model.PersonUUID;
 
 public abstract class BaseTest extends TestCase {
 	
 	private PersistenceManager pm;
 
-	private static Person TESLA = new Person("Nikola", "Tesla", "Smiljam", 1);
-	private static Person CURIE = new Person("Marie", "Curie", "Warsaw", 2);
-	private static Person EINSTEIN = new Person("Albert", "Einstein", "Ulm", 3);
+	private static PersonUUID UUID_TESLA = new PersonUUID("Nikola", "Tesla", "Smiljam", 1);
+	private static PersonUUID UUID_CURIE = new PersonUUID("Marie", "Curie", "Warsaw", 2);
+	private static PersonUUID UUID_EINSTEIN = new PersonUUID("Albert", "Einstein", "Ulm", 3);
 	
+	private static PersonLongAutoID LongAutoID_TESLA = new PersonLongAutoID("Nikola", "Tesla", "Smiljam", 1);
+	private static PersonLongAutoID LongAutoID_CURIE = new PersonLongAutoID("Marie", "Curie", "Warsaw", 2);
+	private static PersonLongAutoID LongAutoID_EINSTEIN = new PersonLongAutoID("Albert", "Einstein", "Ulm", 3);
+
+	private static PersonLongManualID LongManualID_TESLA = new PersonLongManualID(1L, "Nikola", "Tesla", "Smiljam", 1);
+	private static PersonLongManualID LongManualID_CURIE = new PersonLongManualID(2L, "Marie", "Curie", "Warsaw", 2);
+	private static PersonLongManualID LongManualID_EINSTEIN = new PersonLongManualID(3L, "Albert", "Einstein", "Ulm", 3);
+	
+	private static PersonStringID StringID_TESLA = new PersonStringID("TESLA", "Nikola", "Tesla", "Smiljam", 1);
+	private static PersonStringID StringID_CURIE = new PersonStringID("CURIE", "Marie", "Curie", "Warsaw", 2);
+	private static PersonStringID StringID_EINSTEIN = new PersonStringID("EINSTEIN", "Albert", "Einstein", "Ulm", 3);
+
 	public abstract PersistenceManager createPersistenceManager(List<Class<?>> classes) throws Exception;
 	
 	public abstract boolean supportsAutoincrement();
@@ -29,8 +54,47 @@ public abstract class BaseTest extends TestCase {
 	
 	public abstract boolean mustFilterToOrder();
 	
-	public Query<Person> queryPersonOrderBy(String order, Object value, boolean desc) {
-		Query<Person> query = pm.createQuery(Person.class);
+	private List<PersonUUID> getOrderedPersonUUIDs() {
+		ArrayList<PersonUUID> l = new ArrayList<PersonUUID>() {{ 
+			add(UUID_TESLA); 
+			add(UUID_CURIE);
+			add(UUID_EINSTEIN);
+		}};
+
+		Collections.sort(l, new Comparator<PersonUUID>(){
+			public int compare(PersonUUID p1,PersonUUID p2){
+                return p1.id.compareTo(p2.id);
+			}
+		});
+		
+		return l;
+	}
+	public Query<PersonUUID> queryPersonUUIDOrderBy(String order, Object value, boolean desc) {
+		Query<PersonUUID> query = pm.createQuery(PersonUUID.class);
+		if(mustFilterToOrder()) {
+			query = query.filter(order+">", value);
+		}
+		return query.order(desc ? "-"+order : order);
+	}
+
+	public Query<PersonLongAutoID> queryPersonLongAutoIDOrderBy(String order, Object value, boolean desc) {
+		Query<PersonLongAutoID> query = pm.createQuery(PersonLongAutoID.class);
+		if(mustFilterToOrder()) {
+			query = query.filter(order+">", value);
+		}
+		return query.order(desc ? "-"+order : order);
+	}
+	
+	public Query<PersonLongManualID> queryPersonLongManualIDOrderBy(String order, Object value, boolean desc) {
+		Query<PersonLongManualID> query = pm.createQuery(PersonLongManualID.class);
+		if(mustFilterToOrder()) {
+			query = query.filter(order+">", value);
+		}
+		return query.order(desc ? "-"+order : order);
+	}
+	
+	public Query<PersonStringID> queryPersonStringIDOrderBy(String order, Object value, boolean desc) {
+		Query<PersonStringID> query = pm.createQuery(PersonStringID.class);
 		if(mustFilterToOrder()) {
 			query = query.filter(order+">", value);
 		}
@@ -38,194 +102,667 @@ public abstract class BaseTest extends TestCase {
 	}
 	
 	public void testCount() {
-		assertEquals(3, pm.createQuery(Person.class).count());
+		assertEquals(3, pm.createQuery(PersonUUID.class).count());
 	}
 
 	public void testFetch() {
-		List<Person> people = queryPersonOrderBy("n", 0, false).fetch();
+		List<PersonUUID> people = queryPersonUUIDOrderBy("n", 0, false).fetch();
 
 		assertNotNull(people);
 		assertEquals(3, people.size());
 
-		assertEquals(TESLA, people.get(0));
-		assertEquals(CURIE, people.get(1));
-		assertEquals(EINSTEIN, people.get(2));
+		assertEquals(UUID_TESLA, people.get(0));
+		assertEquals(UUID_CURIE, people.get(1));
+		assertEquals(UUID_EINSTEIN, people.get(2));
 	}
 	
 	public void testFetchKeys() {
-		List<Person> people = queryPersonOrderBy("n", 0, false).fetchKeys();
+		List<PersonUUID> people = queryPersonUUIDOrderBy("n", 0, false).fetchKeys();
 
 		assertNotNull(people);
 		assertEquals(3, people.size());
 
-		assertEquals(TESLA.id, people.get(0).id);
-		assertEquals(CURIE.id, people.get(1).id);
-		assertEquals(EINSTEIN.id, people.get(2).id);
+		assertEquals(UUID_TESLA.id, people.get(0).id);
+		assertEquals(UUID_CURIE.id, people.get(1).id);
+		assertEquals(UUID_EINSTEIN.id, people.get(2).id);
 	}
 
 	public void testFetchOrder() {
-		List<Person> people = queryPersonOrderBy("firstName", "", false).fetch();
+		List<PersonUUID> people = queryPersonUUIDOrderBy("firstName", "", false).fetch();
 
 		assertNotNull(people);
 		assertEquals(3, people.size());
 
-		assertEquals(EINSTEIN, people.get(0));
-		assertEquals(CURIE, people.get(1));
-		assertEquals(TESLA, people.get(2));
+		assertEquals(UUID_EINSTEIN, people.get(0));
+		assertEquals(UUID_CURIE, people.get(1));
+		assertEquals(UUID_TESLA, people.get(2));
 	}
 	
 	public void testFetchOrderKeys() {
-		List<Person> people = queryPersonOrderBy("firstName", "", false).fetchKeys();
+		List<PersonUUID> people = queryPersonUUIDOrderBy("firstName", "", false).fetchKeys();
 
 		assertNotNull(people);
 		assertEquals(3, people.size());
 
-		assertEquals(EINSTEIN.id, people.get(0).id);
-		assertEquals(CURIE.id, people.get(1).id);
-		assertEquals(TESLA.id, people.get(2).id);
+		assertEquals(UUID_EINSTEIN.id, people.get(0).id);
+		assertEquals(UUID_CURIE.id, people.get(1).id);
+		assertEquals(UUID_TESLA.id, people.get(2).id);
 	}
 
 	public void testFetchOrderDesc() {
-		List<Person> people = queryPersonOrderBy("lastName", "", true).fetch();
+		List<PersonUUID> people = queryPersonUUIDOrderBy("lastName", "", true).fetch();
 
 		assertNotNull(people);
 		assertEquals(3, people.size());
 
-		assertEquals(TESLA, people.get(0));
-		assertEquals(EINSTEIN, people.get(1));
-		assertEquals(CURIE, people.get(2));
+		assertEquals(UUID_TESLA, people.get(0));
+		assertEquals(UUID_EINSTEIN, people.get(1));
+		assertEquals(UUID_CURIE, people.get(2));
 	}
 
 	public void testFetchOrderDescKeys() {
-		List<Person> people = queryPersonOrderBy("lastName", "", true).fetchKeys();
+		List<PersonUUID> people = queryPersonUUIDOrderBy("lastName", "", true).fetchKeys();
 
 		assertNotNull(people);
 		assertEquals(3, people.size());
 
-		assertEquals(TESLA.id, people.get(0).id);
-		assertEquals(EINSTEIN.id, people.get(1).id);
-		assertEquals(CURIE.id, people.get(2).id);
+		assertEquals(UUID_TESLA.id, people.get(0).id);
+		assertEquals(UUID_EINSTEIN.id, people.get(1).id);
+		assertEquals(UUID_CURIE.id, people.get(2).id);
 	}
 	
-	public void testFetchOrderOnId() {
-		List<Person> people = queryPersonOrderBy("id", "", false).fetchKeys();
+	public void testFetchOrderOnLongAutoId() {
+		List<PersonLongAutoID> people = queryPersonLongAutoIDOrderBy("id", "", false).fetchKeys();
 
 		assertNotNull(people);
 		assertEquals(3, people.size());
 
-		assertEquals(TESLA.id, people.get(0).id);
-		assertEquals(CURIE.id, people.get(1).id);
-		assertEquals(EINSTEIN.id, people.get(2).id);
+		assertEquals(LongAutoID_TESLA.id, people.get(0).id);
+		assertEquals(LongAutoID_CURIE.id, people.get(1).id);
+		assertEquals(LongAutoID_EINSTEIN.id, people.get(2).id);
+	}
+
+	public void testFetchOrderOnLongManualId() {
+		List<PersonLongManualID> people = queryPersonLongManualIDOrderBy("id", "", false).fetchKeys();
+
+		assertNotNull(people);
+		assertEquals(3, people.size());
+
+		assertEquals(LongManualID_TESLA.id, people.get(0).id);
+		assertEquals(LongManualID_CURIE.id, people.get(1).id);
+		assertEquals(LongManualID_EINSTEIN.id, people.get(2).id);
+	}
+	
+	public void testFetchOrderOnStringId() {
+		List<PersonStringID> people = queryPersonStringIDOrderBy("id", "", false).fetchKeys();
+
+		assertNotNull(people);
+		assertEquals(3, people.size());
+
+		assertEquals(StringID_CURIE.id, people.get(0).id);
+		assertEquals(StringID_EINSTEIN.id, people.get(1).id);
+		assertEquals(StringID_TESLA.id, people.get(2).id);
 	}
 		
-	public void testFetchOrderOnIdDesc() {
-		List<Person> people = queryPersonOrderBy("id", "", true).fetchKeys();
+	public void testFetchOrderOnUUID() {
+		List<PersonUUID> l = getOrderedPersonUUIDs();
+		List<PersonUUID> people = queryPersonUUIDOrderBy("id", "", false).fetchKeys();
 
 		assertNotNull(people);
 		assertEquals(3, people.size());
 
-		assertEquals(EINSTEIN.id, people.get(0).id);
-		assertEquals(CURIE.id, people.get(1).id);
-		assertEquals(TESLA.id, people.get(2).id);
+		assertEquals(l.get(0).id, people.get(0).id);
+		assertEquals(l.get(1).id, people.get(1).id);
+		assertEquals(l.get(2).id, people.get(2).id);
 	}
 	
-	public void testFilterOperatorEqual() {
-		Person person = pm.createQuery(Person.class).filter("firstName", "Albert").get();
+	public void testFetchOrderOnLongAutoIdDesc() {
+		List<PersonLongAutoID> people = queryPersonLongAutoIDOrderBy("id", "", true).fetchKeys();
+
+		assertNotNull(people);
+		assertEquals(3, people.size());
+
+		assertEquals(LongAutoID_EINSTEIN.id, people.get(0).id);
+		assertEquals(LongAutoID_CURIE.id, people.get(1).id);
+		assertEquals(LongAutoID_TESLA.id, people.get(2).id);
+	}
+		
+	public void testFetchOrderOnLongManualIdDesc() {
+		List<PersonLongManualID> people = queryPersonLongManualIDOrderBy("id", "", true).fetchKeys();
+
+		assertNotNull(people);
+		assertEquals(3, people.size());
+
+		assertEquals(LongManualID_EINSTEIN.id, people.get(0).id);
+		assertEquals(LongManualID_CURIE.id, people.get(1).id);
+		assertEquals(LongManualID_TESLA.id, people.get(2).id);
+	}
+	
+	public void testFetchOrderOnStringIdDesc() {
+		List<PersonStringID> people = queryPersonStringIDOrderBy("id", "", true).fetchKeys();
+
+		assertNotNull(people);
+		assertEquals(3, people.size());
+
+		assertEquals(StringID_TESLA.id, people.get(0).id);
+		assertEquals(StringID_EINSTEIN.id, people.get(1).id);
+		assertEquals(StringID_CURIE.id, people.get(2).id);
+	}
+	
+	public void testFetchOrderOnUUIDDesc() {
+		List<PersonUUID> l = getOrderedPersonUUIDs();
+		List<PersonUUID> people = queryPersonUUIDOrderBy("id", "", true).fetchKeys();
+
+		assertNotNull(people);
+		assertEquals(3, people.size());
+
+		assertEquals(l.get(2).id, people.get(0).id);
+		assertEquals(l.get(1).id, people.get(1).id);
+		assertEquals(l.get(0).id, people.get(2).id);
+	}
+	
+	
+	public void testFilterOperatorEqualString() {
+		PersonUUID person = pm.createQuery(PersonUUID.class).filter("firstName", "Albert").get();
 		assertNotNull(person);
-		assertEquals(EINSTEIN, person);
+		assertEquals(UUID_EINSTEIN, person);
 	}
-
-	public void testFilterOperatorNotEqual() {
-		List<Person> people = pm.createQuery(Person.class).filter("n!=", 3).order("n").fetch();
+	
+	public void testFilterOperatorEqualInt() {
+		PersonUUID person = pm.createQuery(PersonUUID.class).filter("n", 3).get();
+		assertNotNull(person);
+		assertEquals(UUID_EINSTEIN, person);
+	}
+	
+	public void testFilterOperatorEqualUUID() {
+		List<PersonUUID> l = getOrderedPersonUUIDs();
+	
+		PersonUUID person = pm.createQuery(PersonUUID.class).filter("id", l.get(0).id).get();
+		assertNotNull(person);
+		assertEquals(l.get(0), person);
+	}
+	
+	public void testFilterOperatorEqualLongAutoID() {
+		PersonLongAutoID person = pm.createQuery(PersonLongAutoID.class).filter("id", 3L).get();
+		assertNotNull(person);
+		assertEquals(LongAutoID_EINSTEIN, person);
+	}
+		
+	public void testFilterOperatorEqualLongManualID() {
+		PersonLongManualID person = pm.createQuery(PersonLongManualID.class).filter("id", 3L).get();
+		assertNotNull(person);
+		assertEquals(LongManualID_EINSTEIN, person);
+	}
+	
+	public void testFilterOperatorNotEqualString() {
+		List<PersonStringID> people = pm.createQuery(PersonStringID.class).filter("firstName!=", "Albert").order("firstName").fetch();
 
 		assertNotNull(people);
 		assertEquals(2, people.size());
 
-		assertEquals(TESLA, people.get(0));
-		assertEquals(CURIE, people.get(1));
+		assertEquals(StringID_CURIE, people.get(0));
+		assertEquals(StringID_TESLA, people.get(1));
+	}
+	
+	public void testFilterOperatorNotEqualInt() {
+		List<PersonUUID> people = pm.createQuery(PersonUUID.class).filter("n!=", 3).order("n").fetch();
+
+		assertNotNull(people);
+		assertEquals(2, people.size());
+
+		assertEquals(UUID_TESLA, people.get(0));
+		assertEquals(UUID_CURIE, people.get(1));
 	}
 
+	public void testFilterOperatorNotEqualUUID() {
+		List<PersonUUID> l = getOrderedPersonUUIDs();
+		List<PersonUUID> people = pm.createQuery(PersonUUID.class).filter("id!=", l.get(0).id).order("id").fetch();
+
+		assertNotNull(people);
+		assertEquals(2, people.size());
+
+		assertEquals(l.get(1), people.get(0));
+		assertEquals(l.get(2), people.get(1));
+	}
+	
+	public void testFilterOperatorNotEqualLongAutoID() {
+		List<PersonLongAutoID> people = pm.createQuery(PersonLongAutoID.class).filter("id!=", 3L).order("id").fetch();
+
+		assertNotNull(people);
+		assertEquals(2, people.size());
+
+		assertEquals(LongAutoID_TESLA, people.get(0));
+		assertEquals(LongAutoID_CURIE, people.get(1));
+	}
+
+	public void testFilterOperatorNotEqualLongManualID() {
+		List<PersonLongManualID> people = pm.createQuery(PersonLongManualID.class).filter("id!=", 3L).order("id").fetch();
+
+		assertNotNull(people);
+		assertEquals(2, people.size());
+
+		assertEquals(LongManualID_TESLA, people.get(0));
+		assertEquals(LongManualID_CURIE, people.get(1));
+	}
+	
+	public void testFilterOperatorNotEqualStringID() {
+		List<PersonStringID> people = pm.createQuery(PersonStringID.class).filter("id!=", StringID_EINSTEIN.id).order("id").fetch();
+
+		assertNotNull(people);
+		assertEquals(2, people.size());
+
+		assertEquals(StringID_CURIE, people.get(0));
+		assertEquals(StringID_TESLA, people.get(1));
+	}
+
+	public void testFilterOperatorIn() {
+		List<PersonUUID> people = 
+			pm.createQuery(PersonUUID.class)
+				.filter("n IN", new ArrayList<Integer>(){{ 
+					add(2);
+					add(3);
+				}})
+				.fetch();
+
+		assertNotNull(people);
+		assertEquals(2, people.size());
+
+		assertEquals(UUID_CURIE, people.get(0));
+		assertEquals(UUID_EINSTEIN, people.get(1));
+	}
+	
+	public void testFilterOperatorInOrder() {
+		List<PersonUUID> people = 
+			pm.createQuery(PersonUUID.class)
+				.filter("n IN", new ArrayList<Integer>(){{ 
+					add(3);
+					add(2);
+				}})
+				.order("n")
+				.fetch();
+
+		assertNotNull(people);
+		assertEquals(2, people.size());
+
+		assertEquals(UUID_CURIE, people.get(0));
+		assertEquals(UUID_EINSTEIN, people.get(1));
+	}
+	
+	public void testFilterOperatorInForUUID() {
+		List<PersonUUID> people = 
+			pm.createQuery(PersonUUID.class)
+				.filter("id IN", Arrays.asList( UUID_TESLA.id, UUID_CURIE.id))
+				.fetch();
+
+		assertNotNull(people);
+		assertEquals(2, people.size());
+
+		assertEquals(UUID_TESLA, people.get(0));
+		assertEquals(UUID_CURIE, people.get(1));
+	}
+	
+	public void testFilterOperatorInForLongAutoID() {
+		List<PersonLongAutoID> people = 
+			pm.createQuery(PersonLongAutoID.class)
+				.filter("id IN", new ArrayList<Long>(){{ 
+					add(LongAutoID_TESLA.id);
+					add(LongAutoID_CURIE.id);
+				}})
+				.fetch();
+
+		assertNotNull(people);
+		assertEquals(2, people.size());
+
+		assertEquals(LongAutoID_TESLA, people.get(0));
+		assertEquals(LongAutoID_CURIE, people.get(1));
+	}
+
+	public void testFilterOperatorInForLongManualID() {
+		List<PersonLongManualID> people = 
+			pm.createQuery(PersonLongManualID.class)
+				.filter("id IN", new ArrayList<Long>(){{ 
+					add(LongManualID_TESLA.id);
+					add(LongManualID_CURIE.id);
+				}})
+				.fetch();
+
+		assertNotNull(people);
+		assertEquals(2, people.size());
+
+		assertEquals(LongManualID_TESLA, people.get(0));
+		assertEquals(LongManualID_CURIE, people.get(1));
+	}
+	
+	public void testFilterOperatorInForStringID() {
+		List<PersonStringID> people = 
+			pm.createQuery(PersonStringID.class)
+				.filter("id IN", new ArrayList<String>(){{ 
+					add(StringID_TESLA.id);
+					add(StringID_CURIE.id);
+				}})
+				.fetch();
+
+		assertNotNull(people);
+		assertEquals(2, people.size());
+
+		assertEquals(StringID_TESLA, people.get(0));
+		assertEquals(StringID_CURIE, people.get(1));
+	}
+	
 	public void testFilterOperatorLessThan() {
-		List<Person> people = pm.createQuery(Person.class).filter("n<", 3).order("n").fetch();
+		List<PersonUUID> people = pm.createQuery(PersonUUID.class).filter("n<", 3).order("n").fetch();
 
 		assertNotNull(people);
 		assertEquals(2, people.size());
 
-		assertEquals(TESLA, people.get(0));
-		assertEquals(CURIE, people.get(1));
+		assertEquals(UUID_TESLA, people.get(0));
+		assertEquals(UUID_CURIE, people.get(1));
+	}
+	
+	public void testFilterOperatorLessThanForUUID() {
+		List<PersonUUID> l = getOrderedPersonUUIDs();
+
+		List<PersonUUID> people = pm.createQuery(PersonUUID.class).filter("id<", l.get(2).id).order("id").fetch();
+
+		assertNotNull(people);
+		assertEquals(2, people.size());
+
+		
+		assertEquals(l.get(0), people.get(0));
+		assertEquals(l.get(1), people.get(1));
+	}
+	
+	public void testFilterOperatorLessThanForLongAutoID() {
+		List<PersonLongAutoID> people = pm.createQuery(PersonLongAutoID.class).filter("id<", 3L).order("id").fetch();
+
+		assertNotNull(people);
+		assertEquals(2, people.size());
+
+		assertEquals(LongAutoID_TESLA, people.get(0));
+		assertEquals(LongAutoID_CURIE, people.get(1));
+	}
+	
+	public void testFilterOperatorLessThanForLongManualID() {
+		List<PersonLongManualID> people = pm.createQuery(PersonLongManualID.class).filter("id<", 3L).order("id").fetch();
+
+		assertNotNull(people);
+		assertEquals(2, people.size());
+
+		assertEquals(LongManualID_TESLA, people.get(0));
+		assertEquals(LongManualID_CURIE, people.get(1));
+	}
+	
+	public void testFilterOperatorLessThanForStringID() {
+		List<PersonStringID> people = pm.createQuery(PersonStringID.class).filter("id<", StringID_TESLA.id).order("id").fetch();
+
+		assertNotNull(people);
+		assertEquals(2, people.size());
+
+		assertEquals(StringID_CURIE, people.get(0));
+		assertEquals(StringID_EINSTEIN, people.get(1));
 	}
 	
 	public void testFilterOperatorLessThanOrEqual() {
-		List<Person> people = pm.createQuery(Person.class).filter("n<=", 3).order("n").fetch();
+		List<PersonUUID> people = pm.createQuery(PersonUUID.class).filter("n<=", 3).order("n").fetch();
 
 		assertNotNull(people);
 		assertEquals(3, people.size());
 
-		assertEquals(TESLA, people.get(0));
-		assertEquals(CURIE, people.get(1));
-		assertEquals(EINSTEIN, people.get(2));		
+		assertEquals(UUID_TESLA, people.get(0));
+		assertEquals(UUID_CURIE, people.get(1));
+		assertEquals(UUID_EINSTEIN, people.get(2));		
 	}
 	
+	public void testFilterOperatorLessThanOrEqualForUUID() {
+		List<PersonUUID> l = getOrderedPersonUUIDs();
+
+		List<PersonUUID> people = pm.createQuery(PersonUUID.class).filter("id<=", l.get(2).id).order("id").fetch();
+
+		assertNotNull(people);
+		assertEquals(3, people.size());
+
+		
+		assertEquals(l.get(0), people.get(0));
+		assertEquals(l.get(1), people.get(1));
+		assertEquals(l.get(2), people.get(2));
+	}
+	
+	public void testFilterOperatorLessThanOrEqualForLongAutoID() {
+		List<PersonLongAutoID> people = pm.createQuery(PersonLongAutoID.class).filter("id<=", 3L).order("id").fetch();
+
+		assertNotNull(people);
+		assertEquals(3, people.size());
+
+		assertEquals(LongAutoID_TESLA, people.get(0));
+		assertEquals(LongAutoID_CURIE, people.get(1));
+		assertEquals(LongAutoID_EINSTEIN, people.get(2));
+	}
+	
+	public void testFilterOperatorLessThanOrEqualForLongManualID() {
+		List<PersonLongManualID> people = pm.createQuery(PersonLongManualID.class).filter("id<=", 3L).order("id").fetch();
+
+		assertNotNull(people);
+		assertEquals(3, people.size());
+
+		assertEquals(LongManualID_TESLA, people.get(0));
+		assertEquals(LongManualID_CURIE, people.get(1));
+		assertEquals(LongManualID_EINSTEIN, people.get(2));
+	}
+	
+	public void testFilterOperatorLessThanOrEqualForStringID() {
+		List<PersonStringID> people = pm.createQuery(PersonStringID.class).filter("id<=", StringID_TESLA.id).order("id").fetch();
+
+		assertNotNull(people);
+		assertEquals(3, people.size());
+
+		assertEquals(StringID_CURIE, people.get(0));
+		assertEquals(StringID_EINSTEIN, people.get(1));
+		assertEquals(StringID_TESLA, people.get(2));
+	}
+	
+	
 	public void testFilterOperatorMoreThan() {
-		List<Person> people = pm.createQuery(Person.class).filter("n>", 1).order("n").fetch();
+		List<PersonUUID> people = pm.createQuery(PersonUUID.class).filter("n>", 1).order("n").fetch();
 
 		assertNotNull(people);
 		assertEquals(2, people.size());
 
-		assertEquals(CURIE, people.get(0));
-		assertEquals(EINSTEIN, people.get(1));
+		assertEquals(UUID_CURIE, people.get(0));
+		assertEquals(UUID_EINSTEIN, people.get(1));
 	}
 	
+	public void testFilterOperatorMoreThanForUUID() {
+		List<PersonUUID> l = getOrderedPersonUUIDs();
+
+		List<PersonUUID> people = pm.createQuery(PersonUUID.class).filter("id>", l.get(0).id).order("id").fetch();
+
+		assertNotNull(people);
+		assertEquals(2, people.size());
+
+		
+		assertEquals(l.get(1), people.get(0));
+		assertEquals(l.get(2), people.get(1));
+	}
+	
+	public void testFilterOperatorMoreThanForLongAutoID() {
+		List<PersonLongAutoID> people = pm.createQuery(PersonLongAutoID.class).filter("id>", 1L).order("id").fetch();
+
+		assertNotNull(people);
+		assertEquals(2, people.size());
+
+		assertEquals(LongAutoID_CURIE, people.get(0));
+		assertEquals(LongAutoID_EINSTEIN, people.get(1));
+	}
+	
+	public void testFilterOperatorMoreThanForLongManualID() {
+		List<PersonLongManualID> people = pm.createQuery(PersonLongManualID.class).filter("id>", 1L).order("id").fetch();
+
+		assertNotNull(people);
+		assertEquals(2, people.size());
+
+		assertEquals(LongManualID_CURIE, people.get(0));
+		assertEquals(LongManualID_EINSTEIN, people.get(1));
+	}
+	
+	public void testFilterOperatorMoreThanForStringID() {
+		List<PersonStringID> people = pm.createQuery(PersonStringID.class).filter("id>", StringID_CURIE.id).order("id").fetch();
+
+		assertNotNull(people);
+		assertEquals(2, people.size());
+
+		assertEquals(StringID_EINSTEIN, people.get(0));
+		assertEquals(StringID_TESLA, people.get(1));
+	}
+
+	
 	public void testFilterOperatorMoreThanOrEqual() {
-		List<Person> people = pm.createQuery(Person.class).filter("n>=", 1).order("n").fetch();
+		List<PersonUUID> people = pm.createQuery(PersonUUID.class).filter("n>=", 1).order("n").fetch();
 
 		assertNotNull(people);
 		assertEquals(3, people.size());
 
-		assertEquals(TESLA, people.get(0));
-		assertEquals(CURIE, people.get(1));
-		assertEquals(EINSTEIN, people.get(2));
+		assertEquals(UUID_TESLA, people.get(0));
+		assertEquals(UUID_CURIE, people.get(1));
+		assertEquals(UUID_EINSTEIN, people.get(2));
 	}
 
+	public void testFilterOperatorMoreThanOrEqualForUUID() {
+		List<PersonUUID> l = getOrderedPersonUUIDs();
+
+		List<PersonUUID> people = pm.createQuery(PersonUUID.class).filter("id>=", l.get(0).id).order("id").fetch();
+
+		assertNotNull(people);
+		assertEquals(3, people.size());
+
+		
+		assertEquals(l.get(0), people.get(0));
+		assertEquals(l.get(1), people.get(1));
+		assertEquals(l.get(2), people.get(2));
+	}
+	
+	public void testFilterOperatorMoreThanOrEqualForLongAutoID() {
+		List<PersonLongAutoID> people = pm.createQuery(PersonLongAutoID.class).filter("id>=", 2L).order("id").fetch();
+
+		assertNotNull(people);
+		assertEquals(2, people.size());
+
+		assertEquals(LongAutoID_CURIE, people.get(0));
+		assertEquals(LongAutoID_EINSTEIN, people.get(1));
+	}
+	
+	public void testFilterOperatorMoreThanOrEqualForLongManualID() {
+		List<PersonLongManualID> people = pm.createQuery(PersonLongManualID.class).filter("id>=", 2L).order("id").fetch();
+
+		assertNotNull(people);
+		assertEquals(2, people.size());
+
+		assertEquals(LongManualID_CURIE, people.get(0));
+		assertEquals(LongManualID_EINSTEIN, people.get(1));
+	}
+	
+	public void testFilterOperatorMoreThanOrEqualForStringID() {
+		List<PersonStringID> people = pm.createQuery(PersonStringID.class).filter("id>=", StringID_EINSTEIN.id).order("id").fetch();
+
+		assertNotNull(people);
+		assertEquals(2, people.size());
+
+		assertEquals(StringID_EINSTEIN, people.get(0));
+		assertEquals(StringID_TESLA, people.get(1));
+	}
+	
 	public void testCountFilter() {
-		assertEquals(2, pm.createQuery(Person.class).filter("n<", 3).count());
+		assertEquals(2, pm.createQuery(PersonUUID.class).filter("n<", 3).count());
 	}
 
+	public void testCountFilterUUID() {
+		List<PersonUUID> l = getOrderedPersonUUIDs();
+		assertEquals(2, pm.createQuery(PersonUUID.class).filter("id<", l.get(2).id).count());
+	}
+	
+	public void testCountFilterLongAutoID() {
+		assertEquals(2, pm.createQuery(PersonLongAutoID.class).filter("id<", 3L).count());
+	}
+
+	public void testCountFilterLongManualID() {
+		assertEquals(2, pm.createQuery(PersonLongManualID.class).filter("id<", 3L).count());
+	}
+	
+	public void testCountFilterStringID() {
+		assertEquals(2, pm.createQuery(PersonStringID.class).filter("id<", StringID_TESLA.id).count());
+	}
+	
 	public void testFetchLimit() {
-		List<Person> people = queryPersonOrderBy("n", 0, false).fetch(1);
+		List<PersonUUID> people = queryPersonUUIDOrderBy("n", 0, false).fetch(1);
 
 		assertNotNull(people);
 		assertEquals(1, people.size());
 
-		assertEquals(TESLA, people.get(0));
+		assertEquals(UUID_TESLA, people.get(0));
 	}
 
+	public void testFetchLimitUUID() {
+		List<PersonUUID> l = getOrderedPersonUUIDs();
+		List<PersonUUID> people = queryPersonUUIDOrderBy("id", l.get(0), false).fetch(1);
+
+		assertNotNull(people);
+		assertEquals(1, people.size());
+
+		assertEquals(l.get(0), people.get(0));
+	}
+	
+	public void testFetchLimitLongAutoID() {
+		List<PersonLongAutoID> people = queryPersonLongAutoIDOrderBy("id", 0, false).fetch(1);
+
+		assertNotNull(people);
+		assertEquals(1, people.size());
+
+		assertEquals(LongAutoID_TESLA, people.get(0));
+	}
+	
+	public void testFetchLimitLongManualID() {
+		List<PersonLongManualID> people = queryPersonLongManualIDOrderBy("id", 0, false).fetch(1);
+
+		assertNotNull(people);
+		assertEquals(1, people.size());
+
+		assertEquals(LongManualID_TESLA, people.get(0));
+	}
+	
+	public void testFetchLimitStringID() {
+		List<PersonStringID> people = queryPersonStringIDOrderBy("id", StringID_CURIE, false).fetch(1);
+
+		assertNotNull(people);
+		assertEquals(1, people.size());
+
+		assertEquals(StringID_CURIE, people.get(0));
+	}
+	
 	@Deprecated
 	public void testCountLimit() {
-		assertEquals(1, pm.createQuery(Person.class).filter("n<", 3).count(1));
+		assertEquals(1, pm.createQuery(PersonUUID.class).filter("n<", 3).count(1));
 	}
 
 	public void testFetchLimitOffset() {
-		Query<Person> query = queryPersonOrderBy("n", 0, false);
+		Query<PersonUUID> query = queryPersonUUIDOrderBy("n", 0, false);
 		query.fetch(1);
-		List<Person> people = query.fetch(2, query.nextOffset());
+		List<PersonUUID> people = query.fetch(2, query.nextOffset());
 
 		assertNotNull(people);
 		assertEquals(2, people.size());
 
-		assertEquals(CURIE, people.get(0));
-		assertEquals(EINSTEIN, people.get(1));
+		assertEquals(UUID_CURIE, people.get(0));
+		assertEquals(UUID_EINSTEIN, people.get(1));
 	}
 
 	@Deprecated
 	public void testCountLimitOffset() {
-		Query<Person> query = queryPersonOrderBy("n", 0, false);
+		Query<PersonUUID> query = queryPersonUUIDOrderBy("n", 0, false);
 		query.fetch(1);
 		assertEquals(2, query.count(2, query.nextOffset()));
 	}
 
-	public void testInsert() {
-		Person maxwell = new Person();
+	public void testInsertUUID() {
+		PersonUUID maxwell = new PersonUUID();
 		maxwell.firstName = "James Clerk";
 		maxwell.lastName = "Maxwell";
 		maxwell.city = "Edinburgh";
@@ -234,173 +771,422 @@ public abstract class BaseTest extends TestCase {
 		pm.insert(maxwell);
 		assertNotNull(maxwell.id);
 
-		List<Person> people = queryPersonOrderBy("n", 0, false).fetch();
+		List<PersonUUID> people = queryPersonUUIDOrderBy("n", 0, false).fetch();
 		assertEquals(4, people.size());
 
-		assertEquals(TESLA, people.get(0));
-		assertEquals(CURIE, people.get(1));
-		assertEquals(EINSTEIN, people.get(2));
+		assertEquals(UUID_TESLA, people.get(0));
+		assertEquals(UUID_CURIE, people.get(1));
+		assertEquals(UUID_EINSTEIN, people.get(2));
 		assertEquals(maxwell, people.get(3));
 	}
 
-	public void testGet() {
-		Person curie = getPerson(CURIE.id);
-		assertEquals(CURIE, curie);
+	public void testInsertLongAutoID() {
+		PersonLongAutoID maxwell = new PersonLongAutoID();
+		maxwell.firstName = "James Clerk";
+		maxwell.lastName = "Maxwell";
+		maxwell.city = "Edinburgh";
+		maxwell.n = 4;
+
+		pm.insert(maxwell);
+		assertNotNull(maxwell.id);
+
+		List<PersonLongAutoID> people = queryPersonLongAutoIDOrderBy("n", 0, false).fetch();
+		assertEquals(4, people.size());
+
+		assertEquals(LongAutoID_TESLA, people.get(0));
+		assertEquals(LongAutoID_CURIE, people.get(1));
+		assertEquals(LongAutoID_EINSTEIN, people.get(2));
+		assertEquals(maxwell, people.get(3));
 	}
 
-	public void testUpdate() {
-		Person curie = getPerson(CURIE.id);
+	public void testInsertLongManualID() {
+		PersonLongManualID maxwell = new PersonLongManualID();
+		maxwell.id = 4L;
+		maxwell.firstName = "James Clerk";
+		maxwell.lastName = "Maxwell";
+		maxwell.city = "Edinburgh";
+		maxwell.n = 4;
+
+		pm.insert(maxwell);
+		assertEquals((Long)4L, maxwell.id);
+
+		List<PersonLongManualID> people = queryPersonLongManualIDOrderBy("n", 0, false).fetch();
+		assertEquals(4, people.size());
+
+		assertEquals(LongManualID_TESLA, people.get(0));
+		assertEquals(LongManualID_CURIE, people.get(1));
+		assertEquals(LongManualID_EINSTEIN, people.get(2));
+		assertEquals(maxwell, people.get(3));
+	}
+	
+	public void testInsertStringID() {
+		PersonStringID maxwell = new PersonStringID();
+		maxwell.id = "MAXWELL";
+		maxwell.firstName = "James Clerk";
+		maxwell.lastName = "Maxwell";
+		maxwell.city = "Edinburgh";
+		maxwell.n = 4;
+
+		pm.insert(maxwell);
+		assertEquals(maxwell.id, "MAXWELL");
+
+		List<PersonStringID> people = queryPersonStringIDOrderBy("n", 0, false).fetch();
+		assertEquals(4, people.size());
+
+		assertEquals(StringID_TESLA, people.get(0));
+		assertEquals(StringID_CURIE, people.get(1));
+		assertEquals(StringID_EINSTEIN, people.get(2));
+		assertEquals(maxwell, people.get(3));
+	}
+	
+	public void testGetUUID() {
+		PersonUUID curie = getPersonUUID(UUID_CURIE.id);
+		assertEquals(UUID_CURIE, curie);
+	}
+
+	public void testGetLongAutoID() {
+		PersonLongAutoID curie = getPersonLongAutoID(LongAutoID_CURIE.id);
+		assertEquals(LongAutoID_CURIE, curie);
+	}
+
+	public void testGetLongManualID() {
+		PersonLongManualID curie = getPersonLongManualID(LongManualID_CURIE.id);
+		assertEquals(LongManualID_CURIE, curie);
+	}
+
+	public void testGetStringID() {
+		PersonStringID curie = getPersonStringID(StringID_CURIE.id);
+		assertEquals(StringID_CURIE, curie);
+	}
+
+	public void testUpdateUUID() {
+		PersonUUID curie = getPersonUUID(UUID_CURIE.id);
 		curie.lastName = "Sklodowska–Curie";
 		pm.update(curie);
-		Person curie2 = getPerson(CURIE.id);
+		PersonUUID curie2 = getPersonUUID(UUID_CURIE.id);
 		assertEquals(curie2, curie);
 	}
 
-	public void testDelete() {
-		Person curie = getPerson(CURIE.id);
+	public void testUpdateLongAutoID() {
+		PersonLongAutoID curie = getPersonLongAutoID(LongAutoID_CURIE.id);
+		curie.lastName = "Sklodowska–Curie";
+		pm.update(curie);
+		PersonLongAutoID curie2 = getPersonLongAutoID(LongAutoID_CURIE.id);
+		assertEquals(curie2, curie);
+	}
+	
+	public void testDeleteUUID() {
+		PersonUUID curie = getPersonUUID(UUID_CURIE.id);
 		pm.delete(curie);
 		
-		List<Person> people = queryPersonOrderBy("n", 0, false).fetch();
+		List<PersonUUID> people = queryPersonUUIDOrderBy("n", 0, false).fetch();
 		assertNotNull(people);
 		assertEquals(2, people.size());
 
-		assertEquals(TESLA, people.get(0));
-		assertEquals(EINSTEIN, people.get(1));
+		assertEquals(UUID_TESLA, people.get(0));
+		assertEquals(UUID_EINSTEIN, people.get(1));
 	}
 
-	// FIXME
-	public void testIter1() {
-		/*Iterable<Person> people = pm.createQuery(Person.class).iter("n", 3);
+
+	public void testIterFullUUID() {
+		Iterable<PersonUUID> people = pm.createQuery(PersonUUID.class).iter();
 
 		assertNotNull(people);
 
-		Person[] array = new Person[] { TESLA, CURIE, EINSTEIN };
+		ArrayList<PersonUUID> l = new ArrayList<PersonUUID>() {{ 
+			add(UUID_TESLA); 
+			add(UUID_CURIE);
+			add(UUID_EINSTEIN);
+		}};
 
+		Collections.sort(l, new Comparator<PersonUUID>(){
+			public int compare(PersonUUID p1,PersonUUID p2){
+                return p1.id.compareTo(p2.id);
+			}
+		});
+		
 		int i = 0;
-		for (Person PersonIntKey : people) {
-			assertEquals(array[i], PersonIntKey);
-			i++;
-		}*/
-	}
-
-	// FIXME
-	public void testIter2() {
-		/*Iterable<Person> people = pm.createQuery(Person.class).iter("n", 2);
-
-		assertNotNull(people);
-
-		Person[] array = new Person[] { TESLA, CURIE, EINSTEIN };
-
-		int i = 0;
-		for (Person PersonIntKey : people) {
-			assertEquals(array[i], PersonIntKey);
-			i++;
-		}*/
-	}
-	
-	public void testIterFull() {
-		Iterable<Person> people = pm.createQuery(Person.class).iter();
-
-		assertNotNull(people);
-
-		Person[] array = new Person[] { TESLA, CURIE, EINSTEIN };
-
-		int i = 0;
-		for (Person PersonIntKey : people) {
-			assertEquals(array[i], PersonIntKey);
-			i++;
-		}
-	}
-
-	public void testIterLimit() {
-		Iterable<Person> people = pm.createQuery(Person.class).iter(2);
-
-		assertNotNull(people);
-
-		Person[] array = new Person[] { TESLA, CURIE };
-
-		int i = 0;
-		for (Person PersonIntKey : people) {
-			assertEquals(array[i], PersonIntKey);
+		for (PersonUUID person : people) {
+			assertEquals( l.get(i), person);
 			i++;
 		}
 	}
 	
-	public void testIterLimitOffset() {
-		Iterable<Person> people = pm.createQuery(Person.class).iter(2, 1);
+	public void testIterFullLongAutoID() {
+		Iterable<PersonLongAutoID> people = pm.createQuery(PersonLongAutoID.class).iter();
 
 		assertNotNull(people);
 
-		Person[] array = new Person[] { CURIE, EINSTEIN };
+		PersonLongAutoID[] array = new PersonLongAutoID[] { LongAutoID_TESLA, LongAutoID_CURIE, LongAutoID_EINSTEIN };
 
 		int i = 0;
-		for (Person PersonIntKey : people) {
-			assertEquals(array[i], PersonIntKey);
+		for (PersonLongAutoID person : people) {
+			assertEquals(array[i], person);
+			i++;
+		}
+	}
+
+	public void testIterFullLongManualID() {
+		Iterable<PersonLongManualID> people = pm.createQuery(PersonLongManualID.class).iter();
+
+		assertNotNull(people);
+
+		PersonLongManualID[] array = new PersonLongManualID[] { LongManualID_TESLA, LongManualID_CURIE, LongManualID_EINSTEIN };
+
+		int i = 0;
+		for (PersonLongManualID person : people) {
+			assertEquals(array[i], person);
+			i++;
+		}
+	}
+	
+	public void testIterFullLongStringID() {
+		Iterable<PersonStringID> people = pm.createQuery(PersonStringID.class).iter();
+
+		assertNotNull(people);
+
+		PersonStringID[] array = new PersonStringID[] { StringID_CURIE, StringID_EINSTEIN, StringID_TESLA };
+
+		int i = 0;
+		for (PersonStringID person : people) {
+			assertEquals(array[i], person);
+			i++;
+		}
+	}
+	
+	public void testIterLimitUUID() {
+		Iterable<PersonUUID> people = pm.createQuery(PersonUUID.class).iter(2);
+
+		assertNotNull(people);
+
+		ArrayList<PersonUUID> l = new ArrayList<PersonUUID>() {{ 
+			add(UUID_TESLA); 
+			add(UUID_CURIE);
+			add(UUID_EINSTEIN);
+		}};
+
+		Collections.sort(l, new Comparator<PersonUUID>(){
+			public int compare(PersonUUID p1,PersonUUID p2){
+                return p1.id.compareTo(p2.id);
+			}
+		});
+		
+		int i = 0;
+		for (PersonUUID person : people) {
+			assertEquals( l.get(i), person);
+			i++;
+		}
+	}
+	
+	public void testIterLimitLongAutoID() {
+		Iterable<PersonLongAutoID> people = pm.createQuery(PersonLongAutoID.class).iter(2);
+
+		assertNotNull(people);
+
+		PersonLongAutoID[] array = new PersonLongAutoID[] { LongAutoID_TESLA, LongAutoID_CURIE };
+
+		int i = 0;
+		for (PersonLongAutoID person : people) {
+			assertEquals(array[i], person);
+			i++;
+		}
+	}
+
+	public void testIterLimitLongManualID() {
+		Iterable<PersonLongManualID> people = pm.createQuery(PersonLongManualID.class).iter(2);
+
+		assertNotNull(people);
+
+		PersonLongManualID[] array = new PersonLongManualID[] { LongManualID_TESLA, LongManualID_CURIE };
+
+		int i = 0;
+		for (PersonLongManualID person : people) {
+			assertEquals(array[i], person);
+			i++;
+		}
+	}
+	
+	public void testIterLimitLongStringID() {
+		Iterable<PersonStringID> people = pm.createQuery(PersonStringID.class).iter(2);
+
+		assertNotNull(people);
+
+		PersonStringID[] array = new PersonStringID[] { StringID_CURIE, StringID_EINSTEIN };
+
+		int i = 0;
+		for (PersonStringID person : people) {
+			assertEquals(array[i], person);
+			i++;
+		}
+	}
+	
+	public void testIterLimitOffsetUUID() {
+		Iterable<PersonUUID> people = pm.createQuery(PersonUUID.class).iter(2,1);
+
+		assertNotNull(people);
+
+		ArrayList<PersonUUID> l = new ArrayList<PersonUUID>() {{ 
+			add(UUID_TESLA); 
+			add(UUID_CURIE);
+			add(UUID_EINSTEIN);
+		}};
+
+		Collections.sort(l, new Comparator<PersonUUID>(){
+			public int compare(PersonUUID p1,PersonUUID p2){
+                return p1.id.compareTo(p2.id);
+			}
+		});
+		
+		int i = 0;
+		for (PersonUUID person : people) {
+			assertEquals( l.get(i+1), person);
+			i++;
+		}
+	}
+	
+	public void testIterLimitOffsetLongAutoID() {
+		Iterable<PersonLongAutoID> people = pm.createQuery(PersonLongAutoID.class).iter(2, 1);
+
+		assertNotNull(people);
+
+		PersonLongAutoID[] array = new PersonLongAutoID[] { LongAutoID_CURIE, LongAutoID_EINSTEIN };
+
+		int i = 0;
+		for (PersonLongAutoID person : people) {
+			assertEquals(array[i], person);
+			i++;
+		}
+	}
+
+	public void testIterLimitOffsetLongManualID() {
+		Iterable<PersonLongManualID> people = pm.createQuery(PersonLongManualID.class).iter(2,1);
+
+		assertNotNull(people);
+
+		PersonLongManualID[] array = new PersonLongManualID[] { LongManualID_CURIE, LongManualID_EINSTEIN };
+
+		int i = 0;
+		for (PersonLongManualID person : people) {
+			assertEquals(array[i], person);
+			i++;
+		}
+	}
+	
+	public void testIterLimitOffsetLongStringID() {
+		Iterable<PersonStringID> people = pm.createQuery(PersonStringID.class).iter(2,1);
+
+		assertNotNull(people);
+
+		PersonStringID[] array = new PersonStringID[] { StringID_EINSTEIN, StringID_TESLA };
+
+		int i = 0;
+		for (PersonStringID person : people) {
+			assertEquals(array[i], person);
 			i++;
 		}
 	}
 	
 	public void testIterFilter() {
-		Iterable<Person> people = pm.createQuery(Person.class).filter("n>", 1).iter();
+		Iterable<PersonUUID> people = pm.createQuery(PersonUUID.class).filter("n>", 1).iter();
 
 		assertNotNull(people);
 
-		Person[] array = new Person[] { CURIE, EINSTEIN };
+		PersonUUID[] array = new PersonUUID[] { UUID_CURIE, UUID_EINSTEIN };
 
 		int i = 0;
-		for (Person PersonIntKey : people) {
+		for (PersonUUID PersonIntKey : people) {
 			assertEquals(array[i], PersonIntKey);
 			i++;
 		}
 	}
 	
 	public void testIterFilterLimit() {
-		Iterable<Person> people = pm.createQuery(Person.class).filter("n>", 1).iter(1);
+		Iterable<PersonUUID> people = pm.createQuery(PersonUUID.class).filter("n>", 1).iter(1);
 
 		assertNotNull(people);
 
-		Person[] array = new Person[] { CURIE };
+		PersonUUID[] array = new PersonUUID[] { UUID_CURIE };
 
 		int i = 0;
-		for (Person PersonIntKey : people) {
+		for (PersonUUID PersonIntKey : people) {
 			assertEquals(array[i], PersonIntKey);
 			i++;
 		}
 	}
 	
 	public void testIterFilterLimitOffset() {
-		Iterable<Person> people = pm.createQuery(Person.class).filter("n>", 1).iter(2, 1);
+		Iterable<PersonUUID> people = pm.createQuery(PersonUUID.class).filter("n>", 1).iter(2, 1);
 
 		assertNotNull(people);
 
-		Person[] array = new Person[] { EINSTEIN };
+		PersonUUID[] array = new PersonUUID[] { UUID_EINSTEIN };
 
 		int i = 0;
-		for (Person PersonIntKey : people) {
+		for (PersonUUID PersonIntKey : people) {
 			assertEquals(array[i], PersonIntKey);
 			i++;
 		}
 	}
 	
-	public void testOrderId() {
-		List<Person> people = queryPersonOrderBy("id", "", false).fetch();
+	public void testOrderLongAutoId() {
+		List<PersonLongAutoID> people = queryPersonLongAutoIDOrderBy("id", "", false).fetch();
+		
+		assertNotNull(people);
 		assertEquals(3, people.size());
+		
+		PersonLongAutoID[] array = new PersonLongAutoID[] { LongAutoID_TESLA, LongAutoID_CURIE, LongAutoID_EINSTEIN };
+
+		int i = 0;
+		for (PersonLongAutoID person : people) {
+			assertEquals(array[i], person);
+			i++;
+		}
+	}
+	
+	public void testOrderLongManualId() {
+		List<PersonLongManualID> people = queryPersonLongManualIDOrderBy("id", "", false).fetch();
+		
+		assertNotNull(people);
+		assertEquals(3, people.size());
+		
+		PersonLongManualID[] array = new PersonLongManualID[] { LongManualID_TESLA, LongManualID_CURIE, LongManualID_EINSTEIN };
+
+		int i = 0;
+		for (PersonLongManualID person : people) {
+			assertEquals(array[i], person);
+			i++;
+		}
+	}
+	
+	public void testOrderStringId() {
+		List<PersonStringID> people = queryPersonStringIDOrderBy("id", "", false).fetch();
+		
+		assertNotNull(people);
+		assertEquals(3, people.size());
+		
+		PersonStringID[] array = new PersonStringID[] { StringID_CURIE, StringID_EINSTEIN, StringID_TESLA };
+
+		int i = 0;
+		for (PersonStringID person : people) {
+			assertEquals(array[i], person);
+			i++;
+		}
 	}
 	
 	public void testGetObjectNotFound() {
 		try {
-			getPerson("");
+			getPersonUUID("");
 			fail();
 		} catch(Exception e) {
 			System.out.println("Everything is OK");
 		}
 		
-		assertNull(pm.createQuery(Person.class).filter("firstName", "John").get());
+		assertNull(pm.createQuery(PersonUUID.class).filter("firstName", "John").get());
 	}
 	
 	public void testDeleteObjectNotFound() {
 		try {
-			Person p = new Person();
+			PersonUUID p = new PersonUUID();
 			pm.delete(p);
 			fail();
 		} catch(Exception e) {
@@ -425,17 +1211,17 @@ public abstract class BaseTest extends TestCase {
 	}
 	
 	public void testRelationship() {
-		Discovery radioactivity = new Discovery("Radioactivity", CURIE);
-		Discovery relativity = new Discovery("Relativity", EINSTEIN);
-		Discovery teslaCoil = new Discovery("Tesla Coil", TESLA);
-		Discovery foo = new Discovery(null, TESLA);
+		Discovery radioactivity = new Discovery("Radioactivity", LongAutoID_CURIE);
+		Discovery relativity = new Discovery("Relativity", LongAutoID_EINSTEIN);
+		Discovery teslaCoil = new Discovery("Tesla Coil", LongAutoID_TESLA);
+		Discovery foo = new Discovery(null, LongAutoID_TESLA);
 		
 		pm.insert(radioactivity);
 		pm.insert(relativity);
 		pm.insert(teslaCoil);
 		pm.insert(foo);
 
-		Discovery relativity2 = pm.createQuery(Discovery.class).filter("discoverer", EINSTEIN).get();
+		Discovery relativity2 = pm.createQuery(Discovery.class).filter("discoverer", LongAutoID_EINSTEIN).get();
 		assertTrue(relativity.name.equals(relativity2.name));
 		
 		Discovery foo2 = pm.createQuery(Discovery.class).filter("name", null).get();
@@ -496,6 +1282,9 @@ public abstract class BaseTest extends TestCase {
 				(byte)0x01, (byte)0x02, (byte)0x03, (byte)0x04,
 				(byte)0x10,	(byte)0X11, (byte)0xF0, (byte)0xF1, 
 				(byte)0xF9,	(byte)0xFF };
+		
+		dataTypes.typeEnum = EnumLong.ALPHA;
+		
 		pm.insert(dataTypes);
 		
 		// to test that fields are read back correctly
@@ -558,12 +1347,19 @@ public abstract class BaseTest extends TestCase {
 			assertNull(dataTypes.typeBlob);
 			assertNull(same.typeBlob);
 		}
+		
+		if(dataTypes.typeEnum != null && same.typeEnum != null) {
+			assertEquals(dataTypes.typeEnum.getCode(), same.typeEnum.getCode());
+		} else {
+			assertNull(dataTypes.typeEnum);
+			assertNull(same.typeEnum);
+		}
 	}
 	
 	public void testQueryDelete() {
-		Discovery radioactivity = new Discovery("Radioactivity", CURIE);
-		Discovery relativity = new Discovery("Relativity", EINSTEIN);
-		Discovery teslaCoil = new Discovery("Tesla Coil", TESLA);
+		Discovery radioactivity = new Discovery("Radioactivity", LongAutoID_CURIE);
+		Discovery relativity = new Discovery("Relativity", LongAutoID_EINSTEIN);
+		Discovery teslaCoil = new Discovery("Tesla Coil", LongAutoID_TESLA);
 		
 		pm.insert(radioactivity);
 		pm.insert(relativity);
@@ -574,25 +1370,25 @@ public abstract class BaseTest extends TestCase {
 	}
 	
 	public void testQueryDeleteFiltered() {
-		Discovery radioactivity = new Discovery("Radioactivity", CURIE);
-		Discovery relativity = new Discovery("Relativity", EINSTEIN);
-		Discovery foo = new Discovery("Foo", EINSTEIN);
-		Discovery teslaCoil = new Discovery("Tesla Coil", TESLA);
+		Discovery radioactivity = new Discovery("Radioactivity", LongAutoID_CURIE);
+		Discovery relativity = new Discovery("Relativity", LongAutoID_EINSTEIN);
+		Discovery foo = new Discovery("Foo", LongAutoID_EINSTEIN);
+		Discovery teslaCoil = new Discovery("Tesla Coil", LongAutoID_TESLA);
 		
 		pm.insert(radioactivity);
 		pm.insert(relativity);
 		pm.insert(foo);
 		pm.insert(teslaCoil);
 
-		int n = pm.createQuery(Discovery.class).filter("discoverer", EINSTEIN).delete();
+		int n = pm.createQuery(Discovery.class).filter("discoverer", LongAutoID_EINSTEIN).delete();
 		assertEquals(2, n);
 	}
 
 	public void testJoin() {
-		Discovery radioactivity = new Discovery("Radioactivity", CURIE);
-		Discovery relativity = new Discovery("Relativity", EINSTEIN);
-		Discovery foo = new Discovery("Foo", EINSTEIN);
-		Discovery teslaCoil = new Discovery("Tesla Coil", TESLA);
+		Discovery radioactivity = new Discovery("Radioactivity", LongAutoID_CURIE);
+		Discovery relativity = new Discovery("Relativity", LongAutoID_EINSTEIN);
+		Discovery foo = new Discovery("Foo", LongAutoID_EINSTEIN);
+		Discovery teslaCoil = new Discovery("Tesla Coil", LongAutoID_TESLA);
 		
 		pm.insert(radioactivity);
 		pm.insert(relativity);
@@ -606,17 +1402,17 @@ public abstract class BaseTest extends TestCase {
 		assertEquals(foo, res.get(2));
 		assertEquals(teslaCoil, res.get(3));
 		
-		assertEquals(CURIE, res.get(0).discoverer);
-		assertEquals(EINSTEIN, res.get(1).discoverer);
-		assertEquals(EINSTEIN, res.get(2).discoverer);
-		assertEquals(TESLA, res.get(3).discoverer);
+		assertEquals(LongAutoID_CURIE, res.get(0).discoverer);
+		assertEquals(LongAutoID_EINSTEIN, res.get(1).discoverer);
+		assertEquals(LongAutoID_EINSTEIN, res.get(2).discoverer);
+		assertEquals(LongAutoID_TESLA, res.get(3).discoverer);
 	}
 	
 	public void testJoinSortFields() {
-		Discovery radioactivity = new Discovery("Radioactivity", CURIE);
-		Discovery relativity = new Discovery("Relativity", EINSTEIN);
-		Discovery foo = new Discovery("Foo", EINSTEIN);
-		Discovery teslaCoil = new Discovery("Tesla Coil", TESLA);
+		Discovery radioactivity = new Discovery("Radioactivity", LongAutoID_CURIE);
+		Discovery relativity = new Discovery("Relativity", LongAutoID_EINSTEIN);
+		Discovery foo = new Discovery("Foo", LongAutoID_EINSTEIN);
+		Discovery teslaCoil = new Discovery("Tesla Coil", LongAutoID_TESLA);
 		
 		pm.insert(radioactivity);
 		pm.insert(relativity);
@@ -630,18 +1426,18 @@ public abstract class BaseTest extends TestCase {
 		assertEquals(foo, res.get(2));
 		assertEquals(teslaCoil, res.get(3));
 		
-		assertEquals(CURIE, res.get(0).discoverer);
-		assertEquals(EINSTEIN, res.get(1).discoverer);
-		assertEquals(EINSTEIN, res.get(2).discoverer);
-		assertEquals(TESLA, res.get(3).discoverer);
+		assertEquals(LongAutoID_CURIE, res.get(0).discoverer);
+		assertEquals(LongAutoID_EINSTEIN, res.get(1).discoverer);
+		assertEquals(LongAutoID_EINSTEIN, res.get(2).discoverer);
+		assertEquals(LongAutoID_TESLA, res.get(3).discoverer);
 	}
 	
 	
 	public void testJoinAnnotation() {
-		Discovery4Join radioactivity = new Discovery4Join("Radioactivity", CURIE, TESLA);
-		Discovery4Join relativity = new Discovery4Join("Relativity", EINSTEIN, TESLA);
-		Discovery4Join foo = new Discovery4Join("Foo", EINSTEIN, EINSTEIN);
-		Discovery4Join teslaCoil = new Discovery4Join("Tesla Coil", TESLA, CURIE);
+		Discovery4Join radioactivity = new Discovery4Join("Radioactivity", LongAutoID_CURIE, LongAutoID_TESLA);
+		Discovery4Join relativity = new Discovery4Join("Relativity", LongAutoID_EINSTEIN, LongAutoID_TESLA);
+		Discovery4Join foo = new Discovery4Join("Foo", LongAutoID_EINSTEIN, LongAutoID_EINSTEIN);
+		Discovery4Join teslaCoil = new Discovery4Join("Tesla Coil", LongAutoID_TESLA, LongAutoID_CURIE);
 		
 		pm.insert(radioactivity);
 		pm.insert(relativity);
@@ -655,15 +1451,15 @@ public abstract class BaseTest extends TestCase {
 		assertEquals(foo, res.get(2));
 		assertEquals(teslaCoil, res.get(3));
 		
-		assertEquals(CURIE, res.get(0).discovererJoined);
-		assertEquals(EINSTEIN, res.get(1).discovererJoined);
-		assertEquals(EINSTEIN, res.get(2).discovererJoined);
-		assertEquals(TESLA, res.get(3).discovererJoined);
+		assertEquals(LongAutoID_CURIE, res.get(0).discovererJoined);
+		assertEquals(LongAutoID_EINSTEIN, res.get(1).discovererJoined);
+		assertEquals(LongAutoID_EINSTEIN, res.get(2).discovererJoined);
+		assertEquals(LongAutoID_TESLA, res.get(3).discovererJoined);
 
-		assertEquals(TESLA.id, res.get(0).discovererNotJoined.id);
-		assertEquals(TESLA.id, res.get(1).discovererNotJoined.id);
-		assertEquals(EINSTEIN.id, res.get(2).discovererNotJoined.id);
-		assertEquals(CURIE.id, res.get(3).discovererNotJoined.id);
+		assertEquals(LongAutoID_TESLA.id, res.get(0).discovererNotJoined.id);
+		assertEquals(LongAutoID_TESLA.id, res.get(1).discovererNotJoined.id);
+		assertEquals(LongAutoID_EINSTEIN.id, res.get(2).discovererNotJoined.id);
+		assertEquals(LongAutoID_CURIE.id, res.get(3).discovererNotJoined.id);
 		
 		assertTrue(res.get(0).discovererNotJoined.isOnlyIdFilled());
 		assertTrue(res.get(1).discovererNotJoined.isOnlyIdFilled());
@@ -672,19 +1468,42 @@ public abstract class BaseTest extends TestCase {
 	}
 
 	
-	private Person getPerson(String id) {
-		Person p = new Person();
+	private PersonUUID getPersonUUID(String id) {
+		PersonUUID p = new PersonUUID();
 		p.id = id;
 		pm.get(p);
 		return p;
 	}
 
+	private PersonLongAutoID getPersonLongAutoID(Long id) {
+		PersonLongAutoID p = new PersonLongAutoID();
+		p.id = id;
+		pm.get(p);
+		return p;
+	}
 	
+	private PersonLongManualID getPersonLongManualID(Long id) {
+		PersonLongManualID p = new PersonLongManualID();
+		p.id = id;
+		pm.get(p);
+		return p;
+	}
+
+	private PersonStringID getPersonStringID(String id) {
+		PersonStringID p = new PersonStringID();
+		p.id = id;
+		pm.get(p);
+		return p;
+	}
+
 	@Override
 	protected void setUp() throws Exception {
 		super.setUp();
 		List<Class<?>> classes = new ArrayList<Class<?>>();
-		classes.add(Person.class);
+		classes.add(PersonUUID.class);
+		classes.add(PersonLongAutoID.class);
+		classes.add(PersonLongManualID.class);
+		classes.add(PersonStringID.class);
 		if(supportsAutoincrement())
 			classes.add(AutoInc.class);
 		if(supportsMultipleKeys())
@@ -701,10 +1520,21 @@ public abstract class BaseTest extends TestCase {
 			}
 		}
 		
-		pm.insert(TESLA);
-		pm.insert(CURIE);
-		pm.insert(EINSTEIN);
+		pm.insert(UUID_TESLA);
+		pm.insert(UUID_CURIE);
+		pm.insert(UUID_EINSTEIN);
 				
-	}
+		pm.insert(LongAutoID_TESLA);
+		pm.insert(LongAutoID_CURIE);
+		pm.insert(LongAutoID_EINSTEIN);
+
+		pm.insert(LongManualID_TESLA);
+		pm.insert(LongManualID_CURIE);
+		pm.insert(LongManualID_EINSTEIN);
+
+		pm.insert(StringID_TESLA);
+		pm.insert(StringID_CURIE);
+		pm.insert(StringID_EINSTEIN);
+}
 
 }
