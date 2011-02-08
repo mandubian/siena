@@ -31,7 +31,7 @@ import siena.embed.Embedded;
 public class MassEntity {
 
 	@Id(Generator.AUTO_INCREMENT)
-	public String id;
+	public Long id;
 	
 	public byte 		typeByte;
 	public short 		typeShort;
