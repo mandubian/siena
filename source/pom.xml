@@ -331,7 +331,7 @@
 							</excludes>
 							<includes>
 								<include>**/GaeTest.java</include>
-								<include>**/GaeMassTest.java</include>
+								<!--include>**/GaeMassTest.java</include-->
 							</includes>
 						</configuration>
 					</plugin>
