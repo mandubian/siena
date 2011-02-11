@@ -283,7 +283,7 @@ public abstract class BaseTest extends TestCase {
 	}
 	
 	public void testFilterOperatorEqualLongAutoID() {
-		PersonLongAutoID person = pm.createQuery(PersonLongAutoID.class).filter("id", 3L).get();
+		PersonLongAutoID person = pm.createQuery(PersonLongAutoID.class).filter("id", LongAutoID_EINSTEIN.id).get();
 		assertNotNull(person);
 		assertEquals(LongAutoID_EINSTEIN, person);
 	}
@@ -326,7 +326,7 @@ public abstract class BaseTest extends TestCase {
 	}
 	
 	public void testFilterOperatorNotEqualLongAutoID() {
-		List<PersonLongAutoID> people = pm.createQuery(PersonLongAutoID.class).filter("id!=", 3L).order("id").fetch();
+		List<PersonLongAutoID> people = pm.createQuery(PersonLongAutoID.class).filter("id!=", LongAutoID_EINSTEIN.id).order("id").fetch();
 
 		assertNotNull(people);
 		assertEquals(2, people.size());
@@ -362,6 +362,7 @@ public abstract class BaseTest extends TestCase {
 					add(2);
 					add(3);
 				}})
+				.order("n")
 				.fetch();
 
 		assertNotNull(people);
@@ -389,16 +390,18 @@ public abstract class BaseTest extends TestCase {
 	}
 	
 	public void testFilterOperatorInForUUID() {
+		List<PersonUUID> l = getOrderedPersonUUIDs();
+		
 		List<PersonUUID> people = 
 			pm.createQuery(PersonUUID.class)
-				.filter("id IN", Arrays.asList( UUID_TESLA.id, UUID_CURIE.id))
+				.filter("id IN", Arrays.asList( l.get(0).id, l.get(1).id))
 				.fetch();
 
 		assertNotNull(people);
 		assertEquals(2, people.size());
 
-		assertEquals(UUID_TESLA, people.get(0));
-		assertEquals(UUID_CURIE, people.get(1));
+		assertEquals(l.get(0), people.get(0));
+		assertEquals(l.get(1), people.get(1));
 	}
 	
 	public void testFilterOperatorInForLongAutoID() {
@@ -440,13 +443,14 @@ public abstract class BaseTest extends TestCase {
 					add(StringID_TESLA.id);
 					add(StringID_CURIE.id);
 				}})
+				.order("id")
 				.fetch();
 
 		assertNotNull(people);
 		assertEquals(2, people.size());
 
-		assertEquals(StringID_TESLA, people.get(0));
-		assertEquals(StringID_CURIE, people.get(1));
+		assertEquals(StringID_CURIE, people.get(0));
+		assertEquals(StringID_TESLA, people.get(1));
 	}
 	
 	public void testFilterOperatorLessThan() {
@@ -473,7 +477,7 @@ public abstract class BaseTest extends TestCase {
 	}
 	
 	public void testFilterOperatorLessThanForLongAutoID() {
-		List<PersonLongAutoID> people = pm.createQuery(PersonLongAutoID.class).filter("id<", 3L).order("id").fetch();
+		List<PersonLongAutoID> people = pm.createQuery(PersonLongAutoID.class).filter("id<", LongAutoID_EINSTEIN.id).order("id").fetch();
 
 		assertNotNull(people);
 		assertEquals(2, people.size());
@@ -528,7 +532,7 @@ public abstract class BaseTest extends TestCase {
 	}
 	
 	public void testFilterOperatorLessThanOrEqualForLongAutoID() {
-		List<PersonLongAutoID> people = pm.createQuery(PersonLongAutoID.class).filter("id<=", 3L).order("id").fetch();
+		List<PersonLongAutoID> people = pm.createQuery(PersonLongAutoID.class).filter("id<=", LongAutoID_EINSTEIN.id).order("id").fetch();
 
 		assertNotNull(people);
 		assertEquals(3, people.size());
@@ -539,7 +543,7 @@ public abstract class BaseTest extends TestCase {
 	}
 	
 	public void testFilterOperatorLessThanOrEqualForLongManualID() {
-		List<PersonLongManualID> people = pm.createQuery(PersonLongManualID.class).filter("id<=", 3L).order("id").fetch();
+		List<PersonLongManualID> people = pm.createQuery(PersonLongManualID.class).filter("id<=", LongManualID_EINSTEIN.id).order("id").fetch();
 
 		assertNotNull(people);
 		assertEquals(3, people.size());
@@ -585,7 +589,7 @@ public abstract class BaseTest extends TestCase {
 	}
 	
 	public void testFilterOperatorMoreThanForLongAutoID() {
-		List<PersonLongAutoID> people = pm.createQuery(PersonLongAutoID.class).filter("id>", 1L).order("id").fetch();
+		List<PersonLongAutoID> people = pm.createQuery(PersonLongAutoID.class).filter("id>", LongAutoID_TESLA.id).order("id").fetch();
 
 		assertNotNull(people);
 		assertEquals(2, people.size());
@@ -595,7 +599,7 @@ public abstract class BaseTest extends TestCase {
 	}
 	
 	public void testFilterOperatorMoreThanForLongManualID() {
-		List<PersonLongManualID> people = pm.createQuery(PersonLongManualID.class).filter("id>", 1L).order("id").fetch();
+		List<PersonLongManualID> people = pm.createQuery(PersonLongManualID.class).filter("id>", LongManualID_TESLA.id).order("id").fetch();
 
 		assertNotNull(people);
 		assertEquals(2, people.size());
@@ -641,7 +645,7 @@ public abstract class BaseTest extends TestCase {
 	}
 	
 	public void testFilterOperatorMoreThanOrEqualForLongAutoID() {
-		List<PersonLongAutoID> people = pm.createQuery(PersonLongAutoID.class).filter("id>=", 2L).order("id").fetch();
+		List<PersonLongAutoID> people = pm.createQuery(PersonLongAutoID.class).filter("id>=", LongAutoID_CURIE.id).order("id").fetch();
 
 		assertNotNull(people);
 		assertEquals(2, people.size());
@@ -651,7 +655,7 @@ public abstract class BaseTest extends TestCase {
 	}
 	
 	public void testFilterOperatorMoreThanOrEqualForLongManualID() {
-		List<PersonLongManualID> people = pm.createQuery(PersonLongManualID.class).filter("id>=", 2L).order("id").fetch();
+		List<PersonLongManualID> people = pm.createQuery(PersonLongManualID.class).filter("id>=", LongManualID_CURIE.id).order("id").fetch();
 
 		assertNotNull(people);
 		assertEquals(2, people.size());
@@ -680,11 +684,11 @@ public abstract class BaseTest extends TestCase {
 	}
 	
 	public void testCountFilterLongAutoID() {
-		assertEquals(2, pm.createQuery(PersonLongAutoID.class).filter("id<", 3L).count());
+		assertEquals(2, pm.createQuery(PersonLongAutoID.class).filter("id<", LongAutoID_EINSTEIN.id).count());
 	}
 
 	public void testCountFilterLongManualID() {
-		assertEquals(2, pm.createQuery(PersonLongManualID.class).filter("id<", 3L).count());
+		assertEquals(2, pm.createQuery(PersonLongManualID.class).filter("id<", LongManualID_EINSTEIN.id).count());
 	}
 	
 	public void testCountFilterStringID() {
@@ -889,7 +893,7 @@ public abstract class BaseTest extends TestCase {
 
 
 	public void testIterFullUUID() {
-		Iterable<PersonUUID> people = pm.createQuery(PersonUUID.class).iter();
+		Iterable<PersonUUID> people = pm.createQuery(PersonUUID.class).order("n").iter();
 
 		assertNotNull(people);
 
@@ -898,12 +902,6 @@ public abstract class BaseTest extends TestCase {
 			add(UUID_CURIE);
 			add(UUID_EINSTEIN);
 		}};
-
-		Collections.sort(l, new Comparator<PersonUUID>(){
-			public int compare(PersonUUID p1,PersonUUID p2){
-                return p1.id.compareTo(p2.id);
-			}
-		});
 		
 		int i = 0;
 		for (PersonUUID person : people) {
@@ -913,7 +911,7 @@ public abstract class BaseTest extends TestCase {
 	}
 	
 	public void testIterFullLongAutoID() {
-		Iterable<PersonLongAutoID> people = pm.createQuery(PersonLongAutoID.class).iter();
+		Iterable<PersonLongAutoID> people = pm.createQuery(PersonLongAutoID.class).order("n").iter();
 
 		assertNotNull(people);
 
@@ -927,7 +925,7 @@ public abstract class BaseTest extends TestCase {
 	}
 
 	public void testIterFullLongManualID() {
-		Iterable<PersonLongManualID> people = pm.createQuery(PersonLongManualID.class).iter();
+		Iterable<PersonLongManualID> people = pm.createQuery(PersonLongManualID.class).order("n").iter();
 
 		assertNotNull(people);
 
@@ -941,11 +939,11 @@ public abstract class BaseTest extends TestCase {
 	}
 	
 	public void testIterFullLongStringID() {
-		Iterable<PersonStringID> people = pm.createQuery(PersonStringID.class).iter();
+		Iterable<PersonStringID> people = pm.createQuery(PersonStringID.class).order("n").iter();
 
 		assertNotNull(people);
 
-		PersonStringID[] array = new PersonStringID[] { StringID_CURIE, StringID_EINSTEIN, StringID_TESLA };
+		PersonStringID[] array = new PersonStringID[] { StringID_TESLA, StringID_CURIE, StringID_EINSTEIN  };
 
 		int i = 0;
 		for (PersonStringID person : people) {
@@ -955,21 +953,14 @@ public abstract class BaseTest extends TestCase {
 	}
 	
 	public void testIterLimitUUID() {
-		Iterable<PersonUUID> people = pm.createQuery(PersonUUID.class).iter(2);
+		Iterable<PersonUUID> people = pm.createQuery(PersonUUID.class).order("n").iter(2);
 
 		assertNotNull(people);
 
 		ArrayList<PersonUUID> l = new ArrayList<PersonUUID>() {{ 
 			add(UUID_TESLA); 
 			add(UUID_CURIE);
-			add(UUID_EINSTEIN);
 		}};
-
-		Collections.sort(l, new Comparator<PersonUUID>(){
-			public int compare(PersonUUID p1,PersonUUID p2){
-                return p1.id.compareTo(p2.id);
-			}
-		});
 		
 		int i = 0;
 		for (PersonUUID person : people) {
@@ -979,7 +970,7 @@ public abstract class BaseTest extends TestCase {
 	}
 	
 	public void testIterLimitLongAutoID() {
-		Iterable<PersonLongAutoID> people = pm.createQuery(PersonLongAutoID.class).iter(2);
+		Iterable<PersonLongAutoID> people = pm.createQuery(PersonLongAutoID.class).order("n").iter(2);
 
 		assertNotNull(people);
 
@@ -993,7 +984,7 @@ public abstract class BaseTest extends TestCase {
 	}
 
 	public void testIterLimitLongManualID() {
-		Iterable<PersonLongManualID> people = pm.createQuery(PersonLongManualID.class).iter(2);
+		Iterable<PersonLongManualID> people = pm.createQuery(PersonLongManualID.class).order("n").iter(2);
 
 		assertNotNull(people);
 
@@ -1007,11 +998,11 @@ public abstract class BaseTest extends TestCase {
 	}
 	
 	public void testIterLimitLongStringID() {
-		Iterable<PersonStringID> people = pm.createQuery(PersonStringID.class).iter(2);
+		Iterable<PersonStringID> people = pm.createQuery(PersonStringID.class).order("n").iter(2);
 
 		assertNotNull(people);
 
-		PersonStringID[] array = new PersonStringID[] { StringID_CURIE, StringID_EINSTEIN };
+		PersonStringID[] array = new PersonStringID[] { StringID_TESLA, StringID_CURIE };
 
 		int i = 0;
 		for (PersonStringID person : people) {
@@ -1021,31 +1012,24 @@ public abstract class BaseTest extends TestCase {
 	}
 	
 	public void testIterLimitOffsetUUID() {
-		Iterable<PersonUUID> people = pm.createQuery(PersonUUID.class).iter(2,1);
+		Iterable<PersonUUID> people = pm.createQuery(PersonUUID.class).order("n").iter(2,1);
 
 		assertNotNull(people);
 
 		ArrayList<PersonUUID> l = new ArrayList<PersonUUID>() {{ 
-			add(UUID_TESLA); 
 			add(UUID_CURIE);
 			add(UUID_EINSTEIN);
 		}};
-
-		Collections.sort(l, new Comparator<PersonUUID>(){
-			public int compare(PersonUUID p1,PersonUUID p2){
-                return p1.id.compareTo(p2.id);
-			}
-		});
 		
 		int i = 0;
 		for (PersonUUID person : people) {
-			assertEquals( l.get(i+1), person);
+			assertEquals( l.get(i), person);
 			i++;
 		}
 	}
 	
 	public void testIterLimitOffsetLongAutoID() {
-		Iterable<PersonLongAutoID> people = pm.createQuery(PersonLongAutoID.class).iter(2, 1);
+		Iterable<PersonLongAutoID> people = pm.createQuery(PersonLongAutoID.class).order("n").iter(2, 1);
 
 		assertNotNull(people);
 
@@ -1059,7 +1043,7 @@ public abstract class BaseTest extends TestCase {
 	}
 
 	public void testIterLimitOffsetLongManualID() {
-		Iterable<PersonLongManualID> people = pm.createQuery(PersonLongManualID.class).iter(2,1);
+		Iterable<PersonLongManualID> people = pm.createQuery(PersonLongManualID.class).order("n").iter(2,1);
 
 		assertNotNull(people);
 
@@ -1073,11 +1057,11 @@ public abstract class BaseTest extends TestCase {
 	}
 	
 	public void testIterLimitOffsetLongStringID() {
-		Iterable<PersonStringID> people = pm.createQuery(PersonStringID.class).iter(2,1);
+		Iterable<PersonStringID> people = pm.createQuery(PersonStringID.class).order("n").iter(2,1);
 
 		assertNotNull(people);
 
-		PersonStringID[] array = new PersonStringID[] { StringID_EINSTEIN, StringID_TESLA };
+		PersonStringID[] array = new PersonStringID[] { StringID_CURIE, StringID_EINSTEIN };
 
 		int i = 0;
 		for (PersonStringID person : people) {
@@ -1087,7 +1071,7 @@ public abstract class BaseTest extends TestCase {
 	}
 	
 	public void testIterFilter() {
-		Iterable<PersonUUID> people = pm.createQuery(PersonUUID.class).filter("n>", 1).iter();
+		Iterable<PersonUUID> people = pm.createQuery(PersonUUID.class).filter("n>", 1).order("n").iter();
 
 		assertNotNull(people);
 
@@ -1101,7 +1085,7 @@ public abstract class BaseTest extends TestCase {
 	}
 	
 	public void testIterFilterLimit() {
-		Iterable<PersonUUID> people = pm.createQuery(PersonUUID.class).filter("n>", 1).iter(1);
+		Iterable<PersonUUID> people = pm.createQuery(PersonUUID.class).filter("n>", 1).order("n").iter(1);
 
 		assertNotNull(people);
 
@@ -1115,7 +1099,7 @@ public abstract class BaseTest extends TestCase {
 	}
 	
 	public void testIterFilterLimitOffset() {
-		Iterable<PersonUUID> people = pm.createQuery(PersonUUID.class).filter("n>", 1).iter(2, 1);
+		Iterable<PersonUUID> people = pm.createQuery(PersonUUID.class).filter("n>", 1).order("n").iter(2, 1);
 
 		assertNotNull(people);
 
