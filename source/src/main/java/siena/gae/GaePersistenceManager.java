@@ -24,6 +24,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Properties;
 import java.util.UUID;
 
@@ -310,11 +311,11 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 
 	protected static void setFromObject(Object object, Field f, Object value)
 			throws IllegalArgumentException, IllegalAccessException {
-		// if(value instanceof Text)
-		// value = ((Text) value).getValue();
-		// else if(value instanceof Blob) {
-		// value = ((Blob) value).getBytes();
-		// }
+		if(value instanceof Text)
+			value = ((Text) value).getValue();
+		else if(value instanceof Blob && f.getType() == byte[].class) {
+			value = ((Blob) value).getBytes();
+		}
 		Util.setFromObject(object, f, value);
 	}
 
@@ -815,11 +816,11 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 					setKey(id, obj, entity.getKey());
 
 					return obj;
-				} catch (SienaException e) {
-					throw e;
-				} catch (Exception e) {
+				} catch (IllegalAccessException e) {
 					throw new SienaException(e);
-				}
+				} catch (InstantiationException e) {
+					throw new SienaException(e);
+				} 
 			}
 
 			@Override
