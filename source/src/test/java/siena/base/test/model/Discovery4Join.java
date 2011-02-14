@@ -7,7 +7,7 @@ import siena.Join;
 import siena.Max;
 import siena.Table;
 
-@Table("discoveries4Join")
+@Table("discoveries_join")
 public class Discovery4Join {
 
 	@Id(Generator.AUTO_INCREMENT)

@@ -236,6 +236,42 @@ public class MockPersistenceManager implements PersistenceManager {
 			return null;
 		}
 
+		@Override
+		public Object raw(String request) {
+			// TODO Auto-generated method stub
+			return null;
+		}
+
+		@Override
+		public Query<T> paginate(int size) {
+			// TODO Auto-generated method stub
+			return null;
+		}
+
+		@Override
+		public boolean hasPaginating() {
+			// TODO Auto-generated method stub
+			return false;
+		}
+
+		@Override
+		public int pageSize() {
+			// TODO Auto-generated method stub
+			return 0;
+		}
+
+		@Override
+		public Object dbPayload() {
+			// TODO Auto-generated method stub
+			return null;
+		}
+
+		@Override
+		public void setDbPayload(Object dbPayload) {
+			// TODO Auto-generated method stub
+			
+		}
+
 	}
 
 	@Override

@@ -26,13 +26,16 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Properties;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 import siena.AbstractPersistenceManager;
+import siena.BaseQuery;
 import siena.ClassInfo;
 import siena.DateTime;
 import siena.Generator;
@@ -40,8 +43,10 @@ import siena.Id;
 import siena.Json;
 import siena.Query;
 import siena.QueryFilter;
+import siena.QueryJoin;
 import siena.QueryOrder;
 import siena.SienaException;
+import siena.SienaRestrictedApiException;
 import siena.SimpleDate;
 import siena.Time;
 import siena.Util;
@@ -49,13 +54,11 @@ import siena.embed.Embedded;
 import siena.embed.JsonSerializer;
 
 public class JdbcPersistenceManager extends AbstractPersistenceManager {
-
-	private Map<Class<?>, JdbcClassInfo> infoClasses;
-
+	private static final String DB = "JDBC";
+	
 	private ConnectionManager connectionManager;
 
 	public JdbcPersistenceManager() {
-		infoClasses = new ConcurrentHashMap<Class<?>, JdbcClassInfo>();
 	}
 
 	public JdbcPersistenceManager(ConnectionManager connectionManager, Class<?> listener) {
@@ -82,26 +85,19 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 		return connectionManager.getConnection();
 	}
 
-	public JdbcClassInfo getClassInfo(Class<?> clazz) {
-		JdbcClassInfo ci = infoClasses.get(clazz);
-		if(ci == null) {
-			ci = new JdbcClassInfo(clazz);
-			infoClasses.put(clazz, ci);
-		}
-		return ci;
-	}
-
-	private Object readField(Object object, Field field) {
+	private static Object readField(Object object, Field field) {
 		field.setAccessible(true);
 		try {
 			return field.get(object);
 		} catch (Exception e) {
 			throw new SienaException(e);
+		} finally {
+			field.setAccessible(false);
 		}
 	}
 
 	public void delete(Object obj) {
-		JdbcClassInfo classInfo = getClassInfo(obj.getClass());
+		JdbcClassInfo classInfo = JdbcClassInfo.getClassInfo(obj.getClass());
 
 		PreparedStatement ps = null;
 		try {
@@ -122,7 +118,7 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 	}
 
 	public void get(Object obj) {
-		JdbcClassInfo classInfo = getClassInfo(obj.getClass());
+		JdbcClassInfo classInfo = JdbcClassInfo.getClassInfo(obj.getClass());
 
 		PreparedStatement ps = null;
 		ResultSet rs = null;
@@ -131,7 +127,7 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 			addParameters(obj, classInfo.keys, ps, 1);
 			rs = ps.executeQuery();
 			if(rs.next()) {
-				mapObject(obj, rs);
+				mapObject(obj, rs, null, null);
 			} else {
 				throw new SienaException("No such object");
 			}
@@ -147,7 +143,7 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 		for (Field field : fields) {
 			Class<?> type = field.getType();
 			if(ClassInfo.isModel(type)) {
-				JdbcClassInfo ci = getClassInfo(type);
+				JdbcClassInfo ci = JdbcClassInfo.getClassInfo(type);
 				Object rel = readField(obj, field);
 				for(Field f : ci.keys) {
 					if(rel != null) {
@@ -161,10 +157,14 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 				}
 			} else {
 				Object value = readField(obj, field);
-				if(value instanceof Json)
-					value = ((Json)value).toString();
-				else if(field.getAnnotation(Embedded.class) != null)
-					value = JsonSerializer.serialize(value).toString();
+				if(value != null){
+					if(Json.class.isAssignableFrom(field.getType()))
+						value = ((Json)value).toString();
+					else if(field.getAnnotation(Embedded.class) != null)
+						value = JsonSerializer.serialize(value).toString();
+					else if(Enum.class.isAssignableFrom(field.getType()))
+						value = value.toString();
+				}
 				setParameter(ps, i++, value);
 			}
 		}
@@ -172,7 +172,7 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 	}
 
 	public void insert(Object obj) {
-		JdbcClassInfo classInfo = getClassInfo(obj.getClass());
+		JdbcClassInfo classInfo = JdbcClassInfo.getClassInfo(obj.getClass());
 
 		PreparedStatement ps = null;
 		try {
@@ -201,7 +201,7 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 	}
 
 	public void update(Object obj) {
-		JdbcClassInfo classInfo = getClassInfo(obj.getClass());
+		JdbcClassInfo classInfo = JdbcClassInfo.getClassInfo(obj.getClass());
 
 		PreparedStatement ps = null;
 		try {
@@ -217,18 +217,10 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 		}
 	}
 
-	public String[] getColumnNames(Class<?> clazz, String field) {
-		try {
-			return ClassInfo.getColumnNames(clazz.getDeclaredField(field));
-		} catch (Exception e) {
-			throw new SienaException(e);
-		}
-	}
-
-	protected <T> T mapObject(Class<T> clazz, ResultSet rs) {
+	protected static <T> T mapObject(Class<T> clazz, ResultSet rs, String tableName, List<Field >joinFields) {
 		try {
 			T obj = clazz.newInstance();
-			mapObject(obj, rs);
+			mapObject(obj, rs, tableName, joinFields);
 			return obj;
 		} catch(SienaException e) {
 			throw e;
@@ -237,18 +229,64 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 		}
 	}
 
-	private void mapObject(Object obj, ResultSet rs) {
+	private static void mapObject(Object obj, ResultSet rs, String tableName, List<Field >joinFields) {
 		Class<?> clazz = obj.getClass();
-		for (Field field : getClassInfo(clazz).allFields) {
-			mapField(obj, field, rs);
+		for (Field field : JdbcClassInfo.getClassInfo(clazz).allFields) {
+			mapField(obj, field, rs, tableName, joinFields);
 		}
 	}
 
-	protected <T> List<T> mapList(Class<T> clazz, ResultSet rs) {
+	protected <T> List<T> mapList(Class<T> clazz, ResultSet rs, String tableName, List<Field> joinFields, int pageSize) {
 		try {
 			List<T> objects = new ArrayList<T>();
-			while(rs.next()) {
-				objects.add(mapObject(clazz, rs));
+			if(pageSize==0){
+				while(rs.next()) {
+					objects.add(mapObject(clazz, rs, tableName, joinFields));
+				}
+			}else {
+				for(int i=0; i<pageSize && rs.next();i++){
+					objects.add(mapObject(clazz, rs, tableName, joinFields));
+				}
+			}
+			return objects;
+		} catch(SienaException e) {
+			throw e;
+		} catch(Exception e) {
+			throw new SienaException(e);
+		}
+	}
+	
+	
+	protected <T> T mapObjectKeys(Class<T> clazz, ResultSet rs, String tableName, List<Field> joinFields) {
+		try {
+			T obj = clazz.newInstance();
+			mapObjectKeys(obj, rs, tableName, joinFields);
+			return obj;
+		} catch(SienaException e) {
+			throw e;
+		} catch(Exception e) {
+			throw new SienaException(e);
+		}
+	}
+
+	private void mapObjectKeys(Object obj, ResultSet rs, String tableName, List<Field> joinFields) {
+		Class<?> clazz = obj.getClass();
+		for (Field field : JdbcClassInfo.getClassInfo(clazz).keys) {
+			mapField(obj, field, rs, tableName, joinFields);
+		}
+	}
+	
+	protected <T> List<T> mapListKeys(Class<T> clazz, ResultSet rs, String tableName, List<Field> joinFields, int pageSize) {
+		try {
+			List<T> objects = new ArrayList<T>();
+			if(pageSize==0){
+				while(rs.next()) {
+				objects.add(mapObjectKeys(clazz, rs, tableName, joinFields));
+				}
+			}else {
+				for(int i=0; i<pageSize && rs.next();i++){
+					objects.add(mapObjectKeys(clazz, rs, tableName, joinFields));
+				}
 			}
 			return objects;
 		} catch(SienaException e) {
@@ -258,32 +296,37 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 		}
 	}
 
-	private void mapField(Object obj, Field field, ResultSet rs) {
+	private static void mapField(Object obj, Field field, ResultSet rs, String tableName, List<Field> joinFields) {
 		Class<?> type = field.getType();
 		field.setAccessible(true);
 		try {
 			if(ClassInfo.isModel(type)) {
-				String[] fks = ClassInfo.getColumnNames(field);
-				Object rel = type.newInstance();
-				JdbcClassInfo classInfo = getClassInfo(type);
-				boolean none = false;
-				int i = 0;
-				checkForeignKeyMapping(classInfo.keys, fks, obj.getClass(), field);
-				for(Field f : classInfo.keys) {
-					Object o = rs.getObject(fks[i++]);
-					if(o == null) {
-						none = true;
-						break;
+				JdbcClassInfo fieldClassInfo = JdbcClassInfo.getClassInfo(type);
+				
+				if(joinFields==null || joinFields.size()==0 || !joinFields.contains(field)){
+					String[] fks = ClassInfo.getColumnNames(field, tableName);
+					Object rel = type.newInstance();
+					boolean none = false;
+					int i = 0;
+					checkForeignKeyMapping(fieldClassInfo.keys, fks, obj.getClass(), field);
+					for(Field f : fieldClassInfo.keys) {
+						Object o = rs.getObject(fks[i++]);
+						if(o == null) {
+							none = true;
+							break;
+						}
+						Util.setFromObject(rel, f, o);
 					}
-					Util.setFromObject(rel, f, o);
-					// f.set(rel, o);
+					if(!none)
+						field.set(obj, rel);
 				}
-				if(!none)
+				else {
+					Object rel = mapObject(type, rs, fieldClassInfo.tableName, null);
 					field.set(obj, rel);
+				}
 			} else {
-				Object val = rs.getObject(ClassInfo.getColumnNames(field)[0]);
+				Object val = rs.getObject(ClassInfo.getColumnNames(field, tableName)[0]);
 				Util.setFromObject(obj, field, val);
-				// field.set(obj, val);
 			}
 		} catch (SienaException e) {
 			throw e;
@@ -292,7 +335,7 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 		}
 	}
 
-	public void checkForeignKeyMapping(List<Field> keys, String[] columns, Class<?> clazz, Field field) {
+	public static void checkForeignKeyMapping(List<Field> keys, String[] columns, Class<?> clazz, Field field) {
 		if (keys.size() != columns.length) {
 			throw new SienaException("Bad mapping for field '"+field.getName()+"'. " +
 					"Related class "+field.getType().getName()+" has "+keys.size()+" primary keys, " +
@@ -300,7 +343,7 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 		}
 	}
 
-	public void closeStatement(Statement st) {
+	public static void closeStatement(Statement st) {
 		if(st == null) return;
 		try {
 			st.close();
@@ -309,7 +352,7 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 		}
 	}
 
-	public void closeResultSet(ResultSet rs) {
+	public static void closeResultSet(ResultSet rs) {
 		if(rs == null) return;
 		try {
 			rs.close();
@@ -378,27 +421,79 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 		this.connectionManager = connectionManager;
 	}
 
+	private static <T> List<Field> getJoinFields(Query<T> query) {
+		List<Field> joinFields = null;
+		// adds all join fields brought by call to .join() functions
+		if(query.getJoins().size()>0){
+			joinFields = new ArrayList<Field>();
+			for(QueryJoin join:query.getJoins())
+				joinFields.add(join.field);
+		}
+		// then adds the remaining joins coming from @Join if not added yet 
+		ClassInfo ci = ClassInfo.getClassInfo(query.getQueriedClass());
+		if(ci.joinFields.size() > 0){
+			if(joinFields == null) joinFields = new ArrayList<Field>();
+			for(Field f: ci.joinFields){
+				if(!joinFields.contains(f)) joinFields.add(f);
+			}
+		}
+		return joinFields;
+	}
+	
+	private static <T> List<Field> getJoinFields(Query<T> query, JdbcClassInfo info) {
+		List<Field> joinFields = null;
+		// adds all join fields brought by call to .join() functions
+		if(query.getJoins()!=null && query.getJoins().size()>0){
+			joinFields = new ArrayList<Field>();
+			for(QueryJoin join:query.getJoins())
+				joinFields.add(join.field);
+		}
+		// then adds the remaining joins coming from @Join if not added yet 
+		if(info.joinFields!=null && info.joinFields.size() > 0){
+			if(joinFields == null) joinFields = new ArrayList<Field>();
+			for(Field f: info.joinFields){
+				if(!joinFields.contains(f)) joinFields.add(f);
+			}
+		}
+		return joinFields;
+	}
+	
 	private <T> List<T> fetch(Query<T> query, String suffix) {
-		Class<T> clazz = query.getQueriedClass();
-		List<Object> parameters = new ArrayList<Object>();
-		StringBuilder sql = new StringBuilder(getClassInfo(clazz).baseSelectSQL);
-		appendSqlWhere(query, sql, parameters);
-		appendSqlOrder(query, sql);
-		sql.append(suffix);
-		PreparedStatement statement = null;
-		ResultSet rs = null;
-		try {
-			statement = createStatement(sql.toString(), parameters);
-			rs = statement.executeQuery();
-			List<T> result = mapList(clazz, rs);
+		if(!query.hasPaginating() || query.dbPayload() == null ) {
+			Class<T> clazz = query.getQueriedClass();
+			List<Object> parameters = new ArrayList<Object>();
+			StringBuilder sql = buildSqlSelect(query);
+			appendSqlWhere(query, sql, parameters);
+			appendSqlOrder(query, sql);
+			sql.append(suffix);
+			PreparedStatement statement = null;
+			ResultSet rs = null;
+			try {
+				statement = createStatement(sql.toString(), parameters);
+				if(query.hasPaginating())
+					statement.setFetchSize(query.pageSize());
+				rs = statement.executeQuery();
+				List<T> result = mapList(clazz, rs, ClassInfo.getClassInfo(clazz).tableName, getJoinFields(query), query.pageSize());
+				return result;
+			} catch(SQLException e) {
+				throw new SienaException(e);
+			} finally {
+				if(!query.hasPaginating()){
+					closeResultSet(rs);
+					closeStatement(statement);
+				}else {
+					query.setDbPayload(new Object[] { rs, statement });
+				}
+			}
+		}else {
+			// payload has been initialized so goes on
+			Class<T> clazz = query.getQueriedClass();
+			ResultSet rs = (ResultSet)((Object[])query.dbPayload())[0];
+			List<T> result = mapList(clazz, rs, ClassInfo.getClassInfo(clazz).tableName, getJoinFields(query), query.pageSize());
 			return result;
-		} catch(SQLException e) {
-			throw new SienaException(e);
-		} finally {
-			closeResultSet(rs);
-			closeStatement(statement);
 		}
 	}
+
 
 	@Override
 	public <T> List<T> fetch(Query<T> query) {
@@ -421,6 +516,49 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 		return result;
 	}
 
+	private <T> StringBuilder buildSqlSelect(Query<T> query) {
+		Class<T> clazz = query.getQueriedClass();
+		JdbcClassInfo info = JdbcClassInfo.getClassInfo(clazz);
+		List<String> cols = new ArrayList<String>();
+
+		List<Field> joinFields = getJoinFields(query, info);
+		if(joinFields==null){
+			JdbcClassInfo.calculateColumns(info.allFields, cols, null, "");
+			
+			StringBuilder sql = 
+				new StringBuilder("SELECT " + Util.join(cols, ", ") + " FROM " + info.tableName);
+			
+			return sql;
+		}
+
+		// builds fields from primary class
+		JdbcClassInfo.calculateColumns(info.allFields, cols, info.tableName, "");
+		StringBuilder sql = new StringBuilder(" FROM " + info.tableName);
+				
+		for(Field field: joinFields){
+			JdbcClassInfo fieldInfo = JdbcClassInfo.getClassInfo(field.getType());
+			
+			if (!ClassInfo.isModel(field.getType())){
+				throw new SienaRestrictedApiException(DB, "join", "Join not possible: Field "+field.getName()+" is not a relation field");
+			}
+			// removes the field itself from columns
+			cols.remove( info.tableName+"."+field.getName());
+			
+			// adds all field columns
+			JdbcClassInfo.calculateColumns(fieldInfo.allFields, cols, fieldInfo.tableName, "");
+			String[] columns = ClassInfo.getColumnNames(field, info.tableName);		
+			if (columns.length > 1 || fieldInfo.keys.size() > 1){
+				throw new SienaRestrictedApiException(DB, "join", "Join not possible: join field "+field.getName()+" has multiple keys");
+			}
+			sql.append(" JOIN " + fieldInfo.tableName 
+					+ " ON " + columns[0]
+					+ " = " + fieldInfo.tableName+"."+fieldInfo.keys.get(0).getName());
+		}
+
+		sql.insert(0, "SELECT " + Util.join(cols, ", "));
+		return sql;
+	}
+	
 	private <T> void appendSqlWhere(Query<T> query, StringBuilder sql, List<Object> parameters) {
 		List<QueryFilter> filters = query.getFilters();
 		if(filters.isEmpty()) return;
@@ -437,8 +575,8 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 			first = false;
 
 			String[] columns = ClassInfo.getColumnNames(f);
-			if(op.equals("IN")) {
-				if(!(value instanceof Collection<?>))
+			if("IN".equals(op)) {
+				if(!Collection.class.isAssignableFrom(value.getClass()))
 					throw new SienaException("Collection needed when using IN operator in filter() query");
 				StringBuilder s = new StringBuilder();
 				Collection<?> col = (Collection<?>) value;
@@ -452,7 +590,7 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 				if(!op.equals("=")) {
 					throw new SienaException("Unsupported operator for relationship: "+op);
 				}
-				JdbcClassInfo classInfo = getClassInfo(f.getType());
+				JdbcClassInfo classInfo = JdbcClassInfo.getClassInfo(f.getType());
 				int i = 0;
 				checkForeignKeyMapping(classInfo.keys, columns, query.getQueriedClass(), f);
 				for (Field key : classInfo.keys) {
@@ -473,6 +611,8 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 			} else {
 				if(value == null && op.equals("=")) {
 					sql.append(columns[0]+" IS NULL");
+				} else if(value == null && op.equals("!=")) {
+					sql.append(columns[0]+" IS NOT NULL");
 				} else {
 					sql.append(columns[0]+op+"?");
 					if(value == null) {
@@ -491,7 +631,8 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 
 	private <T> void appendSqlOrder(Query<T> query, StringBuilder sql) {
 		List<QueryOrder> orders = query.getOrders();
-		if(orders.isEmpty()) return;
+		List<QueryJoin> joins = query.getJoins();
+		if(orders.isEmpty() && joins.isEmpty()) return;
 
 		sql.append(" ORDER BY ");
 		boolean first = true;
@@ -501,11 +642,26 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 			}
 			first = false;
 
-			String[] columns = ClassInfo.getColumnNames(order.field);
-			for (String column : columns) {
-				sql.append(column+ (order.ascending? "" : " DESC"));
+			if(order.parentField==null){
+				String[] columns = ClassInfo.getColumnNames(order.field);
+				for (String column : columns) {
+					sql.append(column+ (order.ascending? "" : " DESC"));
+				}
+			}else {
+				try {
+					ClassInfo parentCi = ClassInfo.getClassInfo(order.parentField.getType());
+					Field subField = order.parentField.getType().getField(order.field.getName());
+					String[] columns = ClassInfo.getColumnNames(subField, parentCi.tableName);
+					for (String column : columns) {
+						sql.append(column+ (order.ascending? "" : " DESC"));
+					}
+				}catch(NoSuchFieldException ex){
+					throw new SienaException("Order not possible: join sort field "+order.field.getName()+" is not a known field of "+order.parentField.getName());
+				}
 			}
 		}
+
+
 	}
 
 	private Object translateDate(Field f, Date value) {
@@ -570,86 +726,171 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 			closeStatement(statement);
 		}
 	}
+	
+	private <T> List<T> fetchKeys(Query<T> query, String suffix) {
+		if(!query.hasPaginating() || query.dbPayload() == null ) {
+			Class<T> clazz = query.getQueriedClass();
+			List<Object> parameters = new ArrayList<Object>();
+			StringBuilder sql = new StringBuilder(JdbcClassInfo.getClassInfo(clazz).baseKeySelectSQL);
+			appendSqlWhere(query, sql, parameters);
+			appendSqlOrder(query, sql);
+			sql.append(suffix);
+			PreparedStatement statement = null;
+			ResultSet rs = null;
+			try {
+				statement = createStatement(sql.toString(), parameters);
+				if(query.hasPaginating())
+						statement.setFetchSize(query.pageSize());
+				rs = statement.executeQuery();
+				
+				List<T> result = mapListKeys(clazz, rs, ClassInfo.getClassInfo(clazz).tableName, getJoinFields(query), query.pageSize());
+				return result;
+			} catch(SQLException e) {
+				throw new SienaException(e);
+			} finally {
+				if(!query.hasPaginating()){
+					closeResultSet(rs);
+					closeStatement(statement);
+				}else {
+					query.setDbPayload(new Object[] { rs, statement });
+				}
+			}
+		}else {
+			// payload has been initialized so goes on
+			Class<T> clazz = query.getQueriedClass();
+			ResultSet rs = (ResultSet)((Object[])query.dbPayload())[0];
+			List<T> result = mapListKeys(clazz, rs, ClassInfo.getClassInfo(clazz).tableName, getJoinFields(query), query.pageSize());
+			return result;
+		}
+	}
+	
 
 	@Override
 	public <T> List<T> fetchKeys(Query<T> query) {
-		// TODO Auto-generated method stub
-		return null;
+		List<T> result = fetchKeys(query, "");
+		query.setNextOffset(result.size());
+		return result;
 	}
 
 	@Override
 	public <T> List<T> fetchKeys(Query<T> query, int limit) {
-		// TODO Auto-generated method stub
-		return null;
+		List<T> result = fetchKeys(query, " LIMIT "+limit);
+		query.setNextOffset(result.size());
+		return result;
 	}
 
 	@Override
 	public <T> List<T> fetchKeys(Query<T> query, int limit, Object offset) {
-		// TODO Auto-generated method stub
-		return null;
+		List<T> result = fetchKeys(query, " LIMIT "+limit+" OFFSET "+offset);
+		query.setNextOffset(result.size());
+		return result;
 	}
 	
 	
+	private <T> Iterable<T> iter(Query<T> query, String suffix) {
+		if(!query.hasPaginating() || query.dbPayload() == null ) {
+			Class<T> clazz = query.getQueriedClass();
+			List<Object> parameters = new ArrayList<Object>();
+			StringBuilder sql = new StringBuilder(JdbcClassInfo.getClassInfo(clazz).baseSelectSQL);
+			appendSqlWhere(query, sql, parameters);
+			appendSqlOrder(query, sql);
+			sql.append(suffix);
+			PreparedStatement statement = null;
+			ResultSet rs = null;
+			try {
+				statement = createStatement(sql.toString(), parameters);
+				if(query.hasPaginating())
+					statement.setFetchSize(query.pageSize());
+				rs = statement.executeQuery();
+				return new SienaJdbcIterable<T>(statement, rs, query);
+			} catch(SQLException e) {
+				closeResultSet(rs);
+				closeStatement(statement);
+				throw new SienaException(e);
+			} finally {
+				// doesn't close statement as it is an iterable
+				//closeResultSet(rs);
+				//closeStatement(statement);
+				// but sets the dbpayload if paginating
+				if(query.hasPaginating()){
+					query.setDbPayload(new Object[] { rs, statement });
+				}
+			}
+		}else {
+			// payload has been initialized so goes on
+			Class<T> clazz = query.getQueriedClass();
+			ResultSet rs = (ResultSet)((Object[])query.dbPayload())[0];
+			Statement st = (Statement)((Object[])query.dbPayload())[1];
+			return new SienaJdbcIterable<T>(st, rs, query);
+		}
+	}
+	
 	@Override
 	public <T> Iterable<T> iter(Query<T> query) {
-		// TODO Auto-generated method stub
-		return null;
+		return iter(query, "");
 	}
 
 	@Override
 	public <T> Iterable<T> iter(Query<T> query, int limit) {
-		// TODO Auto-generated method stub
-		return null;
+		return iter(query, " LIMIT "+limit);
 	}
 
 	@Override
 	public <T> Iterable<T> iter(Query<T> query, int limit, Object offset) {
-		// TODO Auto-generated method stub
-		return null;
+		return iter(query, " LIMIT "+limit+" OFFSET "+offset);
 	}
 
-	private static final String[] supportedOperators = new String[]{ "<", ">", ">=", "<=", "=", " IN" };
+	private static final String[] supportedOperators = new String[]{ "<", ">", ">=", "<=", "!=", "=", "IN" };
 
 	@Override
 	public String[] supportedOperators() {
 		return supportedOperators;
 	}
 
-	class JdbcClassInfo {
+	public static class JdbcClassInfo {
+		protected static Map<Class<?>, JdbcClassInfo> infoClasses = new ConcurrentHashMap<Class<?>, JdbcClassInfo>();
+
+		// encapsulates a classinfo
+		public ClassInfo info;
+		
 		public String tableName;
 		public String insertSQL;
 		public String updateSQL;
 		public String deleteSQL;
 		public String selectSQL;
 		public String baseSelectSQL;
+		public String keySelectSQL;
+		public String baseKeySelectSQL;
 
 		public List<Field> keys = null;
 		public List<Field> insertFields = null;
 		public List<Field> updateFields = null;
 		public List<Field> generatedKeys = null;
 		public List<Field> allFields = null;
+		public List<Field> joinFields = null;
 
-		public JdbcClassInfo(Class<?> clazz) {
-			ClassInfo info = ClassInfo.getClassInfo(clazz);
-
+		public JdbcClassInfo(Class<?> clazz, ClassInfo info) {
 			keys = info.keys;
 			insertFields = info.insertFields;
 			updateFields = info.updateFields;
 			generatedKeys = info.generatedKeys;
 			allFields = info.allFields;
 			tableName = info.tableName;
+			joinFields = info.joinFields;
 
 			List<String> keyColumns = new ArrayList<String>();
+			List<String> keyWhereColumns = new ArrayList<String>();
 			List<String> insertColumns = new ArrayList<String>();
 			List<String> updateColumns = new ArrayList<String>();
 			List<String> allColumns = new ArrayList<String>();
 
-			calculateColumns(insertFields, insertColumns, "");
-			calculateColumns(updateFields, updateColumns, "=?");
-			calculateColumns(keys, keyColumns, "=?");
-			calculateColumns(allFields, allColumns, "");
+			calculateColumns(info.insertFields, insertColumns, null, "");
+			calculateColumns(info.updateFields, updateColumns, null, "=?");
+			calculateColumns(info.keys, keyColumns, null, "");
+			calculateColumns(info.keys, keyWhereColumns, null, "=?");
+			calculateColumns(info.allFields, allColumns, null, "");
 
-			deleteSQL = "DELETE FROM "+tableName+" WHERE "+Util.join(keyColumns, " AND ");
+			deleteSQL = "DELETE FROM "+tableName+" WHERE "+Util.join(keyWhereColumns, " AND ");
 
 			String[] is = new String[insertColumns.size()];
 			Arrays.fill(is, "?");
@@ -658,22 +899,126 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 			updateSQL = "UPDATE "+tableName+" SET ";
 			updateSQL += Util.join(updateColumns, ", ");
 			updateSQL += " WHERE ";
-			updateSQL += Util.join(keyColumns, " AND ");
+			updateSQL += Util.join(keyWhereColumns, " AND ");
 
 			baseSelectSQL = "SELECT "+Util.join(allColumns, ", ")+" FROM "+tableName;
+			baseKeySelectSQL = "SELECT "+Util.join(keyColumns, ", ")+" FROM "+tableName;
 
-			selectSQL = baseSelectSQL+" WHERE "+Util.join(keyColumns, " AND ");
+			selectSQL = baseSelectSQL+" WHERE "+Util.join(keyWhereColumns, " AND ");
+			keySelectSQL = baseKeySelectSQL+" WHERE "+Util.join(keyWhereColumns, " AND ");
 		}
 
-		private void calculateColumns(List<Field> fields, List<String> columns, String suffix) {
+		public static void calculateColumns(List<Field> fields, List<String> columns, String tableName, String suffix) {
 			for (Field field : fields) {
-				String[] columnNames = ClassInfo.getColumnNames(field);
+				String[] columnNames = ClassInfo.getColumnNames(field, tableName);
 				for (String columnName : columnNames) {
 					columns.add(columnName+suffix);
 				}
 			}
 		}
+		
+		public static JdbcClassInfo getClassInfo(Class<?> clazz) {
+			JdbcClassInfo ci = infoClasses.get(clazz);
+
+			if(ci == null) {
+				ci = new JdbcClassInfo(clazz, ClassInfo.getClassInfo(clazz));
+				infoClasses.put(clazz, ci);
+			}
+			return ci;
+		}
+	}
+
+	/**
+	 * @author mandubian
+	 * 
+	 *         A Siena Iterable<Model> encapsulating a Jdbc ResultSet
+	 *         its Iterator<Model>...
+	 */
+	public static class SienaJdbcIterable<T> implements Iterable<T> {
+	    /**
+	     * The wrapped <code>Statement</code>.
+	     */
+	    private final Statement st;
+		
+		/**
+	     * The wrapped <code>ResultSet</code>.
+	     */
+	    private final ResultSet rs;
+	    
+	    /**
+	     * The wrapped <code>Query</code>.
+	     */
+	    Query<T> query;
+
+		SienaJdbcIterable(Statement st, ResultSet rs, Query<T> query) {
+			this.st = st;
+			this.rs = rs;
+			this.query = query;
+		}
+
+		@Override
+		public Iterator<T> iterator() {
+			return new SienaJdbcIterator<T>(query);
+		}
+
+		// only constructs the iterator with Class<V> in order to transmit the generic type T
+		public class SienaJdbcIterator<V> implements Iterator<V> {
+			Query<V> query;
+			int idx = 0;
+
+			SienaJdbcIterator(Query<V> query) {
+				this.query = query;
+			}
+
+			@Override
+			public boolean hasNext() {
+				try {
+		            if(!rs.isLast()){
+		            	if(query.hasPaginating())
+		            		return idx<query.pageSize();
+		            	return true;
+		            }
+		            return false;
+		        } catch (SQLException ex) {
+		            throw new SienaException(ex);
+		        }
+			}
+
+			@Override
+			public V next() {
+				try {
+					if(rs.next()){
+						Class<V> clazz = query.getQueriedClass();
+						if(query.hasPaginating() && idx<query.pageSize()){
+							idx++;
+							return mapObject(clazz, rs, ClassInfo.getClassInfo(clazz).tableName, getJoinFields(query));
+						}else return mapObject(clazz, rs, ClassInfo.getClassInfo(clazz).tableName, getJoinFields(query));
+					}
+					else throw new NoSuchElementException();
+				} catch (SQLException e) {
+					throw new SienaException(e);
+		        }
+			}
+
+			@Override
+			public void remove() {
+				try {
+		            rs.deleteRow();
+		        } catch (SQLException e) {
+		        	throw new SienaException(e);
+		        }
+			}
+
+			@Override
+			protected void finalize() throws Throwable {
+				closeResultSet(rs);
+				closeStatement(st);
+				super.finalize();
+			}
+
+		}
 
 	}
 
+	
 }

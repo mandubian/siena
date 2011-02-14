@@ -25,6 +25,7 @@ import siena.Table;
 public class PersonStringID {
 
 	@Id(Generator.NONE)
+	@Max(36)
 	public String id;
 	
 	@Column("first_name") @Max(100)
@@ -50,7 +51,7 @@ public class PersonStringID {
 	}
 
 	public String toString() {
-		return "id: "+id+", firstName: "+firstName+", lastName: "+lastName+", city: "+city;
+		return "id: "+id+", firstName: "+firstName+", lastName: "+lastName+", city: "+city+", n:"+n;
 	}
 
 	@Override

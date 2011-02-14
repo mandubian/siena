@@ -40,4 +40,12 @@ public class Discovery {
 		
 		return false;
 	}
+	
+	public boolean isOnlyIdFilled() {
+		if(this.id != null 
+			&& this.name == null
+			&& this.discoverer == null
+		) return true;
+		return false;
+	}
 }

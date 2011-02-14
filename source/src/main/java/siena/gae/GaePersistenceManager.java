@@ -106,7 +106,7 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 			case NONE:
 				Object idVal = null;
 				try {
-					idVal = idField.get(obj);
+					idVal = readField(obj, idField);
 				}catch(Exception ex){
 					throw new SienaException("Id Field " + idField.getName() + " access error", ex);
 				}
@@ -193,7 +193,7 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 		
 		try {
 			Field idField = info.getIdField();
-			Object value = idField.get(obj);
+			Object value = readField(obj, idField);
 			
 			if(idField.isAnnotationPresent(Id.class)){
 				Id id = idField.getAnnotation(Id.class);
@@ -229,6 +229,8 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 			return field.get(object);
 		} catch (Exception e) {
 			throw new SienaException(e);
+		} finally {
+			field.setAccessible(false);
 		}
 	}
 
@@ -506,7 +508,7 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 			for (QueryJoin join : joins) {
 				Field field = join.field;
 				if (!ClassInfo.isModel(field.getType())){
-					throw new SienaException("Join not possible: Field "+field.getName()+" is not a relation field");
+					throw new SienaRestrictedApiException(DB, "join", "Join not possible: Field "+field.getName()+" is not a relation field");
 				}
 				else if(join.sortFields!=null && join.sortFields.length!=0)
 					throw new SienaRestrictedApiException(DB, "join", "Join not allowed with sort fields");

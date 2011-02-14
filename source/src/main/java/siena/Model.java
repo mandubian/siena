@@ -248,6 +248,32 @@ public abstract class Model {
 		public Class<T> getQueriedClass() {
 			return clazz;
 		}
+
+		public Object raw(String request) {
+			return createQuery().raw(request);
+		}
+
+		public Query<T> paginate(int limit) {
+			return createQuery().paginate(limit);
+		}
+
+		public int pageSize() {
+			return createQuery().pageSize();
+		}
+
+		@Override
+		public boolean hasPaginating() {
+			return createQuery().hasPaginating();
+		}
+
+		public Object dbPayload() {
+			return createQuery().dbPayload();
+		}
+
+		public void setDbPayload(Object dbPayload) {
+			createQuery().setDbPayload(dbPayload);
+		}
+		
 		
 	}
 

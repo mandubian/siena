@@ -17,17 +17,15 @@ package siena;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
-import java.lang.reflect.ParameterizedType;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class ClassInfo {
 	
-	private static Map<Class<?>, ClassInfo> infoClasses = new HashMap<Class<?>, ClassInfo>();
+	protected static Map<Class<?>, ClassInfo> infoClasses = new ConcurrentHashMap<Class<?>, ClassInfo>();
 	
 	public String tableName;
 
@@ -38,7 +36,7 @@ public class ClassInfo {
 	public List<Field> allFields = new ArrayList<Field>();
 	public List<Field> joinFields = new ArrayList<Field>();
 
-	private ClassInfo(Class<?> clazz) {
+	protected ClassInfo(Class<?> clazz) {
 		tableName = getTableName(clazz);
 
 		Field[] fields = clazz.getDeclaredFields();	
@@ -97,6 +95,33 @@ public class ClassInfo {
 		return new String[]{ field.getName() };
 	}
 
+	public static String[] getColumnNames(Field field, String tableName) {
+		Column c = field.getAnnotation(Column.class);
+		if(c != null && c.value().length > 0) {
+			if(tableName!=null && !("".equals(tableName))){
+				String[] cols = c.value();
+				for(int i=0;i<cols.length;i++){
+					cols[i]=tableName+"."+cols[i];
+				}
+				return cols;
+			}
+			else return c.value();
+		}
+		
+		// default mapping: field names
+		if(isModel(field.getType())) {
+			ClassInfo ci = getClassInfo(field.getType());
+			List<String> keys = new ArrayList<String>();
+			for (Field key : ci.keys) {
+				keys.addAll(Arrays.asList(getColumnNames(key, tableName)));
+			}
+			return keys.toArray(new String[keys.size()]);
+		}
+		if(tableName!=null && !("".equals(tableName)))
+			return new String[]{ tableName+"."+field.getName() };
+		else return new String[]{ field.getName() };
+	}
+	
 	public static boolean isModel(Class<?> type) {
 		// this way is much better in Java syntax
 		if(Model.class.isAssignableFrom(type)) /*if(type.getSuperclass() == Model.class)*/

@@ -8,6 +8,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 
 import junit.framework.TestCase;
@@ -20,6 +21,7 @@ import siena.base.test.model.DataTypes;
 import siena.base.test.model.DataTypes.EnumLong;
 import siena.base.test.model.Discovery;
 import siena.base.test.model.Discovery4Join;
+import siena.base.test.model.DiscoveryPrivate;
 import siena.base.test.model.MultipleKeys;
 import siena.base.test.model.PersonLongAutoID;
 import siena.base.test.model.PersonLongManualID;
@@ -125,6 +127,11 @@ public abstract class BaseTest extends TestCase {
 		assertEquals(UUID_TESLA.id, people.get(0).id);
 		assertEquals(UUID_CURIE.id, people.get(1).id);
 		assertEquals(UUID_EINSTEIN.id, people.get(2).id);
+		
+		assertTrue(people.get(0).isOnlyIdFilled());
+		assertTrue(people.get(1).isOnlyIdFilled());
+		assertTrue(people.get(2).isOnlyIdFilled());
+
 	}
 
 	public void testFetchOrder() {
@@ -1351,6 +1358,9 @@ public abstract class BaseTest extends TestCase {
 
 		int n = pm.createQuery(Discovery.class).delete();
 		assertEquals(3, n);
+		
+		List<Discovery> res = pm.createQuery(Discovery.class).fetch();
+		assertEquals(0, res.size());
 	}
 	
 	public void testQueryDeleteFiltered() {
@@ -1366,6 +1376,11 @@ public abstract class BaseTest extends TestCase {
 
 		int n = pm.createQuery(Discovery.class).filter("discoverer", LongAutoID_EINSTEIN).delete();
 		assertEquals(2, n);
+
+		List<Discovery> res = pm.createQuery(Discovery.class).order("name").fetch();
+		assertEquals(2, res.size());
+		assertEquals(radioactivity, res.get(0));
+		assertEquals(teslaCoil, res.get(1));
 	}
 
 	public void testJoin() {
@@ -1379,15 +1394,15 @@ public abstract class BaseTest extends TestCase {
 		pm.insert(foo);
 		pm.insert(teslaCoil);
 		
-		List<Discovery> res = pm.createQuery(Discovery.class).join("discoverer").fetch();
+		List<Discovery> res = pm.createQuery(Discovery.class).join("discoverer").order("name").fetch();
 		assertEquals(4, res.size());
-		assertEquals(radioactivity, res.get(0));
-		assertEquals(relativity, res.get(1));
-		assertEquals(foo, res.get(2));
+		assertEquals(foo, res.get(0));
+		assertEquals(radioactivity, res.get(1));
+		assertEquals(relativity, res.get(2));
 		assertEquals(teslaCoil, res.get(3));
 		
-		assertEquals(LongAutoID_CURIE, res.get(0).discoverer);
-		assertEquals(LongAutoID_EINSTEIN, res.get(1).discoverer);
+		assertEquals(LongAutoID_EINSTEIN, res.get(0).discoverer);
+		assertEquals(LongAutoID_CURIE, res.get(1).discoverer);
 		assertEquals(LongAutoID_EINSTEIN, res.get(2).discoverer);
 		assertEquals(LongAutoID_TESLA, res.get(3).discoverer);
 	}
@@ -1403,16 +1418,16 @@ public abstract class BaseTest extends TestCase {
 		pm.insert(foo);
 		pm.insert(teslaCoil);
 		
-		List<Discovery> res = pm.createQuery(Discovery.class).join("discoverer", "firstName").fetch();
+		List<Discovery> res = pm.createQuery(Discovery.class).join("discoverer", "firstName").order("name").fetch();
 		assertEquals(4, res.size());
-		assertEquals(radioactivity, res.get(0));
+		assertEquals(foo, res.get(0));
 		assertEquals(relativity, res.get(1));
-		assertEquals(foo, res.get(2));
+		assertEquals(radioactivity, res.get(2));
 		assertEquals(teslaCoil, res.get(3));
 		
-		assertEquals(LongAutoID_CURIE, res.get(0).discoverer);
+		assertEquals(LongAutoID_EINSTEIN, res.get(0).discoverer);
 		assertEquals(LongAutoID_EINSTEIN, res.get(1).discoverer);
-		assertEquals(LongAutoID_EINSTEIN, res.get(2).discoverer);
+		assertEquals(LongAutoID_CURIE, res.get(2).discoverer);
 		assertEquals(LongAutoID_TESLA, res.get(3).discoverer);
 	}
 	
@@ -1451,6 +1466,107 @@ public abstract class BaseTest extends TestCase {
 		assertTrue(res.get(3).discovererNotJoined.isOnlyIdFilled());
 	}
 
+	public void testFetchPrivateFields() {
+		DiscoveryPrivate radioactivity = new DiscoveryPrivate(1L, "Radioactivity", LongAutoID_CURIE);
+		DiscoveryPrivate relativity = new DiscoveryPrivate(2L, "Relativity", LongAutoID_EINSTEIN);
+		DiscoveryPrivate foo = new DiscoveryPrivate(3L, "Foo", LongAutoID_EINSTEIN);
+		DiscoveryPrivate teslaCoil = new DiscoveryPrivate(4L, "Tesla Coil", LongAutoID_TESLA);
+		
+		pm.insert(radioactivity);
+		pm.insert(relativity);
+		pm.insert(foo);
+		pm.insert(teslaCoil);
+
+		List<DiscoveryPrivate> res = pm.createQuery(DiscoveryPrivate.class).order("name").fetch();
+		assertEquals(foo, res.get(0));
+		assertEquals(radioactivity, res.get(1));
+		assertEquals(relativity, res.get(2));
+		assertEquals(teslaCoil, res.get(3));
+	}
+	
+	public void testFetchPaginate() {
+		Discovery[] discs = new Discovery[10];
+		for(int i=0; i<10; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+			pm.insert(discs[i]);
+		}
+
+		Query<Discovery> query = pm.createQuery(Discovery.class).paginate(5).order("name");
+		List<Discovery> res = query.fetch();
+		assertEquals(5, res.size());
+		for(int i=0; i<5; i++){
+			assertEquals(discs[i], res.get(i));
+		}
+		res = query.fetch();
+		assertEquals(5, res.size());
+		for(int i=0; i<5; i++){
+			assertEquals(discs[i+5], res.get(i));
+		}
+	}
+	public void testFetchKeysPaginate() {
+		Discovery[] discs = new Discovery[10];
+		for(int i=0; i<10; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+			pm.insert(discs[i]);
+		}
+
+		Query<Discovery> query = pm.createQuery(Discovery.class).paginate(5).order("name");
+		List<Discovery> res = query.fetchKeys();
+		assertEquals(5, res.size());
+		for(int i=0; i<5; i++){
+			assertEquals(discs[i].id, res.get(i).id);
+			assertTrue(res.get(i).isOnlyIdFilled());
+		}
+		res = query.fetchKeys();
+		assertEquals(5, res.size());
+		for(int i=0; i<5; i++){
+			assertEquals(discs[i+5].id, res.get(i).id);
+			assertTrue(res.get(i).isOnlyIdFilled());
+		}
+	}
+	
+	public void testIterPaginate() {
+		Discovery[] discs = new Discovery[10];
+		for(int i=0; i<10; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+			pm.insert(discs[i]);
+		}
+
+		Query<Discovery> query = pm.createQuery(Discovery.class).paginate(5).order("name");
+		Iterable<Discovery> res = query.iter();
+		Iterator<Discovery> it = res.iterator();
+		int i=0;
+		while(it.hasNext()){
+			assertEquals(discs[i++], it.next());
+		}
+		res = query.iter();
+		it = res.iterator();
+		while(it.hasNext()){
+			assertEquals(discs[i++], it.next());
+		}
+	}
+	
+	
+	public void testIterFetchPaginate() {
+		Discovery[] discs = new Discovery[10];
+		for(int i=0; i<10; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+			pm.insert(discs[i]);
+		}
+
+		Query<Discovery> query = pm.createQuery(Discovery.class).paginate(5).order("name");
+		Iterable<Discovery> res = query.iter();
+		Iterator<Discovery> it = res.iterator();
+		int i=0;
+		while(it.hasNext()){
+			assertEquals(discs[i++], it.next());
+		}
+		List<Discovery> res2 = query.fetch();
+		assertEquals(5, res2.size());
+		for(int j=0; j<5; j++){
+			assertEquals(discs[j+5], res2.get(j));
+		}
+	}
 	
 	private PersonUUID getPersonUUID(String id) {
 		PersonUUID p = new PersonUUID();
@@ -1494,6 +1610,7 @@ public abstract class BaseTest extends TestCase {
 			classes.add(MultipleKeys.class);
 		classes.add(Discovery.class);
 		classes.add(Discovery4Join.class);
+		classes.add(DiscoveryPrivate.class);
 		classes.add(DataTypes.class);
 		pm = createPersistenceManager(classes);
 		

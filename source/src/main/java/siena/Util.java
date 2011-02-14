@@ -94,6 +94,7 @@ public class Util {
 		if(type == Double.class)  return Double.valueOf(value);
 		if(type == Date.class)    return timestamp(value);
 		if(type == Json.class)    return Json.loads(value);
+		if(Enum.class.isAssignableFrom(type)) return Enum.valueOf((Class<Enum>) type, (String)value);
 		throw new IllegalArgumentException("Unsupported type: "+type.getName());
 	}
 	
@@ -181,11 +182,6 @@ public class Util {
 			else if(type == Float.class   || type == Float.TYPE)   value = number.floatValue();
 			else if(type == Double.class  || type == Double.TYPE)  value = number.doubleValue();
 		} 
-		else if(value instanceof Text)
-			value = ((Text) value).getValue();
-		else if(value instanceof Blob && type == byte[].class) {
-			value = ((Blob) value).getBytes();
-		}
 		else if(value instanceof String && type == Json.class) {
 			value = Json.loads((String) value);
 		} 

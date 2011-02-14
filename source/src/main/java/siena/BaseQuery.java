@@ -2,6 +2,7 @@ package siena;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import org.apache.commons.lang.NotImplementedException;
@@ -19,6 +20,12 @@ public class BaseQuery<T> implements Query<T> {
 
 	private Object nextOffset;
 	
+	// indicates the query shall manage Pagination
+	private int pageSize = 0;
+	// this is the horrible way I found to manage data propagation in query depending on DB
+	// this field is managed by each DB impl as it needs
+	private Object dbPayload;
+	
 	public BaseQuery(PersistenceManager pm, Class<T> clazz) {
 		this.pm = pm;
 		this.clazz = clazz;
@@ -27,6 +34,23 @@ public class BaseQuery<T> implements Query<T> {
 		orders = new ArrayList<QueryOrder>();
 		searches = new ArrayList<QuerySearch>();
 		joins = new ArrayList<QueryJoin>();
+	}
+	
+	public BaseQuery(BaseQuery<T> query) {
+		this.pm = query.pm;
+		this.clazz = query.clazz;		
+		
+		this.filters = new ArrayList<QueryFilter>();
+		this.orders = new ArrayList<QueryOrder>();
+		this.searches = new ArrayList<QuerySearch>();
+		this.joins = new ArrayList<QueryJoin>();
+		
+		Collections.copy(this.filters, query.filters);
+		Collections.copy(this.orders, query.orders);
+		Collections.copy(this.searches, query.searches);
+		Collections.copy(this.joins, query.joins);
+		
+		this.nextOffset = query.nextOffset;
 	}
 	
 	public List<QueryFilter> getFilters() {
@@ -91,6 +115,23 @@ public class BaseQuery<T> implements Query<T> {
 		try {
 			Field field = clazz.getDeclaredField(fieldName);
 			joins.add(new QueryJoin(field, sortFields));
+			// add immediately orders to keep order of orders 
+			// sets joined field as parent field to manage order on the right joined table for ex
+			for(String sortFieldName: sortFields){
+				boolean ascending = true;
+				
+				if(sortFieldName.startsWith("-")) {
+					sortFieldName = sortFieldName.substring(1);
+					ascending = false;
+				}
+				try {
+					Field sortField = field.getType().getField(sortFieldName);
+					orders.add(new QueryOrder(sortField, ascending, field));
+					return this;
+				} catch(NoSuchFieldException ex){
+					throw new SienaException("Join not possible: join sort field "+sortFieldName+" is not a known field of "+fieldName);
+				}
+			}
 			return this;
 		} catch(Exception e) {
 			throw new SienaException(e);
@@ -126,14 +167,7 @@ public class BaseQuery<T> implements Query<T> {
 	public int count(int limit, Object offset) {
 		return pm.count(this, limit, offset);
 	}
-	
-	public Object nextOffset() {
-		return nextOffset;
-	}
-	
-	public void setNextOffset(Object nextOffset) {
-		this.nextOffset = nextOffset;
-	}
+
 	
 	public int delete() {
 		return pm.delete(this);
@@ -164,11 +198,56 @@ public class BaseQuery<T> implements Query<T> {
 	}
 	
 	public Query<T> clone() {
-		throw new NotImplementedException();
+		return new BaseQuery<T>(this);
 	}
 	
 	public Class<T> getQueriedClass() {
 		return clazz;
 	}
 
+	@Override
+	public Object raw(String request) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+
+	
+	public Object nextOffset() {
+		return nextOffset;
+	}
+	
+	public void setNextOffset(Object nextOffset) {
+		this.nextOffset = nextOffset;
+	}
+
+
+	@Override
+	public Query<T> paginate(int pageSize) {
+		this.pageSize = pageSize;
+		return this;
+	}
+	
+	@Override
+	public int pageSize() {
+		return pageSize;
+	}
+
+	@Override
+	public boolean hasPaginating() {
+		if(pageSize != 0) return true;
+		else return false;
+	}
+
+	@Override
+	public Object dbPayload() {
+		return dbPayload;
+	}
+
+	@Override
+	public void setDbPayload(Object dbPayload) {
+		this.dbPayload = dbPayload;
+	}
+
+	
 }

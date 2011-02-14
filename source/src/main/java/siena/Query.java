@@ -65,4 +65,11 @@ public interface Query<T> {
 	
 	public Class<T> getQueriedClass();
 
+	public Object raw(String request);
+	public Query<T> paginate(int size);
+	public boolean hasPaginating();
+	public int pageSize();
+	
+	public Object dbPayload();
+	public void setDbPayload(Object dbPayload);
 }

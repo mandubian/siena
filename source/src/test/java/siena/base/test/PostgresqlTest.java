@@ -21,8 +21,8 @@ public class PostgresqlTest extends BaseTest {
 		Properties p = new Properties();
 		
 		String driver   = "org.postgresql.Driver";
-		String username = "postgres";
-		String password = "postgres";
+		String username = "siena";
+		String password = "siena";
 		String url      = "jdbc:postgresql://localhost/siena";
 		
 		p.setProperty("driver",   driver);

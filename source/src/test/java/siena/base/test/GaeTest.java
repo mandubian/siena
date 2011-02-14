@@ -702,5 +702,35 @@ public class GaeTest extends BaseTest {
 		super.testJoinAnnotation();
 	}
 
+	@Override
+	public void testFetchPrivateFields() {
+		// TODO Auto-generated method stub
+		super.testFetchPrivateFields();
+	}
+
+	@Override
+	public void testFetchPaginate() {
+		// TODO Auto-generated method stub
+		//super.testFetchPaginate();
+	}
+
+	@Override
+	public void testFetchKeysPaginate() {
+		// TODO Auto-generated method stub
+		//super.testFetchKeysPaginate();
+	}
+
+	@Override
+	public void testIterPaginate() {
+		// TODO Auto-generated method stub
+		//super.testIterPaginate();
+	}
+
+	@Override
+	public void testIterFetchPaginate() {
+		// TODO Auto-generated method stub
+		//super.testIterFetchPaginate();
+	}
+
 	
 }

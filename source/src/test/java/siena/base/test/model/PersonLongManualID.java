@@ -50,7 +50,7 @@ public class PersonLongManualID {
 	}
 
 	public String toString() {
-		return "id: "+id+", firstName: "+firstName+", lastName: "+lastName+", city: "+city;
+		return "id: "+id+", firstName: "+firstName+", lastName: "+lastName+", city: "+city+", n:"+n;
 	}
 
 	@Override

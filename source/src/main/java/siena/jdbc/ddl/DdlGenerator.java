@@ -23,6 +23,7 @@ import siena.Json;
 import siena.Max;
 import siena.NotNull;
 import siena.SienaException;
+import siena.SienaRestrictedApiException;
 import siena.SimpleDate;
 import siena.Text;
 import siena.Time;
@@ -30,7 +31,8 @@ import siena.Unique;
 import siena.embed.Embedded;
 
 public class DdlGenerator {
-	
+	public static final String DB = "JDBC";
+
 	private Map<String, Table> tables = new HashMap<String, Table>();
 	private Database database = new Database();
 	
@@ -164,7 +166,7 @@ public class DdlGenerator {
 				
 				Max max = field.getAnnotation(Max.class);
 				if(max == null)
-					throw new SienaException("Field "+field.getName()+" in class "
+					throw new SienaRestrictedApiException(DB, "createColumn", "Field "+field.getName()+" in class "
 							+clazz.getName()+" doesn't have a @Max annotation");
 				column.setSize(""+max.value());
 			}
@@ -181,12 +183,22 @@ public class DdlGenerator {
 				columnType = Types.TIMESTAMP;
 		} else if(type == Json.class) {
 			columnType = Types.LONGVARCHAR;
-		} else {
+		} else if(type == byte[].class){
+			columnType = Types.BLOB;
+		} else if(Enum.class.isAssignableFrom(type)){
+			// enums are stored as string
+			columnType = Types.VARCHAR;
+			Max max = field.getAnnotation(Max.class);
+			if(max == null)
+				column.setSize(""+254); // fixes by default to this value in order to prevent alter tables every time
+			else column.setSize(""+max.value());
+		}						
+		else {
 			Embedded embedded = field.getAnnotation(Embedded.class);
 			if(embedded != null) {
 				columnType = Types.LONGVARCHAR;
 			} else {
-				throw new SienaException("Unsupported type for field "
+				throw new SienaRestrictedApiException(DB, "createColumn", "Unsupported type for field "
 						+clazz.getName()+"."+field.getName());
 			}
 		}
