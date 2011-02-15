@@ -262,8 +262,8 @@ public abstract class Model {
 		}
 
 		@Override
-		public boolean hasPaginating() {
-			return createQuery().hasPaginating();
+		public boolean hasPagination() {
+			return createQuery().hasPagination();
 		}
 
 		public Object dbPayload() {

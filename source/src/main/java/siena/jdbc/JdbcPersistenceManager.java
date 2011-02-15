@@ -459,7 +459,7 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 	}
 	
 	private <T> List<T> fetch(Query<T> query, String suffix) {
-		if(!query.hasPaginating() || query.dbPayload() == null ) {
+		if(!query.hasPagination() || query.dbPayload() == null ) {
 			Class<T> clazz = query.getQueriedClass();
 			List<Object> parameters = new ArrayList<Object>();
 			StringBuilder sql = buildSqlSelect(query);
@@ -470,7 +470,7 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 			ResultSet rs = null;
 			try {
 				statement = createStatement(sql.toString(), parameters);
-				if(query.hasPaginating())
+				if(query.hasPagination())
 					statement.setFetchSize(query.pageSize());
 				rs = statement.executeQuery();
 				List<T> result = mapList(clazz, rs, ClassInfo.getClassInfo(clazz).tableName, getJoinFields(query), query.pageSize());
@@ -478,7 +478,7 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 			} catch(SQLException e) {
 				throw new SienaException(e);
 			} finally {
-				if(!query.hasPaginating()){
+				if(!query.hasPagination()){
 					closeResultSet(rs);
 					closeStatement(statement);
 				}else {
@@ -728,7 +728,7 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 	}
 	
 	private <T> List<T> fetchKeys(Query<T> query, String suffix) {
-		if(!query.hasPaginating() || query.dbPayload() == null ) {
+		if(!query.hasPagination() || query.dbPayload() == null ) {
 			Class<T> clazz = query.getQueriedClass();
 			List<Object> parameters = new ArrayList<Object>();
 			StringBuilder sql = new StringBuilder(JdbcClassInfo.getClassInfo(clazz).baseKeySelectSQL);
@@ -739,7 +739,7 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 			ResultSet rs = null;
 			try {
 				statement = createStatement(sql.toString(), parameters);
-				if(query.hasPaginating())
+				if(query.hasPagination())
 						statement.setFetchSize(query.pageSize());
 				rs = statement.executeQuery();
 				
@@ -748,7 +748,7 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 			} catch(SQLException e) {
 				throw new SienaException(e);
 			} finally {
-				if(!query.hasPaginating()){
+				if(!query.hasPagination()){
 					closeResultSet(rs);
 					closeStatement(statement);
 				}else {
@@ -788,7 +788,7 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 	
 	
 	private <T> Iterable<T> iter(Query<T> query, String suffix) {
-		if(!query.hasPaginating() || query.dbPayload() == null ) {
+		if(!query.hasPagination() || query.dbPayload() == null ) {
 			Class<T> clazz = query.getQueriedClass();
 			List<Object> parameters = new ArrayList<Object>();
 			StringBuilder sql = new StringBuilder(JdbcClassInfo.getClassInfo(clazz).baseSelectSQL);
@@ -799,7 +799,7 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 			ResultSet rs = null;
 			try {
 				statement = createStatement(sql.toString(), parameters);
-				if(query.hasPaginating())
+				if(query.hasPagination())
 					statement.setFetchSize(query.pageSize());
 				rs = statement.executeQuery();
 				return new SienaJdbcIterable<T>(statement, rs, query);
@@ -812,7 +812,7 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 				//closeResultSet(rs);
 				//closeStatement(statement);
 				// but sets the dbpayload if paginating
-				if(query.hasPaginating()){
+				if(query.hasPagination()){
 					query.setDbPayload(new Object[] { rs, statement });
 				}
 			}
@@ -974,7 +974,7 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 			public boolean hasNext() {
 				try {
 		            if(!rs.isLast()){
-		            	if(query.hasPaginating())
+		            	if(query.hasPagination())
 		            		return idx<query.pageSize();
 		            	return true;
 		            }
@@ -989,7 +989,7 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 				try {
 					if(rs.next()){
 						Class<V> clazz = query.getQueriedClass();
-						if(query.hasPaginating() && idx<query.pageSize()){
+						if(query.hasPagination() && idx<query.pageSize()){
 							idx++;
 							return mapObject(clazz, rs, ClassInfo.getClassInfo(clazz).tableName, getJoinFields(query));
 						}else return mapObject(clazz, rs, ClassInfo.getClassInfo(clazz).tableName, getJoinFields(query));

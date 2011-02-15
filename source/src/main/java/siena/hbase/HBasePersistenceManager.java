@@ -356,7 +356,7 @@ public class HBasePersistenceManager implements PersistenceManager {
 		}
 
 		@Override
-		public boolean hasPaginating() {
+		public boolean hasPagination() {
 			// TODO Auto-generated method stub
 			return false;
 		}

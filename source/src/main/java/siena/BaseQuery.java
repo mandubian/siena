@@ -234,7 +234,7 @@ public class BaseQuery<T> implements Query<T> {
 	}
 
 	@Override
-	public boolean hasPaginating() {
+	public boolean hasPagination() {
 		if(pageSize != 0) return true;
 		else return false;
 	}

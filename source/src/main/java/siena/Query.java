@@ -67,7 +67,7 @@ public interface Query<T> {
 
 	public Object raw(String request);
 	public Query<T> paginate(int size);
-	public boolean hasPaginating();
+	public boolean hasPagination();
 	public int pageSize();
 	
 	public Object dbPayload();
