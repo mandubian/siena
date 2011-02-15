@@ -314,6 +314,32 @@
 
 	<profiles>
 		<profile>
+			<id>FULL</id>
+			<build>
+				<plugins>
+					<!-- Test cases -->
+					<plugin>
+						<artifactId>maven-surefire-plugin</artifactId>
+						<configuration>
+							<excludes>
+								<exclude>**/BaseTest.java</exclude>
+								<exclude>**/BaseMassTest.java</exclude>
+								<exclude>**/TestAll.java</exclude>
+								<exclude>**/Person.java</exclude>
+								<exclude>**/Message.java</exclude>
+								<exclude>**/Discovery.java</exclude>
+							</excludes>
+							<includes>
+								<include>**/GaeTest.java</include>
+								<include>**/JdbcTest.java</include>
+								<!--include>**/GaeMassTest.java</include-->
+							</includes>
+						</configuration>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+		<profile>
 			<id>GAE</id>
 			<build>
 				<plugins>
