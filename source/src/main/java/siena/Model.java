@@ -81,7 +81,7 @@ public abstract class Model {
 				Object a = field.get(this);
 				Object b = field.get(that);
 				if(a == null ? b != null : !a.equals(b))
-					return false;
+					{ return false; }
 			} catch (Exception e) {
 				throw new SienaException(e);
 			}
