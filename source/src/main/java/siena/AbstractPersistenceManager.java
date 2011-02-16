@@ -8,15 +8,12 @@ public abstract class AbstractPersistenceManager implements PersistenceManager {
 		return new BaseQuery<T>(this, clazz);
 	}
 
-	@Override
 	public <T> T get(Query<T> query) {
 		List<T> list = fetch(query, 1);
-		if(list.isEmpty())
-			return null;
+		if(list.isEmpty()) { return null; }
 		return list.get(0);
 	}
 
-	@Override
 	public <T> int count(Query<T> query, int limit) {
 		return fetch(query, limit).size();
 	}

@@ -20,8 +20,14 @@ public class BaseQuery<T> implements Query<T> {
 
 	private Object nextOffset;
 	
-	// indicates the query shall manage Pagination
+	// a pageSize != 0 indicates the query shall manage Pagination
+	// default is NO PAGE
 	private int pageSize = 0;
+	
+	// isAlive is trigger by keepAlive/dontKeepAlive
+	// default is FALSE
+	private boolean isAlive = false; 
+	
 	// this is the horrible way I found to manage data propagation in query depending on DB
 	// this field is managed by each DB impl as it needs
 	private Object dbPayload;
@@ -129,7 +135,7 @@ public class BaseQuery<T> implements Query<T> {
 					orders.add(new QueryOrder(sortField, ascending, field));
 					return this;
 				} catch(NoSuchFieldException ex){
-					throw new SienaException("Join not possible: join sort field "+sortFieldName+" is not a known field of "+fieldName);
+					throw new SienaException("Join not possible: join sort field "+sortFieldName+" is not a known field of "+fieldName, ex);
 				}
 			}
 			return this;
@@ -197,7 +203,7 @@ public class BaseQuery<T> implements Query<T> {
 		return pm.iter(this, limit, offset);
 	}
 	
-	public Query<T> clone() {
+	public Query<T> copy() {
 		return new BaseQuery<T>(this);
 	}
 	
@@ -205,12 +211,10 @@ public class BaseQuery<T> implements Query<T> {
 		return clazz;
 	}
 
-	@Override
 	public Object raw(String request) {
 		// TODO Auto-generated method stub
 		return null;
 	}
-
 
 	
 	public Object nextOffset() {
@@ -222,29 +226,45 @@ public class BaseQuery<T> implements Query<T> {
 	}
 
 
-	@Override
 	public Query<T> paginate(int pageSize) {
 		this.pageSize = pageSize;
 		return this;
 	}
 	
 	@Override
+	public Query<T> dontPaginate() {
+		this.pageSize = 0;
+		return this;
+	}
+
 	public int pageSize() {
 		return pageSize;
 	}
 
-	@Override
 	public boolean hasPagination() {
-		if(pageSize != 0) return true;
-		else return false;
+		if(pageSize != 0) { return true; }
+		else { return false; }
+	}
+	
+	public Query<T> keepAlive() {
+		isAlive = true;
+		return this;
+	}
+
+	public boolean isAlive() {
+		return this.isAlive;
 	}
 
 	@Override
+	public Query<T> dontKeepAlive() {
+		isAlive = false;
+		return this;
+	}
+
 	public Object dbPayload() {
 		return dbPayload;
 	}
 
-	@Override
 	public void setDbPayload(Object dbPayload) {
 		this.dbPayload = dbPayload;
 	}

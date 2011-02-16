@@ -267,7 +267,7 @@ public class HBasePersistenceManager implements PersistenceManager {
 			return null;
 		}
 		
-		public HBaseQuery<T> clone() {
+		public HBaseQuery<T> copy() {
 			return null;
 		}
 		
@@ -377,6 +377,30 @@ public class HBasePersistenceManager implements PersistenceManager {
 		public void setDbPayload(Object dbPayload) {
 			// TODO Auto-generated method stub
 			
+		}
+
+		@Override
+		public Query<T> dontPaginate() {
+			// TODO Auto-generated method stub
+			return null;
+		}
+
+		@Override
+		public Query<T> keepAlive() {
+			// TODO Auto-generated method stub
+			return null;
+		}
+
+		@Override
+		public Query<T> dontKeepAlive() {
+			// TODO Auto-generated method stub
+			return null;
+		}
+
+		@Override
+		public boolean isAlive() {
+			// TODO Auto-generated method stub
+			return false;
 		}
 		
 	}

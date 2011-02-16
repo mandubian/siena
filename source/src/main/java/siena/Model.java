@@ -72,7 +72,7 @@ public abstract class Model {
 
 	public boolean equals(Object that) {
 		if(this == that) return true;
-		if(that == null || that.getClass() != this.getClass()) return false;
+		if(that == null || that.getClass() != this.getClass()) { return false; }
 
 		List<Field> keys = ClassInfo.getClassInfo(getClass()).keys;
 		for (Field field : keys) {
@@ -81,7 +81,7 @@ public abstract class Model {
 				Object a = field.get(this);
 				Object b = field.get(that);
 				if(a == null ? b != null : !a.equals(b))
-					return false;
+					{ return false; }
 			} catch (Exception e) {
 				throw new SienaException(e);
 			}
@@ -112,12 +112,13 @@ public abstract class Model {
 		Class<?> clazz = getClass();
 		Field[] fields = clazz.getDeclaredFields();
 		for (Field field : fields) {
-			if(field.getType() != Query.class) continue;
+			if(field.getType() != Query.class) { continue; }
 
 			Filter filter = field.getAnnotation(Filter.class);
-			if(filter == null)
+			if(filter == null) {
 				throw new SienaException("Found Query<T> field without @Filter annotation at "
 						+clazz.getName()+"."+field.getName());
+			}
 
 			ParameterizedType pt = (ParameterizedType) field.getGenericType();
 			Class<?> c = (Class<?>) pt.getActualTypeArguments()[0];
@@ -202,7 +203,7 @@ public abstract class Model {
 			return createQuery().iter(limit, offset);
 		}
 
-		public ProxyQuery<T> clone() {
+		public ProxyQuery<T> copy() {
 			return new ProxyQuery<T>(clazz, filter, obj);
 		}
 
@@ -257,11 +258,14 @@ public abstract class Model {
 			return createQuery().paginate(limit);
 		}
 
+		public Query<T> dontPaginate() {
+			return createQuery().dontPaginate();
+		}
+
 		public int pageSize() {
 			return createQuery().pageSize();
 		}
 
-		@Override
 		public boolean hasPagination() {
 			return createQuery().hasPagination();
 		}
@@ -272,6 +276,18 @@ public abstract class Model {
 
 		public void setDbPayload(Object dbPayload) {
 			createQuery().setDbPayload(dbPayload);
+		}
+
+		public Query<T> keepAlive() {
+			return createQuery().keepAlive();
+		}
+
+		public Query<T> dontKeepAlive() {
+			return createQuery().dontKeepAlive();
+		}
+
+		public boolean isAlive() {
+			return createQuery().isAlive();
 		}
 		
 		

@@ -15,7 +15,7 @@ public class QueryIterator<T> implements Iterator<T> {
 	private T last;
 
 	public QueryIterator(Query<T> query, int max, String field) {
-		this.query = query.clone().order(field);
+		this.query = query.copy().order(field);
 		this.max = max;
 		this.index = 0;
 		this.field = field;
@@ -28,7 +28,7 @@ public class QueryIterator<T> implements Iterator<T> {
 			if(current == null) {
 				Field f = last.getClass().getDeclaredField(field);
 				f.setAccessible(true);
-				current = query.clone().filter(field+">", f.get(last)).fetch(max);
+				current = query.copy().filter(field+">", f.get(last)).fetch(max);
 			}
 		} catch(Exception e) {
 			throw new SienaException(e);
