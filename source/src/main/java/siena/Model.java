@@ -72,7 +72,7 @@ public abstract class Model {
 
 	public boolean equals(Object that) {
 		if(this == that) { return true; }
-		if(that == null || that.getClass() != this.getClass()) return false;
+		if(that == null || that.getClass() != this.getClass()) { return false; }
 
 		List<Field> keys = ClassInfo.getClassInfo(getClass()).keys;
 		for (Field field : keys) {
