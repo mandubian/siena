@@ -115,9 +115,10 @@ public abstract class Model {
 			if(field.getType() != Query.class) continue;
 
 			Filter filter = field.getAnnotation(Filter.class);
-			if(filter == null)
+			if(filter == null) {
 				throw new SienaException("Found Query<T> field without @Filter annotation at "
 						+clazz.getName()+"."+field.getName());
+			}
 
 			ParameterizedType pt = (ParameterizedType) field.getGenericType();
 			Class<?> c = (Class<?>) pt.getActualTypeArguments()[0];
