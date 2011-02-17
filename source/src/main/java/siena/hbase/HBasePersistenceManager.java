@@ -3,6 +3,7 @@ package siena.hbase;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 
 import org.apache.hadoop.conf.Configuration;
@@ -21,6 +22,8 @@ import siena.PersistenceManager;
 import siena.Query;
 import siena.QueryFilter;
 import siena.QueryJoin;
+import siena.QueryOption;
+import siena.QueryOption.Type;
 import siena.QueryOrder;
 import siena.QuerySearch;
 import siena.SienaException;
@@ -219,7 +222,8 @@ public class HBasePersistenceManager implements PersistenceManager {
 
 		@Override
 		public List<T> fetch(int limit, Object offset) {
-			// TODO Auto-generated method stub
+			// TODO Auto-generated method stub		@Override
+
 			return null;
 		}
 
@@ -356,53 +360,24 @@ public class HBasePersistenceManager implements PersistenceManager {
 		}
 
 		@Override
-		public boolean hasPagination() {
-			// TODO Auto-generated method stub
-			return false;
-		}
-
-		@Override
-		public int pageSize() {
-			// TODO Auto-generated method stub
-			return 0;
-		}
-
-		@Override
-		public Object dbPayload() {
+		public Query<T> customize(QueryOption... options) {
 			// TODO Auto-generated method stub
 			return null;
 		}
 
 		@Override
-		public void setDbPayload(Object dbPayload) {
-			// TODO Auto-generated method stub
-			
-		}
-
-		@Override
-		public Query<T> dontPaginate() {
+		public QueryOption option(Type option) {
 			// TODO Auto-generated method stub
 			return null;
 		}
 
 		@Override
-		public Query<T> keepAlive() {
+		public Map<Type, QueryOption> options() {
 			// TODO Auto-generated method stub
 			return null;
 		}
 
-		@Override
-		public Query<T> dontKeepAlive() {
-			// TODO Auto-generated method stub
-			return null;
-		}
 
-		@Override
-		public boolean isAlive() {
-			// TODO Auto-generated method stub
-			return false;
-		}
-		
 	}
 
 	@Override

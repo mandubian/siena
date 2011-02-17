@@ -16,6 +16,7 @@
 package siena;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * The Siena interface for performing queries.
@@ -67,14 +68,20 @@ public interface Query<T> {
 	Object raw(String request);
 	
 	Query<T> paginate(int size);
-	Query<T> dontPaginate();
-	boolean hasPagination();
-	int pageSize();
+
+    /* 
+     * sets options on the query. 
+     * By default, this function is not used but expert users could trigger some specific options such as the REUSABLE
+     */
+    Query<T> customize(QueryOption... options);
+    
+    /* 
+     * retrieves an option by its type
+     */
+    QueryOption option(QueryOption.Type option);	
 	
-	Query<T> keepAlive();
-	Query<T> dontKeepAlive();
-	boolean isAlive();
-	
-	Object dbPayload();
-	void setDbPayload(Object dbPayload);
+    /* 
+     * retrieves all options
+     */
+    Map<QueryOption.Type, QueryOption> options();	
 }

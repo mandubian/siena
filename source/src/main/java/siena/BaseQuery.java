@@ -3,9 +3,13 @@ package siena;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.commons.lang.NotImplementedException;
+
+import siena.QueryOption.Type;
 
 public class BaseQuery<T> implements Query<T> {
 	
@@ -31,6 +35,12 @@ public class BaseQuery<T> implements Query<T> {
 	// this is the horrible way I found to manage data propagation in query depending on DB
 	// this field is managed by each DB impl as it needs
 	private Object dbPayload;
+	
+	private Map<QueryOption.Type, QueryOption> options = new HashMap<QueryOption.Type, QueryOption>() {{
+		put(QueryOption.PAGINATE.type, QueryOption.PAGINATE);
+		put(QueryOption.REUSABLE.type, QueryOption.REUSABLE);
+		put(QueryOption.DB_CLUDGE.type, QueryOption.DB_CLUDGE);
+	}};
 	
 	public BaseQuery(PersistenceManager pm, Class<T> clazz) {
 		this.pm = pm;
@@ -227,47 +237,28 @@ public class BaseQuery<T> implements Query<T> {
 
 
 	public Query<T> paginate(int pageSize) {
-		this.pageSize = pageSize;
+		options.get(QueryOption.PAGINATE.type).activate().value(pageSize);
 		return this;
-	}
-	
-	@Override
-	public Query<T> dontPaginate() {
-		this.pageSize = 0;
-		return this;
-	}
-
-	public int pageSize() {
-		return pageSize;
-	}
-
-	public boolean hasPagination() {
-		if(pageSize != 0) { return true; }
-		else { return false; }
-	}
-	
-	public Query<T> keepAlive() {
-		isAlive = true;
-		return this;
-	}
-
-	public boolean isAlive() {
-		return this.isAlive;
 	}
 
 	@Override
-	public Query<T> dontKeepAlive() {
-		isAlive = false;
+	public Query<T> customize(QueryOption... options) {
+		for(QueryOption option: options){
+			this.options.put(option.type, option);
+		}
 		return this;
 	}
 
-	public Object dbPayload() {
-		return dbPayload;
+	@Override
+	public QueryOption option(Type option) {
+		return options.get(option);
 	}
 
-	public void setDbPayload(Object dbPayload) {
-		this.dbPayload = dbPayload;
+	@Override
+	public Map<Type, QueryOption> options() {
+		return options;
 	}
+	
 
 	
 }

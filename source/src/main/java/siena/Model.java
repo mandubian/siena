@@ -19,6 +19,9 @@ import java.lang.reflect.Field;
 import java.lang.reflect.ParameterizedType;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+
+import siena.QueryOption.Type;
 
 /**
  * This is the base abstract class to extend your domain classes.
@@ -258,38 +261,17 @@ public abstract class Model {
 			return createQuery().paginate(limit);
 		}
 
-		public Query<T> dontPaginate() {
-			return createQuery().dontPaginate();
+		public Query<T> customize(QueryOption... options) {
+			return createQuery().customize(options);
 		}
 
-		public int pageSize() {
-			return createQuery().pageSize();
+		public QueryOption option(Type option) {
+			return createQuery().option(option);
 		}
 
-		public boolean hasPagination() {
-			return createQuery().hasPagination();
-		}
-
-		public Object dbPayload() {
-			return createQuery().dbPayload();
-		}
-
-		public void setDbPayload(Object dbPayload) {
-			createQuery().setDbPayload(dbPayload);
-		}
-
-		public Query<T> keepAlive() {
-			return createQuery().keepAlive();
-		}
-
-		public Query<T> dontKeepAlive() {
-			return createQuery().dontKeepAlive();
-		}
-
-		public boolean isAlive() {
-			return createQuery().isAlive();
-		}
-		
+		public Map<Type, QueryOption> options() {
+			return createQuery().options();
+		}	
 		
 	}
 
