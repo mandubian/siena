@@ -5,7 +5,8 @@ public class QueryOption {
     public enum Type {
         PAGINATE,
         DB_CLUDGE,
-        REUSABLE
+        REUSABLE,
+        OFFSET
     }
 
     /* the state of an option */
@@ -13,8 +14,12 @@ public class QueryOption {
         ACTIVE, PASSIVE
     }
 
-    /* DEFAULT OPTIONS THAT BE ADDED DIRECTLY TO QUERY */
+    /* an option has a type, a state and an optional value (pagesize for  PAGINATE for example) */
+    public Type type;
+    private State state = State.PASSIVE;
+    private Object value = null;
     
+    /* DEFAULT OPTIONS THAT BE ADDED DIRECTLY TO QUERY */
     /* PAGINATE is in fact an option and the page size is the value */
     static public final QueryOption PAGINATE = new QueryOption(Type.PAGINATE, 0);
 
@@ -24,50 +29,48 @@ public class QueryOption {
     /* makes a query reusable keeping some opened resources between calls... the statement for JDBC... as you may deduce, the previous DB_CLUDGE will be used to keep this state */
     static public final QueryOption REUSABLE = new QueryOption(Type.REUSABLE);
 
-    /* an option has a type, a state and an optional value (pagesize for  PAGINATE for example) */
-    public Type type;
-    public State state = State.PASSIVE;
-    public Object value = null;
-               
-    QueryOption(QueryOption.Type option, State active, Object value){
+    /* makes a query reusable keeping some opened resources between calls... the statement for JDBC... as you may deduce, the previous DB_CLUDGE will be used to keep this state */
+    static public final QueryOption OFFSET = new QueryOption(Type.OFFSET, 0);
+    
+    public QueryOption(QueryOption.Type option, State active, Object value){
         this.type = option;
         this.state = active;
         this.value = value;
     }
 
-    QueryOption(QueryOption.Type option, Object value){
+    public QueryOption(QueryOption.Type option, Object value){
         this.type = option;
         this.state = State.PASSIVE;
         this.value = value;
     }
 
-    QueryOption(QueryOption.Type option){
+    public QueryOption(QueryOption.Type option){
         this.type = option;
         this.state = State.PASSIVE;       
     }
 
    
-    QueryOption activate() {
+    public QueryOption activate() {
         this.state = State.ACTIVE;
         return this;
     }
    
-    QueryOption passivate() {
+    public QueryOption passivate() {
         this.state = State.PASSIVE;
         return this;
     }
    
-    boolean isActive() {
+    public boolean isActive() {
         if(state == State.ACTIVE) return true;
         else return false;
     }
     
-    QueryOption value(Object value){
+    public QueryOption value(Object value){
     	this.value = value;
     	return this;
     }
     
-    Object value(){
+    public Object value(){
     	return this.value;
     }
 }

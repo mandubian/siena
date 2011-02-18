@@ -48,8 +48,8 @@ public interface Query<T> {
 	@Deprecated
 	int count(int limit, Object offset);
 	
-	Object nextOffset();
-	void setNextOffset(Object nextOffset);
+//	Object nextOffset();
+//	void setNextOffset(Object nextOffset);
 	
 	int delete();
 

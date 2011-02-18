@@ -40,6 +40,7 @@ public class BaseQuery<T> implements Query<T> {
 		put(QueryOption.PAGINATE.type, QueryOption.PAGINATE);
 		put(QueryOption.REUSABLE.type, QueryOption.REUSABLE);
 		put(QueryOption.DB_CLUDGE.type, QueryOption.DB_CLUDGE);
+		put(QueryOption.OFFSET.type, QueryOption.OFFSET);
 	}};
 	
 	public BaseQuery(PersistenceManager pm, Class<T> clazz) {
@@ -241,7 +242,6 @@ public class BaseQuery<T> implements Query<T> {
 		return this;
 	}
 
-	@Override
 	public Query<T> customize(QueryOption... options) {
 		for(QueryOption option: options){
 			this.options.put(option.type, option);
@@ -249,16 +249,12 @@ public class BaseQuery<T> implements Query<T> {
 		return this;
 	}
 
-	@Override
 	public QueryOption option(Type option) {
 		return options.get(option);
 	}
 
-	@Override
 	public Map<Type, QueryOption> options() {
 		return options;
 	}
-	
-
-	
+		
 }
