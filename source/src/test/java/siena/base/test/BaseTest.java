@@ -756,7 +756,7 @@ public abstract class BaseTest extends TestCase {
 	public void testFetchLimitOffset() {
 		Query<PersonUUID> query = queryPersonUUIDOrderBy("n", 0, false);
 		query.fetch(1);
-		List<PersonUUID> people = query.fetch(2, query.nextOffset());
+		List<PersonUUID> people = query.fetch(2, 1);
 
 		assertNotNull(people);
 		assertEquals(2, people.size());
@@ -769,7 +769,7 @@ public abstract class BaseTest extends TestCase {
 	public void testCountLimitOffset() {
 		Query<PersonUUID> query = queryPersonUUIDOrderBy("n", 0, false);
 		query.fetch(1);
-		assertEquals(2, query.count(2, query.nextOffset()));
+		assertEquals(2, query.count(2, 1));
 	}
 
 	public void testInsertUUID() {
@@ -1533,16 +1533,20 @@ public abstract class BaseTest extends TestCase {
 		}
 
 		Query<Discovery> query = pm.createQuery(Discovery.class).paginate(5).order("name");
-		Iterable<Discovery> res = query.iter();
-		Iterator<Discovery> it = res.iterator();
-		int i=0;
-		while(it.hasNext()){
-			assertEquals(discs[i++], it.next());
-		}
-		res = query.iter();
-		it = res.iterator();
-		while(it.hasNext()){
-			assertEquals(discs[i++], it.next());
+		try {
+			Iterable<Discovery> res = query.iter();
+			Iterator<Discovery> it = res.iterator();
+			int i=0;
+			while(it.hasNext()){
+				assertEquals(discs[i++], it.next());
+			}
+			res = query.iter();
+			it = res.iterator();
+			while(it.hasNext()){
+				assertEquals(discs[i++], it.next());
+			}
+		}finally {
+			query.release();
 		}
 	}
 	

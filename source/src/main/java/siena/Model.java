@@ -206,12 +206,12 @@ public abstract class Model {
 			return createQuery().iter(limit, offset);
 		}
 
-		public ProxyQuery<T> copy() {
+		public ProxyQuery<T> clone() {
 			return new ProxyQuery<T>(clazz, filter, obj);
 		}
 
 		public Object nextOffset() {
-			return null; // TODO
+			return createQuery().nextOffset();
 		}
 
 		public int delete() {
@@ -247,6 +247,7 @@ public abstract class Model {
 		}
 
 		public void setNextOffset(Object nextOffset) {
+			createQuery().setNextOffset(nextOffset);
 		}
 
 		public Class<T> getQueriedClass() {
@@ -271,6 +272,21 @@ public abstract class Model {
 
 		public Map<Type, QueryOption> options() {
 			return createQuery().options();
+		}
+
+		@Override
+		public Query<T> offset(int offset) {
+			return createQuery().offset(offset);
+		}
+
+		@Override
+		public Query<T> reuse() {
+			return createQuery().reuse();
+		}
+
+		@Override
+		public Query<T> release() {
+			return createQuery().release();
 		}	
 		
 	}

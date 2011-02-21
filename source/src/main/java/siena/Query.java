@@ -43,13 +43,6 @@ public interface Query<T> {
 	List<T> fetch(int limit, Object offset);
 
 	int count();
-	@Deprecated
-	int count(int limit);
-	@Deprecated
-	int count(int limit, Object offset);
-	
-//	Object nextOffset();
-//	void setNextOffset(Object nextOffset);
 	
 	int delete();
 
@@ -61,13 +54,14 @@ public interface Query<T> {
 	Iterable<T> iter(int limit);
 	Iterable<T> iter(int limit, Object offset);
 		
-	Query<T> copy();
+	Query<T> clone();
 	
 	Class<T> getQueriedClass();
 
 	Object raw(String request);
 	
 	Query<T> paginate(int size);
+    Query<T> offset(int offset);
 
     /* 
      * sets options on the query. 
@@ -84,4 +78,25 @@ public interface Query<T> {
      * retrieves all options
      */
     Map<QueryOption.Type, QueryOption> options();	
+    
+    /**
+     * triggers ON the query reuse mechanism for advanced users
+     */
+    Query<T> reuse();
+
+    /**
+     * release all resources of a query and triggers OFF the query reuse
+     */
+    Query<T> release();
+    
+	@Deprecated
+	int count(int limit);
+	@Deprecated
+	int count(int limit, Object offset);
+	
+	@Deprecated
+	Object nextOffset();
+
+	@Deprecated
+	void setNextOffset(Object nextOffset);
 }

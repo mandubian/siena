@@ -49,7 +49,12 @@ public class QueryOption {
         this.state = State.PASSIVE;       
     }
 
-   
+    public QueryOption(QueryOption option){
+        this.type = option.type;
+        this.state = option.state;
+        this.value = option.value;
+    }
+    
     public QueryOption activate() {
         this.state = State.ACTIVE;
         return this;
@@ -73,4 +78,9 @@ public class QueryOption {
     public Object value(){
     	return this.value;
     }
+
+	public QueryOption clone() {
+		return new QueryOption(this);
+	}
+    
 }

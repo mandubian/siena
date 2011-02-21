@@ -465,6 +465,7 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 		QueryOption cludge = query.option(QueryOption.DB_CLUDGE.type);
 		QueryOption reusable = query.option(QueryOption.REUSABLE.type);
 		int pageSize = (Integer)pag.value();
+		int offsetIdx = (Integer)offset.value();
 		
 		if(!reusable.isActive() || (reusable.isActive() && !cludge.isActive())) {
 			Class<T> clazz = query.getQueriedClass();
@@ -485,6 +486,9 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 				rs = statement.executeQuery();
 				List<T> result = mapList(clazz, rs, ClassInfo.getClassInfo(clazz).tableName, 
 						getJoinFields(query), pageSize);
+				// increases offset
+				if(offset.isActive())
+					offset.value(offsetIdx+result.size());
 				return result;
 			} catch(SQLException e) {
 				throw new SienaException(e);
@@ -504,25 +508,25 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 			Class<T> clazz = query.getQueriedClass();
 			Object[] obj = (Object[])cludge.value();
 			PreparedStatement st = (PreparedStatement)obj[0];
+			Integer idxLimit = (Integer)obj[1];
+			Integer idxOffset = (Integer)obj[2];
 			try {
 				// when paginating, should update limit and offset
 				if(pag.isActive()){
 					// update limit and offset
-					int idxLimit = (Integer)obj[1];
-					int idxOffset = (Integer)obj[2];
 					st.setObject(idxLimit, pag.value());
+				}
+				if(offset.isActive()){
 					st.setObject(idxOffset, offset.value());
-					ResultSet rs = st.getResultSet();
-					List<T> result = mapList(clazz, rs, ClassInfo.getClassInfo(clazz).tableName, 
-							getJoinFields(query), pageSize);
-					return result;
 				}
-				else {
-					ResultSet rs = st.getResultSet();
-					List<T> result = mapList(clazz, rs, ClassInfo.getClassInfo(clazz).tableName, 
-							getJoinFields(query), 0);
-					return result;
-				}
+				
+				ResultSet rs = st.getResultSet();
+				List<T> result = mapList(clazz, rs, ClassInfo.getClassInfo(clazz).tableName, 
+					getJoinFields(query), pageSize);
+				// increases offset
+				if(offset.isActive())
+					offset.value(offsetIdx+result.size());
+				return result;
 			}catch(SQLException ex){
 				throw new SienaException(ex);
 			} finally {
@@ -783,43 +787,78 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 	}
 	
 	private <T> List<T> fetchKeys(Query<T> query, String suffix) {
-		QueryOption pagOpt = query.option(QueryOption.PAGINATE.type);
+		QueryOption pag = query.option(QueryOption.PAGINATE.type);
+		QueryOption offset = query.option(QueryOption.OFFSET.type);
 		QueryOption cludge = query.option(QueryOption.DB_CLUDGE.type);
-		int pageSize = (Integer)pagOpt.value();
+		QueryOption reusable = query.option(QueryOption.REUSABLE.type);
+		int pageSize = (Integer)pag.value();
+		int offsetIdx = (Integer)offset.value();
 		
-		if(cludge.isActive()) {
+		if(!reusable.isActive() || (reusable.isActive() && !cludge.isActive())) {
 			Class<T> clazz = query.getQueriedClass();
 			List<Object> parameters = new ArrayList<Object>();
-			StringBuilder sql = new StringBuilder(JdbcClassInfo.getClassInfo(clazz).baseKeySelectSQL);
+			StringBuilder sql = buildSqlSelect(query);
 			appendSqlWhere(query, sql, parameters);
 			appendSqlOrder(query, sql);
-			sql.append(suffix);
+			appendSqlLimitOffset(query, sql, parameters);
+			//sql.append(suffix);
 			PreparedStatement statement = null;
 			ResultSet rs = null;
 			try {
 				statement = createStatement(sql.toString(), parameters);
-				if(query.hasPagination())
-						statement.setFetchSize(query.pageSize());
+				if(pag.isActive()) {
+					// this is just a hint to the DB so wonder if it should be used
+					statement.setFetchSize(pageSize);
+				}
 				rs = statement.executeQuery();
-				
-				List<T> result = mapListKeys(clazz, rs, ClassInfo.getClassInfo(clazz).tableName, getJoinFields(query), query.pageSize());
+				List<T> result = mapListKeys(clazz, rs, ClassInfo.getClassInfo(clazz).tableName, 
+						getJoinFields(query), pageSize);
+				// increases offset
+				if(offset.isActive())
+					offset.value(offsetIdx+result.size());
 				return result;
 			} catch(SQLException e) {
 				throw new SienaException(e);
 			} finally {
-				if(!query.hasPagination()){
+				if(!reusable.isActive()){
 					closeResultSet(rs);
 					closeStatement(statement);
 				}else {
-					query.setDbPayload(new Object[] { rs, statement });
+					Integer idxOffset = parameters.size()-1;
+					Integer idxLimit = idxOffset - 1;
+					// store indexes of offset and limit for reuse
+					cludge.activate().value(new Object[] { statement, idxLimit, idxOffset});
 				}
 			}
 		}else {
 			// payload has been initialized so goes on
 			Class<T> clazz = query.getQueriedClass();
-			ResultSet rs = (ResultSet)((Object[])query.dbPayload())[0];
-			List<T> result = mapListKeys(clazz, rs, ClassInfo.getClassInfo(clazz).tableName, getJoinFields(query), query.pageSize());
-			return result;
+			Object[] obj = (Object[])cludge.value();
+			PreparedStatement st = (PreparedStatement)obj[0];
+			Integer idxLimit = (Integer)obj[1];
+			Integer idxOffset = (Integer)obj[2];
+			try {
+				// when paginating, should update limit and offset
+				if(pag.isActive()){
+					// update limit and offset
+					st.setObject(idxLimit, pag.value());
+				}
+				if(offset.isActive()){
+					st.setObject(idxOffset, offset.value());
+				}
+				
+				ResultSet rs = st.getResultSet();
+				List<T> result = mapListKeys(clazz, rs, ClassInfo.getClassInfo(clazz).tableName, 
+					getJoinFields(query), pageSize);
+				// increases offset
+				if(offset.isActive())
+					offset.value(offsetIdx+result.size());
+				return result;
+			}catch(SQLException ex){
+				throw new SienaException(ex);
+			} finally {
+				closeStatement(st);
+			}
 		}
 	}
 	
@@ -827,63 +866,109 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 	@Override
 	public <T> List<T> fetchKeys(Query<T> query) {
 		List<T> result = fetchKeys(query, "");
-		query.setNextOffset(result.size());
+		//query.setNextOffset(result.size());
 		return result;
 	}
 
 	@Override
 	public <T> List<T> fetchKeys(Query<T> query, int limit) {
+		query.option(QueryOption.PAGINATE.type).activate().value(limit);
 		List<T> result = fetchKeys(query, " LIMIT "+limit);
-		query.setNextOffset(result.size());
+		//query.setNextOffset(result.size());
 		return result;
 	}
 
 	@Override
 	public <T> List<T> fetchKeys(Query<T> query, int limit, Object offset) {
+		query.option(QueryOption.PAGINATE.type).activate().value(limit);
+		query.option(QueryOption.OFFSET.type).activate().value(offset);
 		List<T> result = fetchKeys(query, " LIMIT "+limit+" OFFSET "+offset);
-		query.setNextOffset(result.size());
+		//query.setNextOffset(result.size());
 		return result;
 	}
 	
 	
 	private <T> Iterable<T> iter(Query<T> query, String suffix) {
-		if(!query.hasPagination() || query.dbPayload() == null ) {
+		QueryOption pag = query.option(QueryOption.PAGINATE.type);
+		QueryOption offset = query.option(QueryOption.OFFSET.type);
+		QueryOption cludge = query.option(QueryOption.DB_CLUDGE.type);
+		QueryOption reusable = query.option(QueryOption.REUSABLE.type);
+
+		// forces the reusable option since iteration requires it!!!
+		reusable.activate();
+		
+		int pageSize = (Integer)pag.value();
+		int offsetIdx = (Integer)offset.value();
+		
+		if(!reusable.isActive() || (reusable.isActive() && !cludge.isActive())) {
 			Class<T> clazz = query.getQueriedClass();
 			List<Object> parameters = new ArrayList<Object>();
-			StringBuilder sql = new StringBuilder(JdbcClassInfo.getClassInfo(clazz).baseSelectSQL);
+			StringBuilder sql = buildSqlSelect(query);
 			appendSqlWhere(query, sql, parameters);
 			appendSqlOrder(query, sql);
-			sql.append(suffix);
+			appendSqlLimitOffset(query, sql, parameters);
+			//sql.append(suffix);
 			PreparedStatement statement = null;
 			ResultSet rs = null;
 			try {
 				statement = createStatement(sql.toString(), parameters);
-				if(query.hasPagination())
-					statement.setFetchSize(query.pageSize());
+				if(pag.isActive()) {
+					// this is just a hint to the DB so wonder if it should be used
+					statement.setFetchSize(pageSize);
+				}
 				rs = statement.executeQuery();
+				
+				// increases offset with fetch size
+				if(offset.isActive())
+					offset.value(offsetIdx+rs.getFetchSize());			
+				
 				return new SienaJdbcIterable<T>(statement, rs, query);
 			} catch(SQLException e) {
-				closeResultSet(rs);
-				closeStatement(statement);
 				throw new SienaException(e);
 			} finally {
-				// doesn't close statement as it is an iterable
-				//closeResultSet(rs);
-				//closeStatement(statement);
-				// but sets the dbpayload if paginating
-				if(query.hasPagination()){
-					query.setDbPayload(new Object[] { rs, statement });
+				if(!reusable.isActive()){
+					closeResultSet(rs);
+					closeStatement(statement);
+				}else {
+					Integer idxOffset = parameters.size();
+					Integer idxLimit = idxOffset - 1;
+					// store indexes of offset and limit for reuse
+					cludge.activate().value(new Object[] { statement, idxLimit, idxOffset});
 				}
 			}
 		}else {
 			// payload has been initialized so goes on
-			Class<T> clazz = query.getQueriedClass();
-			ResultSet rs = (ResultSet)((Object[])query.dbPayload())[0];
-			Statement st = (Statement)((Object[])query.dbPayload())[1];
-			return new SienaJdbcIterable<T>(st, rs, query);
+			Object[] obj = (Object[])cludge.value();
+			PreparedStatement st = (PreparedStatement)obj[0];
+			Integer idxLimit = (Integer)obj[1];
+			Integer idxOffset = (Integer)obj[2];
+			try {
+				// when paginating, should update limit and offset
+				if(pag.isActive()){
+					// update limit and offset
+					st.setObject(idxLimit, pag.value());
+				}
+				if(offset.isActive()){
+					st.setObject(idxOffset, offset.value());
+				}
+				
+				ResultSet rs = st.getResultSet();
+				
+				// increases offset with fetch size
+				if(offset.isActive())
+					offset.value(offsetIdx+rs.getFetchSize());			
+				
+				return new SienaJdbcIterable<T>(st, rs, query);
+			}catch(SQLException ex){
+				throw new SienaException(ex);
+			} finally {
+				if(!reusable.isActive()){
+					closeStatement(st);
+				}
+			}
 		}
 	}
-	
+
 	@Override
 	public <T> Iterable<T> iter(Query<T> query) {
 		return iter(query, "");
@@ -891,12 +976,36 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 
 	@Override
 	public <T> Iterable<T> iter(Query<T> query, int limit) {
+		query.option(QueryOption.PAGINATE.type).activate().value(limit);
 		return iter(query, " LIMIT "+limit);
 	}
 
 	@Override
 	public <T> Iterable<T> iter(Query<T> query, int limit, Object offset) {
+		query.option(QueryOption.PAGINATE.type).activate().value(limit);
+		query.option(QueryOption.OFFSET.type).activate().value(offset);
 		return iter(query, " LIMIT "+limit+" OFFSET "+offset);
+	}
+
+	@Override
+	public <T> void release(Query<T> query) {
+		QueryOption pag = query.option(QueryOption.PAGINATE.type);
+		QueryOption offset = query.option(QueryOption.OFFSET.type);
+		QueryOption cludge = query.option(QueryOption.DB_CLUDGE.type);
+		QueryOption reusable = query.option(QueryOption.REUSABLE.type);
+		
+		// resets offset
+		if(offset.isActive()) 
+			offset.passivate().value(0);
+		// disables reusable and cludge
+		if(reusable.isActive()){
+			reusable.passivate();
+			// payload has been initialized so goes on
+			Object[] obj = (Object[])cludge.value();
+			PreparedStatement st = (PreparedStatement)obj[0];
+			closeStatement(st);	
+			cludge.passivate().value(null);
+		}
 	}
 
 	private static final String[] supportedOperators = new String[]{ "<", ">", ">=", "<=", "!=", "=", "IN" };
@@ -1008,11 +1117,18 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 	     * The wrapped <code>Query</code>.
 	     */
 	    Query<T> query;
+	    
+	    /**
+	     * The wrapped <code>Pagination QueryOption</code>.
+	     */
+	    QueryOption pag;
 
 		SienaJdbcIterable(Statement st, ResultSet rs, Query<T> query) {
 			this.st = st;
 			this.rs = rs;
 			this.query = query;
+			this.pag = query.option(QueryOption.PAGINATE.type);
+
 		}
 
 		@Override
@@ -1033,8 +1149,8 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 			public boolean hasNext() {
 				try {
 		            if(!rs.isLast()){
-		            	if(query.hasPagination())
-		            		return idx<query.pageSize();
+		            	if(pag.isActive())
+		            		return idx<(Integer)pag.value();
 		            	return true;
 		            }
 		            return false;
@@ -1048,7 +1164,7 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 				try {
 					if(rs.next()){
 						Class<V> clazz = query.getQueriedClass();
-						if(query.hasPagination() && idx<query.pageSize()){
+						if(pag.isActive() && idx<(Integer)pag.value()){
 							idx++;
 							return mapObject(clazz, rs, ClassInfo.getClassInfo(clazz).tableName, getJoinFields(query));
 						}else return mapObject(clazz, rs, ClassInfo.getClassInfo(clazz).tableName, getJoinFields(query));
@@ -1061,11 +1177,14 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 
 			@Override
 			public void remove() {
-				try {
+				// doesn't delete row because it REALLY deletes row from DB!!!
+				// need to think about it
+				/*try {
+					
 		            rs.deleteRow();
 		        } catch (SQLException e) {
 		        	throw new SienaException(e);
-		        }
+		        }*/
 			}
 
 			@Override
@@ -1075,6 +1194,13 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 				super.finalize();
 			}
 
+		}
+
+		@Override
+		protected void finalize() throws Throwable {
+			closeResultSet(rs);
+			closeStatement(st);
+			super.finalize();
 		}
 
 	}

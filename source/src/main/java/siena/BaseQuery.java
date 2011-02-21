@@ -37,10 +37,10 @@ public class BaseQuery<T> implements Query<T> {
 	private Object dbPayload;
 	
 	private Map<QueryOption.Type, QueryOption> options = new HashMap<QueryOption.Type, QueryOption>() {{
-		put(QueryOption.PAGINATE.type, QueryOption.PAGINATE);
-		put(QueryOption.REUSABLE.type, QueryOption.REUSABLE);
-		put(QueryOption.DB_CLUDGE.type, QueryOption.DB_CLUDGE);
-		put(QueryOption.OFFSET.type, QueryOption.OFFSET);
+		put(QueryOption.PAGINATE.type, QueryOption.PAGINATE.clone());
+		put(QueryOption.REUSABLE.type, QueryOption.REUSABLE.clone());
+		put(QueryOption.DB_CLUDGE.type, QueryOption.DB_CLUDGE.clone());
+		put(QueryOption.OFFSET.type, QueryOption.OFFSET.clone());
 	}};
 	
 	public BaseQuery(PersistenceManager pm, Class<T> clazz) {
@@ -214,7 +214,7 @@ public class BaseQuery<T> implements Query<T> {
 		return pm.iter(this, limit, offset);
 	}
 	
-	public Query<T> copy() {
+	public Query<T> clone() {
 		return new BaseQuery<T>(this);
 	}
 	
@@ -227,11 +227,12 @@ public class BaseQuery<T> implements Query<T> {
 		return null;
 	}
 
-	
+	@Deprecated
 	public Object nextOffset() {
 		return nextOffset;
 	}
 	
+	@Deprecated
 	public void setNextOffset(Object nextOffset) {
 		this.nextOffset = nextOffset;
 	}
@@ -239,9 +240,15 @@ public class BaseQuery<T> implements Query<T> {
 
 	public Query<T> paginate(int pageSize) {
 		options.get(QueryOption.PAGINATE.type).activate().value(pageSize);
+		options.get(QueryOption.OFFSET.type).activate();
 		return this;
 	}
 
+	public Query<T> offset(int offset) {
+		options.get(QueryOption.OFFSET.type).activate().value(offset);
+		return this;
+	}
+	
 	public Query<T> customize(QueryOption... options) {
 		for(QueryOption option: options){
 			this.options.put(option.type, option);
@@ -255,6 +262,16 @@ public class BaseQuery<T> implements Query<T> {
 
 	public Map<Type, QueryOption> options() {
 		return options;
+	}
+
+	public Query<T> reuse() {
+		options.get(QueryOption.REUSABLE.type).activate();
+		return this;
+	}
+
+	public Query<T> release() {
+		pm.release(this);
+		return this;
 	}
 		
 }

@@ -140,7 +140,7 @@ public class MockPersistenceManager implements PersistenceManager {
 			return null;
 		}
 		
-		public Query<T> copy() {
+		public Query<T> clone() {
 			throw new UnsupportedOperationException();
 		}
 		

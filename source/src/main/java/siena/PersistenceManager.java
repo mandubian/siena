@@ -137,5 +137,7 @@ public interface PersistenceManager {
 	
 	public <T> List<T> join(Query<T> query, String field, String... sortFields);*/
 	
+	public <T> void release(Query<T> query);
+
 	public String[] supportedOperators();
 }

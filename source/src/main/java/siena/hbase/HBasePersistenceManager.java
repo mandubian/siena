@@ -271,7 +271,7 @@ public class HBasePersistenceManager implements PersistenceManager {
 			return null;
 		}
 		
-		public HBaseQuery<T> copy() {
+		public HBaseQuery<T> clone() {
 			return null;
 		}
 		
