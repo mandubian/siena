@@ -1,12 +1,17 @@
 package siena;
 
+import java.util.HashMap;
+import java.util.Map;
+
 public class QueryOption {
     /* an enum defining the types of options */
     public enum Type {
         PAGINATE,
         DB_CLUDGE,
         REUSABLE,
-        OFFSET
+        OFFSET,
+        SEARCH,
+        WHAT_YOU_NEED
     }
 
     /* the state of an option */
@@ -18,6 +23,15 @@ public class QueryOption {
     public Type type;
     private State state = State.PASSIVE;
     private Object value = null;
+    
+    static private final Map<Type, QueryOption> defaults = new HashMap<Type, QueryOption>() {{
+    	put(Type.PAGINATE, new QueryOption(Type.PAGINATE, 0));
+    	put(Type.OFFSET, new QueryOption(Type.OFFSET, 0));
+    	put(Type.DB_CLUDGE, new QueryOption(Type.DB_CLUDGE));
+    	put(Type.REUSABLE, new QueryOption(Type.REUSABLE));
+    	put(Type.SEARCH, new QueryOption(Type.SEARCH));
+    	put(Type.WHAT_YOU_NEED, new QueryOption(Type.WHAT_YOU_NEED));
+    }};
     
     /* DEFAULT OPTIONS THAT BE ADDED DIRECTLY TO QUERY */
     /* PAGINATE is in fact an option and the page size is the value */
@@ -31,6 +45,9 @@ public class QueryOption {
 
     /* makes a query reusable keeping some opened resources between calls... the statement for JDBC... as you may deduce, the previous DB_CLUDGE will be used to keep this state */
     static public final QueryOption OFFSET = new QueryOption(Type.OFFSET, 0);
+
+    /* Search option is specific as it can be added on each QuerySearch depending on the DB*/ 
+    static public final QueryOption SEARCH = new QueryOption(Type.SEARCH);
     
     public QueryOption(QueryOption.Type option, State active, Object value){
         this.type = option;
@@ -83,4 +100,13 @@ public class QueryOption {
 		return new QueryOption(this);
 	}
     
+	public static QueryOption getInstance(Type type) {
+		if(defaults.containsKey(type))
+			return defaults.get(type).clone();
+		else return new QueryOption(type);
+	}
+	
+	public String toString() {
+		return "{ type:"+this.type+" - state:"+this.state+" - value:"+this.value+"}";
+	}
 }

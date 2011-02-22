@@ -729,9 +729,21 @@ public class JdbcTest extends BaseTest {
 	}
 
 	@Override
+	public void testFetchPaginateReuse() {
+		// TODO Auto-generated method stub
+		super.testFetchPaginateReuse();
+	}
+
+	@Override
 	public void testFetchKeysPaginate() {
 		// TODO Auto-generated method stub
 		super.testFetchKeysPaginate();
+	}
+
+	@Override
+	public void testFetchKeysPaginateReuse() {
+		// TODO Auto-generated method stub
+		super.testFetchKeysPaginateReuse();
 	}
 
 	@Override
@@ -744,6 +756,30 @@ public class JdbcTest extends BaseTest {
 	public void testIterFetchPaginate() {
 		// TODO Auto-generated method stub
 		super.testIterFetchPaginate();
+	}
+
+	@Override
+	public void testFetchOffset() {
+		// TODO Auto-generated method stub
+		super.testFetchOffset();
+	}
+
+	@Override
+	public void testFetchPaginateOffset() {
+		// TODO Auto-generated method stub
+		super.testFetchPaginateOffset();
+	}
+
+	@Override
+	public void testIterOffset() {
+		// TODO Auto-generated method stub
+		super.testIterOffset();
+	}
+
+	@Override
+	public void testIterPaginateOffset() {
+		// TODO Auto-generated method stub
+		super.testIterPaginateOffset();
 	}
 
 	

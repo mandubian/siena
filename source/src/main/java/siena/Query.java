@@ -34,7 +34,13 @@ public interface Query<T> {
 	
 	Query<T> filter(String fieldName, Object value);
 	Query<T> order(String fieldName);
+	
+	Query<T> search(String match, String... fields);
+	Query<T> search(String match, QueryOption opt, String... fields);
+
+	@Deprecated
 	Query<T> search(String match, boolean inBooleanMode, String index);
+
 	Query<T> join(String field, String... sortFields);
 
 	T get();

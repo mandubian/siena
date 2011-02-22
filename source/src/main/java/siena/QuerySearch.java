@@ -3,14 +3,18 @@ package siena;
 public class QuerySearch {
 	
 	public String match;
-	public boolean inBooleanMode;
-	public String index;
+	public QueryOption option;
+	public String[] fields;
 	
-	public QuerySearch(String match, boolean inBooleanMode,
-			String index) {
+	public QuerySearch(String match, String... fields) {
 		this.match = match;
-		this.inBooleanMode = inBooleanMode;
-		this.index = index;
+		this.fields = fields;
+	}
+	
+	public QuerySearch(String match, QueryOption option, String... fields) {
+		this.match = match;
+		this.option = option;
+		this.fields = fields;
 	}
 	
 }

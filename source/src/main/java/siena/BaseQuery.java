@@ -122,12 +122,24 @@ public class BaseQuery<T> implements Query<T> {
 		}
 	}
 
+	public Query<T> search(String match, String... fields) {
+		searches.add(new QuerySearch(match, fields));
+		return this;
+	}
+	
+	public Query<T> search(String match, QueryOption opt, String... fields) {
+		searches.add(new QuerySearch(match, opt, fields));
+		return this;
+	}
+	
+	
+	@Deprecated
 	public Query<T> search(String match, boolean inBooleanMode, String index) {
-		searches.add(new QuerySearch(match, inBooleanMode, index));
+		//TODO implements default function for backward compat
+		//searches.add(new QuerySearch(match, inBooleanMode, index));
 		return this;
 	}
 
-	@Override
 	public Query<T> join(String fieldName, String... sortFields) {
 		try {
 			Field field = clazz.getDeclaredField(fieldName);
