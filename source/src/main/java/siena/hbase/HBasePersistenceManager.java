@@ -25,7 +25,7 @@ import siena.QueryJoin;
 import siena.QueryOption;
 import siena.QueryOption.Type;
 import siena.QueryOrder;
-import siena.QuerySearch;
+import siena.QueryFilterSearch;
 import siena.SienaException;
 
 public class HBasePersistenceManager implements PersistenceManager {
@@ -318,7 +318,7 @@ public class HBasePersistenceManager implements PersistenceManager {
 		}
 
 		@Override
-		public List<QuerySearch> getSearches() {
+		public List<QueryFilterSearch> getSearches() {
 			// TODO Auto-generated method stub
 			return null;
 		}

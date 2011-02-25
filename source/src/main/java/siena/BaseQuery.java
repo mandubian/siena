@@ -7,10 +7,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.commons.lang.NotImplementedException;
-
-import siena.QueryOption.Type;
-
 public class BaseQuery<T> implements Query<T> {
 	
 	private PersistenceManager pm;
@@ -19,28 +15,18 @@ public class BaseQuery<T> implements Query<T> {
 	private List<QueryFilter> filters;
 
 	private List<QueryOrder> orders;
-	private List<QuerySearch> searches;
+	private List<QueryFilterSearch> searches;
 	private List<QueryJoin> joins;
 
+	@Deprecated
 	private Object nextOffset;
 	
-	// a pageSize != 0 indicates the query shall manage Pagination
-	// default is NO PAGE
-	private int pageSize = 0;
-	
-	// isAlive is trigger by keepAlive/dontKeepAlive
-	// default is FALSE
-	private boolean isAlive = false; 
-	
-	// this is the horrible way I found to manage data propagation in query depending on DB
-	// this field is managed by each DB impl as it needs
-	private Object dbPayload;
-	
-	private Map<QueryOption.Type, QueryOption> options = new HashMap<QueryOption.Type, QueryOption>() {{
-		put(QueryOption.PAGINATE.type, QueryOption.PAGINATE.clone());
-		put(QueryOption.REUSABLE.type, QueryOption.REUSABLE.clone());
-		put(QueryOption.DB_CLUDGE.type, QueryOption.DB_CLUDGE.clone());
-		put(QueryOption.OFFSET.type, QueryOption.OFFSET.clone());
+	private Map<Integer, QueryOption> options = new HashMap<Integer, QueryOption>() {
+		private static final long serialVersionUID = -7438657296637379900L;
+	{
+		put(QueryOptionPaginate.ID, new QueryOptionPaginate(0));
+		put(QueryOptionReuse.ID, new QueryOptionReuse());
+		put(QueryOptionOffset.ID, new QueryOptionOffset(0));
 	}};
 	
 	public BaseQuery(PersistenceManager pm, Class<T> clazz) {
@@ -49,7 +35,7 @@ public class BaseQuery<T> implements Query<T> {
 		
 		filters = new ArrayList<QueryFilter>();
 		orders = new ArrayList<QueryOrder>();
-		searches = new ArrayList<QuerySearch>();
+		searches = new ArrayList<QueryFilterSearch>();
 		joins = new ArrayList<QueryJoin>();
 	}
 	
@@ -59,7 +45,7 @@ public class BaseQuery<T> implements Query<T> {
 		
 		this.filters = new ArrayList<QueryFilter>();
 		this.orders = new ArrayList<QueryOrder>();
-		this.searches = new ArrayList<QuerySearch>();
+		this.searches = new ArrayList<QueryFilterSearch>();
 		this.joins = new ArrayList<QueryJoin>();
 		
 		Collections.copy(this.filters, query.filters);
@@ -67,7 +53,7 @@ public class BaseQuery<T> implements Query<T> {
 		Collections.copy(this.searches, query.searches);
 		Collections.copy(this.joins, query.joins);
 		
-		this.nextOffset = query.nextOffset;
+		//this.nextOffset = query.nextOffset;
 	}
 	
 	public List<QueryFilter> getFilters() {
@@ -78,7 +64,7 @@ public class BaseQuery<T> implements Query<T> {
 		return orders;
 	}
 
-	public List<QuerySearch> getSearches() {
+	public List<QueryFilterSearch> getSearches() {
 		return searches;
 	}
 
@@ -99,7 +85,7 @@ public class BaseQuery<T> implements Query<T> {
 		
 		try {
 			Field field = clazz.getDeclaredField(fieldName);
-			filters.add(new QueryFilter(field, op, value));
+			filters.add(new QueryFilterSimple(field, op, value));
 			return this;
 		} catch (Exception e) {
 			throw new SienaException(e);
@@ -123,12 +109,16 @@ public class BaseQuery<T> implements Query<T> {
 	}
 
 	public Query<T> search(String match, String... fields) {
-		searches.add(new QuerySearch(match, fields));
+		QueryFilterSearch q = new QueryFilterSearch(match, fields);
+		filters.add(q);
+		searches.add(q);
 		return this;
 	}
 	
 	public Query<T> search(String match, QueryOption opt, String... fields) {
-		searches.add(new QuerySearch(match, opt, fields));
+		QueryFilterSearch q = new QueryFilterSearch(match, opt, fields);
+		filters.add(q);
+		searches.add(q);
 		return this;
 	}
 	
@@ -251,13 +241,14 @@ public class BaseQuery<T> implements Query<T> {
 
 
 	public Query<T> paginate(int pageSize) {
-		options.get(QueryOption.PAGINATE.type).activate().value(pageSize);
-		options.get(QueryOption.OFFSET.type).activate();
+		((QueryOptionPaginate)(options.get(QueryOptionPaginate.ID)).activate()).pageSize=pageSize;
+		options.get(QueryOptionOffset.ID).activate();
+
 		return this;
 	}
 
 	public Query<T> offset(int offset) {
-		options.get(QueryOption.OFFSET.type).activate().value(offset);
+		((QueryOptionOffset)(options.get(QueryOptionOffset.ID)).activate()).offset=offset;
 		return this;
 	}
 	
@@ -268,16 +259,16 @@ public class BaseQuery<T> implements Query<T> {
 		return this;
 	}
 
-	public QueryOption option(Type option) {
+	public QueryOption option(int option) {
 		return options.get(option);
 	}
 
-	public Map<Type, QueryOption> options() {
+	public Map<Integer, QueryOption> options() {
 		return options;
 	}
 
 	public Query<T> reuse() {
-		options.get(QueryOption.REUSABLE.type).activate();
+		options.get(QueryOptionReuse.ID).activate();
 		return this;
 	}
 

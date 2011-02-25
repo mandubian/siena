@@ -17,11 +17,8 @@ package siena;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.ParameterizedType;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-
-import siena.QueryOption.Type;
 
 /**
  * This is the base abstract class to extend your domain classes.
@@ -36,6 +33,7 @@ import siena.QueryOption.Type;
  * </code>
  * 
  * @author gimenete
+ * @author mandubian
  *
  */
 public abstract class Model {
@@ -238,7 +236,7 @@ public abstract class Model {
 			return createQuery().getOrders();
 		}
 
-		public List<QuerySearch> getSearches() {
+		public List<QueryFilterSearch> getSearches() {
 			return createQuery().getSearches();
 		}
 
@@ -266,11 +264,11 @@ public abstract class Model {
 			return createQuery().customize(options);
 		}
 
-		public QueryOption option(Type option) {
+		public QueryOption option(int option) {
 			return createQuery().option(option);
 		}
 
-		public Map<Type, QueryOption> options() {
+		public Map<Integer, QueryOption> options() {
 			return createQuery().options();
 		}
 
@@ -287,6 +285,16 @@ public abstract class Model {
 		@Override
 		public Query<T> release() {
 			return createQuery().release();
+		}
+
+		@Override
+		public Query<T> search(String match, String... fields) {
+			return createQuery().search(match, fields);
+		}
+
+		@Override
+		public Query<T> search(String match, QueryOption opt, String... fields) {
+			return createQuery().search(match, opt, fields);
 		}	
 		
 	}

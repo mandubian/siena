@@ -1523,7 +1523,10 @@ public abstract class BaseTest extends TestCase {
 			for(int i=0; i<5; i++){
 				assertEquals(discs[i+5], res.get(i));
 			}
-		}finally{
+		}catch(Exception ex){
+			fail(ex.getMessage());
+		}
+		finally{
 			query.release();
 		}
 	}

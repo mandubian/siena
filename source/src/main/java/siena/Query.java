@@ -29,7 +29,7 @@ public interface Query<T> {
 	
 	List<QueryFilter> getFilters();
 	List<QueryOrder> getOrders();
-	List<QuerySearch> getSearches();
+	List<QueryFilterSearch> getSearches();
 	List<QueryJoin> getJoins();
 	
 	Query<T> filter(String fieldName, Object value);
@@ -78,12 +78,12 @@ public interface Query<T> {
     /* 
      * retrieves an option by its type
      */
-    QueryOption option(QueryOption.Type option);	
+    QueryOption option(int option);	
 	
     /* 
      * retrieves all options
      */
-    Map<QueryOption.Type, QueryOption> options();	
+    Map<Integer, QueryOption> options();	
     
     /**
      * triggers ON the query reuse mechanism for advanced users
