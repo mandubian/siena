@@ -5,7 +5,7 @@ import java.sql.PreparedStatement;
 import siena.QueryOption;
 
 public class QueryOptionJdbcContext extends QueryOption{
-    public static final int ID 	= 0x04;
+    public static final int ID 	= 0x1001;
 	
     public PreparedStatement statement;
     public int limitParamIdx;
@@ -35,7 +35,7 @@ public class QueryOptionJdbcContext extends QueryOption{
 	}
 
 	public String toString() {
-		return "type: JDBC_CONTEXT - state:"+this.state+ " - st:"+statement.toString()
+		return "type:JDBC_CONTEXT - state:"+this.state
 				+ " - limitParamIdx:"+limitParamIdx+" - offsetParamIdx:"+offsetParamIdx;
 	}
 }

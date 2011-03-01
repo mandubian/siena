@@ -18,6 +18,7 @@ package siena.sdb;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.UUID;
 
@@ -25,6 +26,7 @@ import siena.AbstractPersistenceManager;
 import siena.ClassInfo;
 import siena.Query;
 import siena.QueryFilter;
+import siena.QueryFilterSimple;
 import siena.QueryOrder;
 import siena.SienaException;
 import siena.Util;
@@ -230,26 +232,29 @@ public class SdbPersistenceManager extends AbstractPersistenceManager {
 			boolean first = true;
 			
 			for (QueryFilter filter : filters) {
-				Field f      = filter.field;
-				Object value = filter.value;
-				String op    = filter.operator;
-				
-				if(!first) {
-					q.append(" and ");
-				}
-				first = false;
-				
-				String column = null;
-				if(ClassInfo.isId(f)) {
-					column = "itemName()";
-				} else {
-					column = ClassInfo.getColumnNames(f)[0];
-				}
-				if(value == null && op.equals("=")) {
-					q.append(column+" is null");
-				} else {
-					String s = SdbPersistenceManager.toString(f, value);
-					q.append(column+op+SimpleDB.quote(s));
+				if(QueryFilterSimple.class.isAssignableFrom(filter.getClass())){
+					QueryFilterSimple qf = (QueryFilterSimple)filter;
+					Field f      = qf.field;
+					Object value = qf.value;
+					String op    = qf.operator;
+					
+					if(!first) {
+						q.append(" and ");
+					}
+					first = false;
+					
+					String column = null;
+					if(ClassInfo.isId(f)) {
+						column = "itemName()";
+					} else {
+						column = ClassInfo.getColumnNames(f)[0];
+					}
+					if(value == null && op.equals("=")) {
+						q.append(column+" is null");
+					} else {
+						String s = SdbPersistenceManager.toString(f, value);
+						q.append(column+op+SimpleDB.quote(s));
+					}
 				}
 			}
 			
@@ -341,8 +346,56 @@ public class SdbPersistenceManager extends AbstractPersistenceManager {
 	}
 
 	@Override
+	public <T> void release(Query<T> query) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
 	public String[] supportedOperators() {
 		return supportedOperators;
+	}
+
+	@Override
+	public void insert(Object... objects) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void insert(Iterable<?> objects) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void delete(Object... models) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void delete(Iterable<?> models) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public <T> void deleteByKeys(Class<T> clazz, Object... keys) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public <T> void deleteByKeys(Class<T> clazz, Iterable<?> keys) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void update(Map<String, ?> fieldValues) {
+		// TODO Auto-generated method stub
+		
 	}
 
 }

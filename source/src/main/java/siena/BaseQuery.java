@@ -25,8 +25,10 @@ public class BaseQuery<T> implements Query<T> {
 		private static final long serialVersionUID = -7438657296637379900L;
 	{
 		put(QueryOptionPaginate.ID, new QueryOptionPaginate(0));
-		put(QueryOptionReuse.ID, new QueryOptionReuse());
 		put(QueryOptionOffset.ID, new QueryOptionOffset(0));
+		put(QueryOptionReuse.ID, new QueryOptionReuse());
+		//the fetch type is activated by default and set to NORMAL
+		put(QueryOptionFetchType.ID, (new QueryOptionFetchType()).activate());
 	}};
 	
 	public BaseQuery(PersistenceManager pm, Class<T> clazz) {
@@ -275,6 +277,11 @@ public class BaseQuery<T> implements Query<T> {
 	public Query<T> release() {
 		pm.release(this);
 		return this;
+	}
+
+	@Override
+	public void update(Map<String, ?> fieldValues) {
+		pm.update(fieldValues);
 	}
 		
 }

@@ -21,23 +21,25 @@ import siena.base.test.model.DataTypes;
 import siena.base.test.model.DataTypes.EnumLong;
 import siena.base.test.model.Discovery;
 import siena.base.test.model.Discovery4Join;
+import siena.base.test.model.Discovery4Search;
 import siena.base.test.model.DiscoveryPrivate;
 import siena.base.test.model.MultipleKeys;
 import siena.base.test.model.PersonLongAutoID;
 import siena.base.test.model.PersonLongManualID;
 import siena.base.test.model.PersonStringID;
 import siena.base.test.model.PersonUUID;
+import siena.jdbc.QueryOptionJdbcSearch;
 
 public abstract class BaseTest extends TestCase {
 	
-	private PersistenceManager pm;
+	protected PersistenceManager pm;
 
 	private static PersonUUID UUID_TESLA = new PersonUUID("Nikola", "Tesla", "Smiljam", 1);
 	private static PersonUUID UUID_CURIE = new PersonUUID("Marie", "Curie", "Warsaw", 2);
 	private static PersonUUID UUID_EINSTEIN = new PersonUUID("Albert", "Einstein", "Ulm", 3);
 	
 	private static PersonLongAutoID LongAutoID_TESLA = new PersonLongAutoID("Nikola", "Tesla", "Smiljam", 1);
-	private static PersonLongAutoID LongAutoID_CURIE = new PersonLongAutoID("Marie", "Curie", "Warsaw", 2);
+	protected static PersonLongAutoID LongAutoID_CURIE = new PersonLongAutoID("Marie", "Curie", "Warsaw", 2);
 	private static PersonLongAutoID LongAutoID_EINSTEIN = new PersonLongAutoID("Albert", "Einstein", "Ulm", 3);
 
 	private static PersonLongManualID LongManualID_TESLA = new PersonLongManualID(1L, "Nikola", "Tesla", "Smiljam", 1);
@@ -56,7 +58,7 @@ public abstract class BaseTest extends TestCase {
 	
 	public abstract boolean mustFilterToOrder();
 	
-	private List<PersonUUID> getOrderedPersonUUIDs() {
+	protected List<PersonUUID> getOrderedPersonUUIDs() {
 		ArrayList<PersonUUID> l = new ArrayList<PersonUUID>() {{ 
 			add(UUID_TESLA); 
 			add(UUID_CURIE);
@@ -71,7 +73,7 @@ public abstract class BaseTest extends TestCase {
 		
 		return l;
 	}
-	public Query<PersonUUID> queryPersonUUIDOrderBy(String order, Object value, boolean desc) {
+	protected Query<PersonUUID> queryPersonUUIDOrderBy(String order, Object value, boolean desc) {
 		Query<PersonUUID> query = pm.createQuery(PersonUUID.class);
 		if(mustFilterToOrder()) {
 			query = query.filter(order+">", value);
@@ -79,7 +81,7 @@ public abstract class BaseTest extends TestCase {
 		return query.order(desc ? "-"+order : order);
 	}
 
-	public Query<PersonLongAutoID> queryPersonLongAutoIDOrderBy(String order, Object value, boolean desc) {
+	protected Query<PersonLongAutoID> queryPersonLongAutoIDOrderBy(String order, Object value, boolean desc) {
 		Query<PersonLongAutoID> query = pm.createQuery(PersonLongAutoID.class);
 		if(mustFilterToOrder()) {
 			query = query.filter(order+">", value);
@@ -87,7 +89,7 @@ public abstract class BaseTest extends TestCase {
 		return query.order(desc ? "-"+order : order);
 	}
 	
-	public Query<PersonLongManualID> queryPersonLongManualIDOrderBy(String order, Object value, boolean desc) {
+	protected Query<PersonLongManualID> queryPersonLongManualIDOrderBy(String order, Object value, boolean desc) {
 		Query<PersonLongManualID> query = pm.createQuery(PersonLongManualID.class);
 		if(mustFilterToOrder()) {
 			query = query.filter(order+">", value);
@@ -753,6 +755,38 @@ public abstract class BaseTest extends TestCase {
 		assertEquals(1, pm.createQuery(PersonUUID.class).filter("n<", 3).count(1));
 	}
 
+	public void testFetchLimitReal() {
+		Discovery[] discs = new Discovery[10];
+		for(int i=0; i<10; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+			pm.insert(discs[i]);
+		}
+
+		List<Discovery> res = pm.createQuery(Discovery.class).order("name").fetch(3);
+		assertNotNull(res);
+		assertEquals(3, res.size());
+		
+		assertEquals(discs[0], res.get(0));
+		assertEquals(discs[1], res.get(1));
+		assertEquals(discs[2], res.get(2));
+	}
+
+	public void testFetchLimitOffsetReal() {
+		Discovery[] discs = new Discovery[10];
+		for(int i=0; i<10; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+			pm.insert(discs[i]);
+		}
+
+		List<Discovery> res = pm.createQuery(Discovery.class).order("name").fetch(3, 5);
+		assertNotNull(res);
+		assertEquals(3, res.size());
+		
+		assertEquals(discs[5], res.get(0));
+		assertEquals(discs[6], res.get(1));
+		assertEquals(discs[7], res.get(2));
+	}
+	
 	public void testFetchLimitOffset() {
 		Query<PersonUUID> query = queryPersonUUIDOrderBy("n", 0, false);
 		query.fetch(1);
@@ -1733,6 +1767,117 @@ public abstract class BaseTest extends TestCase {
 		}
 	}
 	
+	public void testSearchSingle() {
+		Discovery4Search[] discs = new Discovery4Search[10];
+		for(int i=0; i<10; i++){
+			discs[i] = new Discovery4Search("Disc_"+i, LongAutoID_CURIE);
+			pm.insert(discs[i]);
+		}
+		
+		Query<Discovery4Search> query = 
+			pm.createQuery(Discovery4Search.class).search("Disc_5", "name");
+		
+		List<Discovery4Search> res = query.fetch();
+		
+		assertEquals(1, res.size());
+		assertEquals(discs[5], res.get(0));
+	}
+
+	public void testBatchInsert() {
+		Object[] discs = new Discovery[10];
+		for(int i=0; i<10; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert(discs);
+		
+		List<Discovery> res = 
+			pm.createQuery(Discovery.class).fetch();
+		
+		assertEquals(discs.length, res.size());
+		int i=0;
+		for(Discovery disc:res){
+			assertEquals(discs[i++], disc);
+		}
+	}
+	
+	public void testBatchInsertList() {
+		List<Discovery> discs = new ArrayList<Discovery>();
+		for(int i=0; i<10; i++){
+			discs.add(new Discovery("Disc_"+i, LongAutoID_CURIE));
+		}
+		pm.insert(discs);
+		
+		List<Discovery> res = 
+			pm.createQuery(Discovery.class).fetch();
+		
+		assertEquals(discs.size(), res.size());
+		int i=0;
+		for(Discovery disc:res){
+			assertEquals(discs.get(i++), disc);
+		}
+	}
+	
+	public void testBatchDelete() {
+		Object[] discs = new Discovery[10];
+		for(int i=0; i<10; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+			pm.insert(discs[i]);
+		}
+		List<Discovery> res = 
+			pm.createQuery(Discovery.class).fetch();
+		
+		assertEquals(discs.length, res.size());
+		
+		pm.delete(discs);
+		
+		res = 
+			pm.createQuery(Discovery.class).fetch();
+		
+		assertEquals(0, res.size());
+	}
+	
+	public void testBatchDeleteList() {
+		List<Discovery> discs = new ArrayList<Discovery>();
+		for(int i=0; i<10; i++){
+			Discovery disc = new Discovery("Disc_"+i, LongAutoID_CURIE);
+			discs.add(disc);
+			pm.insert(disc);
+		}
+		List<Discovery> res = 
+			pm.createQuery(Discovery.class).fetch();
+		
+		assertEquals(discs.size(), res.size());
+		
+		pm.delete(discs);
+		
+		res = 
+			pm.createQuery(Discovery.class).fetch();
+		
+		assertEquals(0, res.size());
+	}
+	
+	
+	public void testBatchDeleteByKeys() {
+		pm.deleteByKeys(PersonStringID.class, "TESLA", "CURIE");
+		
+		List<PersonStringID> res = 
+			pm.createQuery(PersonStringID.class).fetch();
+		
+		assertEquals(1, res.size());
+		assertEquals(StringID_EINSTEIN, res.get(0));
+	}
+	
+	public void testBatchDeleteByKeysList() {
+		pm.deleteByKeys(PersonStringID.class, new ArrayList<String>(){{add("TESLA"); add( "CURIE");}});
+		
+		List<PersonStringID> res = 
+			pm.createQuery(PersonStringID.class).fetch();
+		
+		assertEquals(1, res.size());
+		assertEquals(StringID_EINSTEIN, res.get(0));
+	}
+	
+	
 	private PersonUUID getPersonUUID(String id) {
 		PersonUUID p = new PersonUUID();
 		p.id = id;
@@ -1776,6 +1921,7 @@ public abstract class BaseTest extends TestCase {
 		classes.add(Discovery.class);
 		classes.add(Discovery4Join.class);
 		classes.add(DiscoveryPrivate.class);
+		classes.add(Discovery4Search.class);
 		classes.add(DataTypes.class);
 		pm = createPersistenceManager(classes);
 		

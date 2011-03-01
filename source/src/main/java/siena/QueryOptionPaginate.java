@@ -27,6 +27,6 @@ public class QueryOptionPaginate extends QueryOption{
 	}
 
 	public String toString() {
-		return "type: PAGINATE - state:"+this.state+" - pageSize:"+this.pageSize;
+		return "type:PAGINATE - state:"+this.state+" - pageSize:"+this.pageSize;
 	}
 }

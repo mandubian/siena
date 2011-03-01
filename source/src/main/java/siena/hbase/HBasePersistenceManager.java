@@ -17,15 +17,15 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.util.Bytes;
 
+import siena.Batch;
 import siena.ClassInfo;
 import siena.PersistenceManager;
 import siena.Query;
 import siena.QueryFilter;
+import siena.QueryFilterSearch;
 import siena.QueryJoin;
 import siena.QueryOption;
-import siena.QueryOption.Type;
 import siena.QueryOrder;
-import siena.QueryFilterSearch;
 import siena.SienaException;
 
 public class HBasePersistenceManager implements PersistenceManager {
@@ -365,16 +365,54 @@ public class HBasePersistenceManager implements PersistenceManager {
 			return null;
 		}
 
+
+
 		@Override
-		public QueryOption option(Type option) {
+		public Map<Integer, QueryOption> options() {
 			// TODO Auto-generated method stub
 			return null;
 		}
 
 		@Override
-		public Map<Type, QueryOption> options() {
+		public Query<T> search(String match, String... fields) {
 			// TODO Auto-generated method stub
 			return null;
+		}
+
+		@Override
+		public Query<T> search(String match, QueryOption opt, String... fields) {
+			// TODO Auto-generated method stub
+			return null;
+		}
+
+		@Override
+		public Query<T> offset(int offset) {
+			// TODO Auto-generated method stub
+			return null;
+		}
+
+		@Override
+		public QueryOption option(int option) {
+			// TODO Auto-generated method stub
+			return null;
+		}
+
+		@Override
+		public Query<T> reuse() {
+			// TODO Auto-generated method stub
+			return null;
+		}
+
+		@Override
+		public Query<T> release() {
+			// TODO Auto-generated method stub
+			return null;
+		}
+
+		@Override
+		public void update(Map<String, ?> fieldValues) {
+			// TODO Auto-generated method stub
+			
 		}
 
 
@@ -469,6 +507,60 @@ public class HBasePersistenceManager implements PersistenceManager {
 	public String[] supportedOperators() {
 		// TODO Auto-generated method stub
 		return null;
+	}
+
+	@Override
+	public <T> void release(Query<T> query) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public Batch createBatch() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public void insert(Object... objects) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void insert(Iterable<?> objects) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void delete(Object... models) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void delete(Iterable<?> models) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public <T> void deleteByKeys(Class<T> clazz, Object... keys) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public <T> void deleteByKeys(Class<T> clazz, Iterable<?> keys) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void update(Map<String, ?> fieldValues) {
+		// TODO Auto-generated method stub
+		
 	}
 
 

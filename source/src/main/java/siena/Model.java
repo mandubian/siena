@@ -70,7 +70,35 @@ public abstract class Model {
 	public static <R> Query<R> all(Class<R> clazz) {
 		return PersistenceManagerFactory.getPersistenceManager(clazz).createQuery(clazz);
 	}
+	
+	public static <R> Batch batch(Class<R> clazz) {
+		return PersistenceManagerFactory.getPersistenceManager(clazz).createBatch();
+	}
 
+	/*public static <R> void insert(Class<R> clazz, R... models){
+		PersistenceManagerFactory.getPersistenceManager(clazz).insert(models);
+	}
+
+	public static <R> void insert(Class<R> clazz, Iterable<R> models){
+		PersistenceManagerFactory.getPersistenceManager(clazz).insert(models);
+	}
+
+	public static <R> void delete(Class<R> clazz, R... models){
+		PersistenceManagerFactory.getPersistenceManager(clazz).delete(models);
+	}
+
+	public static <R> void delete(Class<R> clazz, Iterable<R> models){
+		PersistenceManagerFactory.getPersistenceManager(clazz).delete(models);
+	}
+	
+	public static <R> void deleteByKeys(Class<R> clazz, Object... keys){
+		PersistenceManagerFactory.getPersistenceManager(clazz).delete(clazz, keys);
+	}
+
+	public static <R> void deleteByKeys(Class<R> clazz, Iterable<?> keys){
+		PersistenceManagerFactory.getPersistenceManager(clazz).delete(clazz, keys);
+	}*/
+	
 	public boolean equals(Object that) {
 		if(this == that) { return true; }
 		if(that == null || that.getClass() != this.getClass()) { return false; }
@@ -295,6 +323,11 @@ public abstract class Model {
 		@Override
 		public Query<T> search(String match, QueryOption opt, String... fields) {
 			return createQuery().search(match, opt, fields);
+		}
+
+		@Override
+		public void update(Map<String, ?> fieldValues) {
+			createQuery().update(fieldValues);
 		}	
 		
 	}

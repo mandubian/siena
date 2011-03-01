@@ -1,12 +1,16 @@
 package siena.base.test;
 
+import java.util.Arrays;
 import java.util.List;
 
 import siena.PersistenceManager;
 import siena.Query;
+import siena.SienaException;
 import siena.SienaRestrictedApiException;
+import siena.base.test.model.Discovery4Search;
 import siena.base.test.model.PersonUUID;
 import siena.gae.GaePersistenceManager;
+import siena.gae.QueryOptionGaeContext;
 
 import com.google.appengine.tools.development.testing.LocalDatastoreServiceTestConfig;
 import com.google.appengine.tools.development.testing.LocalServiceTestHelper;
@@ -72,6 +76,162 @@ public class GaeTest extends BaseTest {
 		fail();
 	}
 
+	public void testReuseWithOperatorIN() {
+		List<PersonUUID> l = getOrderedPersonUUIDs();
+		Query<PersonUUID> query = 
+			pm.createQuery(PersonUUID.class)
+			.filter("id IN", Arrays.asList( l.get(0).id, l.get(1).id))
+			.reuse()
+			.paginate(1);
+		List<PersonUUID> people = query.fetch();
+
+		QueryOptionGaeContext gaeCtx = (QueryOptionGaeContext)query.option(QueryOptionGaeContext.ID);
+		assertFalse(gaeCtx.useCursor);		
+		assertNotNull(people);
+		assertEquals(1, people.size());
+		assertEquals(l.get(0), people.get(0));
+		
+		people = query.fetch();
+		gaeCtx = (QueryOptionGaeContext)query.option(QueryOptionGaeContext.ID);
+		assertFalse(gaeCtx.useCursor);
+		assertNotNull(people);
+		assertEquals(1, people.size());
+		assertEquals(l.get(1), people.get(0));
+	}
+	
+	public void testReuseWithOperatorNotEqual() {
+		List<PersonUUID> l = getOrderedPersonUUIDs();
+		Query<PersonUUID> query = 
+			pm.createQuery(PersonUUID.class)
+			.filter("id!=", l.get(0).id)
+			.order("id")
+			.reuse()
+			.paginate(1);
+		
+		List<PersonUUID> people = query.fetch();
+		QueryOptionGaeContext gaeCtx = (QueryOptionGaeContext)query.option(QueryOptionGaeContext.ID);
+		assertFalse(gaeCtx.useCursor);		
+		assertNotNull(people);
+		assertEquals(1, people.size());
+		assertEquals(l.get(1), people.get(0));
+		
+		people = query.fetch();
+		gaeCtx = (QueryOptionGaeContext)query.option(QueryOptionGaeContext.ID);
+		assertFalse(gaeCtx.useCursor);
+		assertNotNull(people);
+		assertEquals(1, people.size());
+		assertEquals(l.get(2), people.get(0));
+	}
+	
+	
+	public void testSearchSingleFieldEqualsSingleResult() {
+		Discovery4Search[] discs = new Discovery4Search[10];
+		for(int i=0; i<10; i++){
+			if(i%2==0) discs[i] = new Discovery4Search("even_"+i, LongAutoID_CURIE);
+			else discs[i] = new Discovery4Search("odd_"+i, LongAutoID_CURIE);
+			pm.insert(discs[i]);
+		}
+		
+		Query<Discovery4Search> query = 
+			pm.createQuery(Discovery4Search.class).search("even_4", "name").order("name");
+		
+		List<Discovery4Search> res = query.fetch();
+		assertEquals(1, res.size());
+		assertEquals(discs[4], res.get(0));
+		/*assertEquals(5, res.size());
+		for(int i=0; i<res.size();i++){
+			assertEquals(discs[2*i], res.get(i));
+		}*/		
+	}
+
+	public void testSearchSingleFieldEqualsSeveralResults() {
+		Discovery4Search[] discs = new Discovery4Search[10];
+		discs[0] = new Discovery4Search("alpha", LongAutoID_CURIE);
+		pm.insert(discs[0]);
+		discs[1] = new Discovery4Search("beta", LongAutoID_CURIE);
+		pm.insert(discs[1]);
+		discs[2] = new Discovery4Search("gamma", LongAutoID_CURIE);
+		pm.insert(discs[2]);
+		discs[3] = new Discovery4Search("delta", LongAutoID_CURIE);
+		pm.insert(discs[3]);
+		discs[4] = new Discovery4Search("eta", LongAutoID_CURIE);
+		pm.insert(discs[4]);		
+		
+		Query<Discovery4Search> query = 
+			pm.createQuery(Discovery4Search.class).search("beta eta", "name");
+		
+		List<Discovery4Search> res = query.fetch();
+		assertEquals(2, res.size());
+		assertEquals(discs[1], res.get(0));
+		assertEquals(discs[4], res.get(1));
+	}
+	
+	public void testSearchSingleFieldBeginSingleResults() {
+		Discovery4Search[] discs = new Discovery4Search[10];
+		discs[0] = new Discovery4Search("alpha", LongAutoID_CURIE);
+		pm.insert(discs[0]);
+		discs[1] = new Discovery4Search("beta", LongAutoID_CURIE);
+		pm.insert(discs[1]);
+		discs[2] = new Discovery4Search("gamma", LongAutoID_CURIE);
+		pm.insert(discs[2]);
+		discs[3] = new Discovery4Search("delta", LongAutoID_CURIE);
+		pm.insert(discs[3]);
+		discs[4] = new Discovery4Search("eta", LongAutoID_CURIE);
+		pm.insert(discs[4]);		
+		
+		Query<Discovery4Search> query = 
+			pm.createQuery(Discovery4Search.class).search("gamma*", "name");
+		
+		List<Discovery4Search> res = query.fetch();
+		assertEquals(1, res.size());
+		assertEquals(discs[2], res.get(0));
+	}
+	
+	public void testSearchSingleFieldBeginSeveralResults() {
+		Discovery4Search[] discs = new Discovery4Search[10];
+		discs[0] = new Discovery4Search("alpha", LongAutoID_CURIE);
+		pm.insert(discs[0]);
+		discs[1] = new Discovery4Search("beta", LongAutoID_CURIE);
+		pm.insert(discs[1]);
+		discs[2] = new Discovery4Search("alphagamma", LongAutoID_CURIE);
+		pm.insert(discs[2]);
+		discs[3] = new Discovery4Search("delta", LongAutoID_CURIE);
+		pm.insert(discs[3]);
+		discs[4] = new Discovery4Search("eta", LongAutoID_CURIE);
+		pm.insert(discs[4]);		
+		
+		Query<Discovery4Search> query = 
+			pm.createQuery(Discovery4Search.class).search("alpha*", "name");
+		
+		List<Discovery4Search> res = query.fetch();
+		assertEquals(2, res.size());
+		assertEquals(discs[0], res.get(0));
+		assertEquals(discs[2], res.get(1));
+	}
+	
+	public void testSearchSingleFieldEndException() {
+		Discovery4Search[] discs = new Discovery4Search[10];
+		discs[0] = new Discovery4Search("alpha", LongAutoID_CURIE);
+		pm.insert(discs[0]);
+		discs[1] = new Discovery4Search("beta", LongAutoID_CURIE);
+		pm.insert(discs[1]);
+		discs[2] = new Discovery4Search("alphagamma", LongAutoID_CURIE);
+		pm.insert(discs[2]);
+		discs[3] = new Discovery4Search("delta", LongAutoID_CURIE);
+		pm.insert(discs[3]);
+		discs[4] = new Discovery4Search("eta", LongAutoID_CURIE);
+		pm.insert(discs[4]);		
+		try {
+		Query<Discovery4Search> query = 
+			pm.createQuery(Discovery4Search.class).search("*gamma", "name");
+			List<Discovery4Search> res = query.fetch();
+		}catch(SienaException ex ){
+			return;
+		}
+		fail();
+	}
+	
+	// GENERIC TESTS OVERRIDE
 	@Override
 	public void testCount() {
 		// TODO Auto-generated method stub
@@ -451,6 +611,61 @@ public class GaeTest extends BaseTest {
 	}
 
 	@Override
+	public void testFetchLimitReal() {
+		// TODO Auto-generated method stub
+		super.testFetchLimitReal();
+	}
+
+	@Override
+	public void testFetchLimitOffsetReal() {
+		// TODO Auto-generated method stub
+		super.testFetchLimitOffsetReal();
+	}
+
+	@Override
+	public void testFetchPaginateReuse() {
+		// TODO Auto-generated method stub
+		super.testFetchPaginateReuse();
+	}
+
+	@Override
+	public void testFetchKeysPaginateReuse() {
+		// TODO Auto-generated method stub
+		super.testFetchKeysPaginateReuse();
+	}
+
+	@Override
+	public void testFetchOffset() {
+		// TODO Auto-generated method stub
+		super.testFetchOffset();
+	}
+
+	@Override
+	public void testFetchPaginateOffset() {
+		// TODO Auto-generated method stub
+		super.testFetchPaginateOffset();
+	}
+
+	@Override
+	public void testIterOffset() {
+		// TODO Auto-generated method stub
+		super.testIterOffset();
+	}
+
+	@Override
+	public void testIterPaginateOffset() {
+		// TODO Auto-generated method stub
+		super.testIterPaginateOffset();
+	}
+
+	@Override
+	public void testSearchSingle() {
+		// TODO Auto-generated method stub
+		super.testSearchSingle();
+	}
+
+
+	@Override
 	public void testFetchLimitOffset() {
 		// TODO Auto-generated method stub
 		super.testFetchLimitOffset();
@@ -730,6 +945,42 @@ public class GaeTest extends BaseTest {
 	public void testIterFetchPaginate() {
 		// TODO Auto-generated method stub
 		//super.testIterFetchPaginate();
+	}
+
+	@Override
+	public void testBatchInsert() {
+		// TODO Auto-generated method stub
+		super.testBatchInsert();
+	}
+
+	@Override
+	public void testBatchInsertList() {
+		// TODO Auto-generated method stub
+		super.testBatchInsertList();
+	}
+
+	@Override
+	public void testBatchDelete() {
+		// TODO Auto-generated method stub
+		super.testBatchDelete();
+	}
+
+	@Override
+	public void testBatchDeleteList() {
+		// TODO Auto-generated method stub
+		super.testBatchDeleteList();
+	}
+
+	@Override
+	public void testBatchDeleteByKeys() {
+		// TODO Auto-generated method stub
+		super.testBatchDeleteByKeys();
+	}
+
+	@Override
+	public void testBatchDeleteByKeysList() {
+		// TODO Auto-generated method stub
+		super.testBatchDeleteByKeysList();
 	}
 
 	

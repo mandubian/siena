@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 
 import org.apache.commons.lang.NotImplementedException;
@@ -31,6 +32,7 @@ import siena.ClassInfo;
 import siena.Model;
 import siena.Query;
 import siena.QueryFilter;
+import siena.QueryFilterSimple;
 import siena.QueryOrder;
 import siena.SienaException;
 import siena.Util;
@@ -146,17 +148,21 @@ public class RemotePersistenceManager extends AbstractPersistenceManager {
 		
 		List<QueryFilter> filters = query.getFilters();
 		for (QueryFilter filter : filters) {
-			Field field = filter.field;
-			Object value = filter.value;
-			
-			Element filtr = request.getRootElement().addElement("filter");
-			filtr.addAttribute("field", field.getName());
-			filtr.addAttribute("operator", filter.operator);
-			
-			if(ClassInfo.isModel(value.getClass())) {
-				Common.fillRequestElement((Model) value, filtr, true);
-			} else {
-				filtr.setText(Util.toString(field, value));
+			if(QueryFilterSimple.class.isAssignableFrom(filter.getClass())){
+				QueryFilterSimple qf = (QueryFilterSimple)filter;
+
+				Field field = qf.field;
+				Object value = qf.value;
+				
+				Element filtr = request.getRootElement().addElement("filter");
+				filtr.addAttribute("field", field.getName());
+				filtr.addAttribute("operator", qf.operator);
+				
+				if(ClassInfo.isModel(value.getClass())) {
+					Common.fillRequestElement((Model) value, filtr, true);
+				} else {
+					filtr.setText(Util.toString(field, value));
+				}
 			}
 		}
 		
@@ -254,6 +260,54 @@ public class RemotePersistenceManager extends AbstractPersistenceManager {
 	@Override
 	public String[] supportedOperators() {
 		return null; // TODO!
+	}
+
+	@Override
+	public <T> void release(Query<T> query) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void insert(Object... objects) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void insert(Iterable<?> objects) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void delete(Object... models) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void delete(Iterable<?> models) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public <T> void deleteByKeys(Class<T> clazz, Object... keys) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public <T> void deleteByKeys(Class<T> clazz, Iterable<?> keys) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void update(Map<String, ?> fieldValues) {
+		// TODO Auto-generated method stub
+		
 	}
 	
 }

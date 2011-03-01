@@ -170,27 +170,30 @@ public class Util {
 	}
 	
 	public static Object fromObject(Field field, Object value) {
-		if(value == null) return null;
+		if(value == null) {
+			if(field.getType().isPrimitive()) return 0;
+			return null;
+		}
 		
 		Class<?> type = field.getType();
-		if(value instanceof Number) {
+		if(Number.class.isAssignableFrom(value.getClass())) {
 			Number number = (Number) value;
-			if(type == Byte.class         || type == Byte.TYPE)    value = number.byteValue();
-			else if(type == Short.class   || type == Short.TYPE)   value = number.shortValue();
-			else if(type == Integer.class || type == Integer.TYPE) value = number.intValue();
-			else if(type == Long.class    || type == Long.TYPE)    value = number.longValue();
-			else if(type == Float.class   || type == Float.TYPE)   value = number.floatValue();
-			else if(type == Double.class  || type == Double.TYPE)  value = number.doubleValue();
+			if(byte.class.isAssignableFrom(type))    return number.byteValue();
+			else if(short.class.isAssignableFrom(type))   return number.shortValue();
+			else if(int.class.isAssignableFrom(type) ) return number.intValue();
+			else if(long.class.isAssignableFrom(type))    return number.longValue();
+			else if(float.class.isAssignableFrom(type))   return number.floatValue();
+			else if(double.class.isAssignableFrom(type))  return number.doubleValue();
 		} 
-		else if(value instanceof String && type == Json.class) {
-			value = Json.loads((String) value);
+		else if(String.class.isAssignableFrom(value.getClass()) && Json.class.isAssignableFrom(type)) {
+			return Json.loads((String) value);
 		} 
-		else if(field.getAnnotation(Embedded.class) != null && value instanceof String) {
+		else if(field.getAnnotation(Embedded.class) != null && String.class.isAssignableFrom(value.getClass())) {
 			Json data = Json.loads((String) value);
-			value = JsonSerializer.deserialize(field, data);
+			return JsonSerializer.deserialize(field, data);
 		}
-		else if(value instanceof String && Enum.class.isAssignableFrom(type)) {
-			value = Enum.valueOf((Class<Enum>) type, (String)value);
+		else if(String.class.isAssignableFrom(value.getClass())&& type.isEnum()) {
+			return Enum.valueOf((Class<Enum>) type, (String)value);
 		}
 		return value;
 	}

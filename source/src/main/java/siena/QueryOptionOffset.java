@@ -27,6 +27,6 @@ public class QueryOptionOffset extends QueryOption{
 	}
 
 	public String toString() {
-		return "type: OFFSET - state:"+this.state+" - offset:"+this.offset;
+		return "type:OFFSET - state:"+this.state+" - offset:"+this.offset;
 	}
 }

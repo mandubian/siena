@@ -18,6 +18,6 @@ public class QueryOptionReuse extends QueryOption{
 	}
 
 	public String toString() {
-		return "type: REUSE - state:"+this.state;
+		return "type:REUSE - state:"+this.state;
 	}
 }

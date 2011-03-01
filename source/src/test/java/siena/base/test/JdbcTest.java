@@ -13,6 +13,8 @@ import org.apache.ddlutils.PlatformFactory;
 import org.apache.ddlutils.model.Database;
 
 import siena.PersistenceManager;
+import siena.Query;
+import siena.base.test.model.Discovery4Search;
 import siena.jdbc.JdbcPersistenceManager;
 import siena.jdbc.ddl.DdlGenerator;
 
@@ -79,6 +81,50 @@ public class JdbcTest extends BaseTest {
 	public boolean mustFilterToOrder() {
 		return false;
 	}
+
+	// SPECIFIC JDBC TESTS
+	public void testSearchMultipleSingleField() {
+		Discovery4Search[] discs = new Discovery4Search[10];
+		for(int i=0; i<10; i++){
+			if(i%2==0) discs[i] = new Discovery4Search("even_"+i, LongAutoID_CURIE);
+			else discs[i] = new Discovery4Search("odd_"+i, LongAutoID_CURIE);
+			pm.insert(discs[i]);
+		}
+		
+		Query<Discovery4Search> query = 
+			pm.createQuery(Discovery4Search.class).search("even_*", "name").order("name");
+		
+		List<Discovery4Search> res = query.fetch();
+		
+		assertEquals(5, res.size());
+		for(int i=0; i<res.size();i++){
+			assertEquals(discs[2*i], res.get(i));
+		}		
+	}
+
+	public void testSearchMultipleWordsSingleField() {
+		Discovery4Search AB = new Discovery4Search("alpha beta", LongAutoID_CURIE);
+		Discovery4Search GB = new Discovery4Search("gamma beta", LongAutoID_CURIE);
+		Discovery4Search GD = new Discovery4Search("gamma delta", LongAutoID_CURIE);
+		Discovery4Search ET = new Discovery4Search("epsilon theta", LongAutoID_CURIE);
+		pm.insert(AB);
+		pm.insert(GB);
+		pm.insert(GD);
+		pm.insert(ET);
+
+		Query<Discovery4Search> query = 
+			pm.createQuery(Discovery4Search.class).search("alpha delta", "name").order("name");
+		
+		List<Discovery4Search> res = query.fetch();
+		
+		assertEquals(2, res.size());
+		assertEquals(AB, res.get(0));
+		assertEquals(GD, res.get(1));
+	}
+	
+	
+	
+	// GENERIC TESTS
 
 	@Override
 	public void testCount() {
@@ -781,6 +827,61 @@ public class JdbcTest extends BaseTest {
 		// TODO Auto-generated method stub
 		super.testIterPaginateOffset();
 	}
+
+	@Override
+	public void testSearchSingle() {
+		// TODO Auto-generated method stub
+		super.testSearchSingle();
+	}
+
+	@Override
+	public void testFetchLimitReal() {
+		// TODO Auto-generated method stub
+		super.testFetchLimitReal();
+	}
+
+	@Override
+	public void testFetchLimitOffsetReal() {
+		// TODO Auto-generated method stub
+		super.testFetchLimitOffsetReal();
+	}
+
+	@Override
+	public void testBatchInsert() {
+		// TODO Auto-generated method stub
+		//super.testBatchInsert();
+	}
+
+	@Override
+	public void testBatchInsertList() {
+		// TODO Auto-generated method stub
+		//super.testBatchInsertList();
+	}
+
+	@Override
+	public void testBatchDelete() {
+		// TODO Auto-generated method stub
+		//super.testBatchDelete();
+	}
+
+	@Override
+	public void testBatchDeleteList() {
+		// TODO Auto-generated method stub
+		//super.testBatchDeleteList();
+	}
+
+	@Override
+	public void testBatchDeleteByKeys() {
+		// TODO Auto-generated method stub
+		//super.testBatchDeleteByKeys();
+	}
+
+	@Override
+	public void testBatchDeleteByKeysList() {
+		// TODO Auto-generated method stub
+		//super.testBatchDeleteByKeysList();
+	}
+
 
 	
 }

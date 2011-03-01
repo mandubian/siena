@@ -38,11 +38,10 @@ public interface Query<T> {
 	Query<T> search(String match, String... fields);
 	Query<T> search(String match, QueryOption opt, String... fields);
 
-	@Deprecated
-	Query<T> search(String match, boolean inBooleanMode, String index);
-
 	Query<T> join(String field, String... sortFields);
 
+	void update(Map<String, ?> fieldValues);
+	
 	T get();
 	List<T> fetch();
 	List<T> fetch(int limit);
@@ -104,5 +103,8 @@ public interface Query<T> {
 	Object nextOffset();
 
 	@Deprecated
-	void setNextOffset(Object nextOffset);
+	void setNextOffset(Object nextOffset);	
+
+	@Deprecated
+	Query<T> search(String match, boolean inBooleanMode, String index);
 }

@@ -22,7 +22,6 @@ import siena.Index;
 import siena.Json;
 import siena.Max;
 import siena.NotNull;
-import siena.SienaException;
 import siena.SienaRestrictedApiException;
 import siena.SimpleDate;
 import siena.Text;

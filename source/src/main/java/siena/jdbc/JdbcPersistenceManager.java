@@ -687,6 +687,39 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 				}
 			}else if(QueryFilterSearch.class.isAssignableFrom(filter.getClass())){
 				// adds querysearch 
+				Class<T> clazz = query.getQueriedClass();
+				QueryFilterSearch qf = (QueryFilterSearch)filter;
+				List<String> cols = new ArrayList<String>();
+				try {
+					for (String field : qf.fields) {
+						Field f = clazz.getDeclaredField(field);
+						String[] columns = ClassInfo.getColumnNames(f);
+						for (String col : columns) {
+							cols.add(col);
+						}
+					}
+					QueryOption opt = qf.option;
+					if(opt != null){
+						// only manages QueryOptionJdbcSearch
+						if(QueryOptionJdbcSearch.class.isAssignableFrom(opt.getClass())){
+							if(((QueryOptionJdbcSearch)opt).booleanMode){
+								sql.append("MATCH("+Util.join(cols, ",")+") AGAINST(? IN BOOLEAN MODE)");
+							}
+							else {
+								
+							}
+						}else{
+							sql.append("MATCH("+Util.join(cols, ",")+") AGAINST(?)");
+						}
+					}else {
+						// as mysql default search is fulltext and as it requires a FULLTEXT index, 
+						// by default, we use boolean mode which works without fulltext index
+						sql.append("MATCH("+Util.join(cols, ",")+") AGAINST(? IN BOOLEAN MODE)");
+					}
+					parameters.add(qf.match);
+				}catch(Exception e){
+					throw new SienaException(e);
+				}
 			}
 		}
 	}
@@ -1009,30 +1042,87 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 		return iter(query, " LIMIT "+limit+" OFFSET "+offset);
 	}
 
-	@Override
 	public <T> void release(Query<T> query) {
-		QueryOptionOffset offset = (QueryOptionOffset)query.option(QueryOptionOffset.ID);
-		QueryOption reuse = query.option(QueryOptionReuse.ID);
+		super.release(query);
 		QueryOptionJdbcContext jdbcCtx = (QueryOptionJdbcContext)query.option(QueryOptionJdbcContext.ID);
 		
-		// resets offset
-		if(offset.isActive()) 
-			offset.offset=0;
-		// disables reusable and cludge
-		if(reuse.isActive()){
-			reuse.passivate();
-
-			if(jdbcCtx != null){
-				closeStatement(jdbcCtx.statement);
-				jdbcCtx.statement = null;
-				jdbcCtx.passivate();
-			}
+		if(jdbcCtx != null && jdbcCtx.isActive()){
+			closeStatement(jdbcCtx.statement);
+			jdbcCtx.statement = null;
+			jdbcCtx.passivate();
 		}
+	}
+
+
+	
+	@Override
+	public void insert(Object... objects) {
+		/*JdbcClassInfo classInfo = JdbcClassInfo.getClassInfo(obj.getClass());
+
+		PreparedStatement ps = null;
+		try {
+			for (Field field : classInfo.keys) {
+				Id id = field.getAnnotation(Id.class);
+				if (id.value() == Generator.UUID) {
+					field.set(obj, UUID.randomUUID().toString());
+				}
+			}
+			// TODO: implement primary key generation: SEQUENCE
+
+			if (!classInfo.generatedKeys.isEmpty()) {
+				insertWithAutoIncrementKey(classInfo, obj);
+			} else {
+				ps = getConnection().prepareStatement(classInfo.insertSQL);
+				addParameters(obj, classInfo.insertFields, ps, 1);
+				ps.executeUpdate();
+			}
+		} catch (SienaException e) {
+			throw e;
+		} catch (Exception e) {
+			throw new SienaException(e);
+		} finally {
+			closeStatement(ps);
+		}*/
+	}
+
+	@Override
+	public void insert(Iterable<?> objects) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void delete(Object... models) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void delete(Iterable<?> models) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public <T> void deleteByKeys(Class<T> clazz, Object... keys) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public <T> void deleteByKeys(Class<T> clazz, Iterable<?> keys) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void update(Map<String, ?> fieldValues) {
+		// TODO Auto-generated method stub
+		
 	}
 
 	private static final String[] supportedOperators = new String[]{ "<", ">", ">=", "<=", "!=", "=", "IN" };
 
-	@Override
 	public String[] supportedOperators() {
 		return supportedOperators;
 	}
