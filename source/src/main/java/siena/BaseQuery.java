@@ -1,126 +1,65 @@
 package siena;
 
-import java.lang.reflect.Field;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class BaseQuery<T> implements Query<T> {
+import siena.core.async.QueryAsync;
+import siena.core.options.QueryOption;
+
+/**
+ * The base implementation of Query<T> where T is the model being queried (not necessarily inheriting siena.Model)
+ * 
+ * @author mandubian <pascal.voitot@mandubian.org>
+ *
+ * @param <T>
+ */
+public class BaseQuery<T> extends BaseQueryData<T> implements Query<T> {
 	
 	private PersistenceManager pm;
-	private Class<T> clazz;
-	
-	private List<QueryFilter> filters;
-
-	private List<QueryOrder> orders;
-	private List<QueryFilterSearch> searches;
-	private List<QueryJoin> joins;
 
 	@Deprecated
 	private Object nextOffset;
-	
-	private Map<Integer, QueryOption> options = new HashMap<Integer, QueryOption>() {
-		private static final long serialVersionUID = -7438657296637379900L;
-	{
-		put(QueryOptionPaginate.ID, new QueryOptionPaginate(0));
-		put(QueryOptionOffset.ID, new QueryOptionOffset(0));
-		put(QueryOptionReuse.ID, new QueryOptionReuse());
-		//the fetch type is activated by default and set to NORMAL
-		put(QueryOptionFetchType.ID, (new QueryOptionFetchType()).activate());
-	}};
+
 	
 	public BaseQuery(PersistenceManager pm, Class<T> clazz) {
+		super(clazz);
 		this.pm = pm;
-		this.clazz = clazz;
-		
-		filters = new ArrayList<QueryFilter>();
-		orders = new ArrayList<QueryOrder>();
-		searches = new ArrayList<QueryFilterSearch>();
-		joins = new ArrayList<QueryJoin>();
 	}
 	
 	public BaseQuery(BaseQuery<T> query) {
+		super(query);
 		this.pm = query.pm;
-		this.clazz = query.clazz;		
-		
-		this.filters = new ArrayList<QueryFilter>();
-		this.orders = new ArrayList<QueryOrder>();
-		this.searches = new ArrayList<QueryFilterSearch>();
-		this.joins = new ArrayList<QueryJoin>();
-		
-		Collections.copy(this.filters, query.filters);
-		Collections.copy(this.orders, query.orders);
-		Collections.copy(this.searches, query.searches);
-		Collections.copy(this.joins, query.joins);
-		
+
 		//this.nextOffset = query.nextOffset;
 	}
 	
-	public List<QueryFilter> getFilters() {
-		return filters;
-	}
-
-	public List<QueryOrder> getOrders() {
-		return orders;
-	}
-
-	public List<QueryFilterSearch> getSearches() {
-		return searches;
-	}
-
-	public List<QueryJoin> getJoins() {
-		return joins;
+	public BaseQuery(PersistenceManager pm, BaseQueryData<T> data) {
+		super(data);
+		this.pm = pm;
 	}
 	
-	public Query<T> filter(String fieldName, Object value) {
-		String op = "=";
-		for (String s : pm.supportedOperators()) {
-			if(fieldName.endsWith(s)) {
-				op = s;
-				fieldName = fieldName.substring(0, fieldName.length() - op.length());;
-				break;
-			}
-		}
-		fieldName = fieldName.trim();
+	
+	public PersistenceManager getPersistenceManager(){
+		return pm;
+	}
 		
-		try {
-			Field field = clazz.getDeclaredField(fieldName);
-			filters.add(new QueryFilterSimple(field, op, value));
-			return this;
-		} catch (Exception e) {
-			throw new SienaException(e);
-		}
+	public Query<T> filter(String fieldName, Object value) {
+		addFilter(fieldName, value, pm.supportedOperators());		
+		return this;
 	}
 
 	public Query<T> order(String fieldName) {
-		boolean ascending = true;
-		
-		if(fieldName.startsWith("-")) {
-			fieldName = fieldName.substring(1);
-			ascending = false;
-		}
-		try {
-			Field field = clazz.getDeclaredField(fieldName);
-			orders.add(new QueryOrder(field, ascending));
-			return this;
-		} catch(Exception e) {
-			throw new SienaException(e);
-		}
+		addOrder(fieldName);		
+		return this;
 	}
 
 	public Query<T> search(String match, String... fields) {
-		QueryFilterSearch q = new QueryFilterSearch(match, fields);
-		filters.add(q);
-		searches.add(q);
+		addSearch(match, fields);
 		return this;
 	}
 	
 	public Query<T> search(String match, QueryOption opt, String... fields) {
-		QueryFilterSearch q = new QueryFilterSearch(match, opt, fields);
-		filters.add(q);
-		searches.add(q);
+		addSearch(match, opt, fields);
 		return this;
 	}
 	
@@ -133,30 +72,8 @@ public class BaseQuery<T> implements Query<T> {
 	}
 
 	public Query<T> join(String fieldName, String... sortFields) {
-		try {
-			Field field = clazz.getDeclaredField(fieldName);
-			joins.add(new QueryJoin(field, sortFields));
-			// add immediately orders to keep order of orders 
-			// sets joined field as parent field to manage order on the right joined table for ex
-			for(String sortFieldName: sortFields){
-				boolean ascending = true;
-				
-				if(sortFieldName.startsWith("-")) {
-					sortFieldName = sortFieldName.substring(1);
-					ascending = false;
-				}
-				try {
-					Field sortField = field.getType().getField(sortFieldName);
-					orders.add(new QueryOrder(sortField, ascending, field));
-					return this;
-				} catch(NoSuchFieldException ex){
-					throw new SienaException("Join not possible: join sort field "+sortFieldName+" is not a known field of "+fieldName, ex);
-				}
-			}
-			return this;
-		} catch(Exception e) {
-			throw new SienaException(e);
-		}
+		addJoin(fieldName, sortFields);
+		return this;
 	}
 	
 	public T get() {
@@ -219,6 +136,7 @@ public class BaseQuery<T> implements Query<T> {
 	}
 	
 	public Query<T> clone() {
+		// TODO code a real deep clone function
 		return new BaseQuery<T>(this);
 	}
 	
@@ -243,45 +161,68 @@ public class BaseQuery<T> implements Query<T> {
 
 
 	public Query<T> paginate(int pageSize) {
-		((QueryOptionPaginate)(options.get(QueryOptionPaginate.ID)).activate()).pageSize=pageSize;
-		options.get(QueryOptionOffset.ID).activate();
-
-		return this;
-	}
-
-	public Query<T> offset(int offset) {
-		((QueryOptionOffset)(options.get(QueryOptionOffset.ID)).activate()).offset=offset;
-		return this;
-	}
-	
-	public Query<T> customize(QueryOption... options) {
-		for(QueryOption option: options){
-			this.options.put(option.type, option);
-		}
-		return this;
-	}
-
-	public QueryOption option(int option) {
-		return options.get(option);
-	}
-
-	public Map<Integer, QueryOption> options() {
-		return options;
-	}
-
-	public Query<T> reuse() {
-		options.get(QueryOptionReuse.ID).activate();
-		return this;
-	}
-
-	public Query<T> release() {
-		pm.release(this);
+		optionPaginate(pageSize);
 		return this;
 	}
 
 	@Override
-	public void update(Map<String, ?> fieldValues) {
-		pm.update(fieldValues);
+	public Query<T> nextPage() {
+		pm.nextPage(this);
+		return this;
+	}
+
+	@Override
+	public Query<T> previousPage() {
+		pm.previousPage(this);
+		return this;
+	}
+	
+	public Query<T> customize(QueryOption... options) {
+		addOptions(options);
+		return this;
+	}
+
+	public Query<T> stateful() {
+		optionStateful();
+		return this;
+	}
+
+	@Override
+	public Query<T> stateless() {
+		// when going to stateless mode, we reset the options to default values 
+		resetOptions();
+		optionStateless();
+		return this;
+	}
+
+	public Query<T> release() {
+		super.reset();
+		pm.release(this);
+		return this;
+	}
+
+
+	public Query<T> resetData() {
+		super.reset();
+		return this;
+	}
+
+	public int update(Map<String, ?> fieldValues) {
+		return pm.update(this, fieldValues);
+	}
+
+	public String dump() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	public Query<T> restore(String dump) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	public QueryAsync<T> async() {
+		return pm.async().createQuery(this);
 	}
 		
 }

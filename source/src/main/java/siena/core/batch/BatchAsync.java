@@ -13,22 +13,25 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-package siena;
+package siena.core.batch;
+
+import siena.core.async.SienaFuture;
 
 
 /**
- * The Siena interface for performing batches.
+ * The Siena interface for performing batches asynchronously.
  *
- * @author mandubian
+ * @author mandubian <pascal.voitot@mandubian.org>
  *
  */
-public interface Batch {
-	void insert(Object... models);
-	void insert(Iterable<?> models);
-	void update(Object... models);
-	void update(Iterable<?> models);
-	void delete(Object... models);
-	void delete(Iterable<?> models);
-	void deleteByKeys(Class<?> clazz, Object... keys);
-	void deleteByKeys(Class<?> clazz, Iterable<?> keys);
+public interface BatchAsync<T> {
+	SienaFuture<Integer> insert(T... models);
+	SienaFuture<Integer> insert(Iterable<T> models);
+	SienaFuture<Integer> update(T... models);
+	SienaFuture<Integer> update(Iterable<T> models);
+	SienaFuture<Integer> delete(T... models);
+	SienaFuture<Integer> delete(Iterable<T> models);
+	SienaFuture<Integer> deleteByKeys(Object... keys);
+	SienaFuture<Integer> deleteByKeys(Iterable<?> keys);
+	Batch<T> sync();
 }

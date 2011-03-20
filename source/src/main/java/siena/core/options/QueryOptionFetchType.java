@@ -1,4 +1,4 @@
-package siena;
+package siena.core.options;
 
 
 public class QueryOptionFetchType extends QueryOption{
@@ -32,6 +32,6 @@ public class QueryOptionFetchType extends QueryOption{
 	}
 
 	public String toString() {
-		return "type:FETCH - state:"+this.state+ " - type:"+type.toString();
+		return "type:FETCHTYPE - state:"+this.state+ " - type:"+type.toString();
 	}
 }

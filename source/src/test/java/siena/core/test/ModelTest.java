@@ -1,12 +1,13 @@
 package siena.core.test;
 
+import siena.base.test.model.SampleModelMultipleKeys;
 import junit.framework.TestCase;
 
 public class ModelTest extends TestCase {
 	
 	public void testEqualsAndHashCode() {
-		SampleModel a = new SampleModel();
-		SampleModel b = new SampleModel();
+		SampleModelMultipleKeys a = new SampleModelMultipleKeys();
+		SampleModelMultipleKeys b = new SampleModelMultipleKeys();
 		
 		a.id = 1l;
 		b.id = 1l;

@@ -18,38 +18,32 @@ package siena;
 import java.util.List;
 import java.util.Map;
 
+import siena.core.async.QueryAsync;
+import siena.core.options.QueryOption;
+
 /**
  * The Siena interface for performing queries.
  *
  * @author gimenete
+ * @author mandubian
  *
  */
 
-public interface Query<T> {
-	
-	List<QueryFilter> getFilters();
-	List<QueryOrder> getOrders();
-	List<QueryFilterSearch> getSearches();
-	List<QueryJoin> getJoins();
-	
+public interface Query<T> extends QueryData<T>{
 	Query<T> filter(String fieldName, Object value);
 	Query<T> order(String fieldName);
-	
+	Query<T> join(String field, String... sortFields);	
 	Query<T> search(String match, String... fields);
 	Query<T> search(String match, QueryOption opt, String... fields);
-
-	Query<T> join(String field, String... sortFields);
-
-	void update(Map<String, ?> fieldValues);
 	
 	T get();
+	int delete();
+	int update(Map<String, ?> fieldValues);
+	int count();
+
 	List<T> fetch();
 	List<T> fetch(int limit);
 	List<T> fetch(int limit, Object offset);
-
-	int count();
-	
-	int delete();
 
 	List<T> fetchKeys();
 	List<T> fetchKeys(int limit);
@@ -61,39 +55,85 @@ public interface Query<T> {
 		
 	Query<T> clone();
 	
-	Class<T> getQueriedClass();
-
 	Object raw(String request);
 	
+	
+	/**
+	 * initializes the automatic pagination mechanism
+	 * 
+	 * @param size the page size
+	 * @return the query
+	 */
 	Query<T> paginate(int size);
-    Query<T> offset(int offset);
+	
+	/**
+	 * when automatic pagination has been initialized, goes to next page
+	 * 
+	 * @return the query
+	 */
+	Query<T> nextPage();
+	
+	/**
+	 * when automatic pagination has been initialized, goes to previous page
+	 * 
+	 * @return the query
+	 */
+	Query<T> previousPage();
 
     /* 
      * sets options on the query. 
      * By default, this function is not used but expert users could trigger some specific options such as the REUSABLE
      */
     Query<T> customize(QueryOption... options);
-    
-    /* 
-     * retrieves an option by its type
+       
+    /**
+     * triggers ON the query reuse mechanism for advanced users
+     * 
+     * @return the query
      */
-    QueryOption option(int option);	
-	
-    /* 
-     * retrieves all options
-     */
-    Map<Integer, QueryOption> options();	
+    Query<T> stateful();
     
     /**
      * triggers ON the query reuse mechanism for advanced users
+     * 
+     * @return the query
      */
-    Query<T> reuse();
+    Query<T> stateless();
 
     /**
-     * release all resources of a query and triggers OFF the query reuse
-     */
+     * releases all resources of a query and triggers OFF the query reuse
+     * 
+     * @return the query
+     */    
     Query<T> release();
+    Query<T> resetData();
     
+    /**
+     * dumps a query to a safe String
+     * 
+     * @return the safe String representation
+     */
+    String dump();
+
+    /**
+     * restores a query from a safe String
+     * 
+     * @return the restored Query
+     */
+    Query<T> restore(String dump);
+
+    /**
+     * accesses the asynchronous mechanism
+     */
+    QueryAsync<T> async();
+    
+	PersistenceManager getPersistenceManager();
+
+    /*
+     * 
+     * DEPRECATED APIs
+     * 
+     */
 	@Deprecated
 	int count(int limit);
 	@Deprecated

@@ -5,8 +5,6 @@ import java.sql.DriverManager;
 import java.util.List;
 import java.util.Properties;
 
-import junit.framework.TestResult;
-
 import org.apache.commons.dbcp.BasicDataSource;
 import org.apache.ddlutils.Platform;
 import org.apache.ddlutils.PlatformFactory;
@@ -19,50 +17,53 @@ import siena.jdbc.JdbcPersistenceManager;
 import siena.jdbc.ddl.DdlGenerator;
 
 public class JdbcTest extends BaseTest {
+	private static JdbcPersistenceManager pm;
 	
 	@Override
 	public PersistenceManager createPersistenceManager(List<Class<?>> classes) throws Exception {
-		Properties p = new Properties();
-		
-		String driver   = "com.mysql.jdbc.Driver";
-		String username = "siena";
-		String password = "siena";
-		String url      = "jdbc:mysql://localhost/siena";
-		
-		p.setProperty("driver",   driver);
-		p.setProperty("user",     username);
-		p.setProperty("password", password);
-		p.setProperty("url",      url);
-
-		Class.forName(driver);
-		BasicDataSource dataSource = new BasicDataSource();
-		dataSource = new BasicDataSource();
-		dataSource.setUrl(url);
-		dataSource.setUsername(username);
-		dataSource.setPassword(password);
-		dataSource.setMaxWait(2000); // 2 seconds max for wait a connection.
-		
-		DdlGenerator generator = new DdlGenerator();
-		for (Class<?> clazz : classes) {
-			generator.addTable(clazz);
+		if(pm == null){
+			Properties p = new Properties();
+			
+			String driver   = "com.mysql.jdbc.Driver";
+			String username = "siena";
+			String password = "siena";
+			String url      = "jdbc:mysql://localhost/siena";
+			
+			p.setProperty("driver",   driver);
+			p.setProperty("user",     username);
+			p.setProperty("password", password);
+			p.setProperty("url",      url);
+	
+			Class.forName(driver);
+			BasicDataSource dataSource = new BasicDataSource();
+			dataSource = new BasicDataSource();
+			dataSource.setUrl(url);
+			dataSource.setUsername(username);
+			dataSource.setPassword(password);
+			dataSource.setMaxWait(2000); // 2 seconds max for wait a connection.
+			
+			DdlGenerator generator = new DdlGenerator();
+			for (Class<?> clazz : classes) {
+				generator.addTable(clazz);
+			}
+	
+			// get the Database model
+			Database database = generator.getDatabase();
+	
+			Platform platform = PlatformFactory.createNewPlatformInstance("mysql");
+			Class.forName("com.mysql.jdbc.Driver");
+			Connection connection = DriverManager.getConnection(url, username, password);
+			
+			System.out.println(platform.getAlterTablesSql(connection, database));
+			
+			// this will perform the database changes
+			platform.alterTables(connection, database, true);
+	
+			connection.close();
+			
+			pm = new JdbcPersistenceManager();
+			pm.init(p);
 		}
-
-		// get the Database model
-		Database database = generator.getDatabase();
-
-		Platform platform = PlatformFactory.createNewPlatformInstance("mysql");
-		Class.forName("com.mysql.jdbc.Driver");
-		Connection connection = DriverManager.getConnection(url, username, password);
-		
-		System.out.println(platform.getAlterTablesSql(connection, database));
-		
-		// this will perform the database changes
-		platform.alterTables(connection, database, true);
-
-		connection.close();
-		
-		JdbcPersistenceManager pm = new JdbcPersistenceManager();
-		pm.init(p);
 		
 		return pm;
 	}
@@ -121,11 +122,10 @@ public class JdbcTest extends BaseTest {
 		assertEquals(AB, res.get(0));
 		assertEquals(GD, res.get(1));
 	}
-	
+
 	
 	
 	// GENERIC TESTS
-
 	@Override
 	public void testCount() {
 		// TODO Auto-generated method stub
@@ -244,6 +244,12 @@ public class JdbcTest extends BaseTest {
 	public void testFilterOperatorEqualLongManualID() {
 		// TODO Auto-generated method stub
 		super.testFilterOperatorEqualLongManualID();
+	}
+
+	@Override
+	public void testFilterOperatorEqualStringID() {
+		// TODO Auto-generated method stub
+		super.testFilterOperatorEqualStringID();
 	}
 
 	@Override
@@ -499,9 +505,22 @@ public class JdbcTest extends BaseTest {
 	}
 
 	@Override
+	@Deprecated
 	public void testCountLimit() {
 		// TODO Auto-generated method stub
 		super.testCountLimit();
+	}
+
+	@Override
+	public void testFetchLimitReal() {
+		// TODO Auto-generated method stub
+		super.testFetchLimitReal();
+	}
+
+	@Override
+	public void testFetchLimitOffsetReal() {
+		// TODO Auto-generated method stub
+		super.testFetchLimitOffsetReal();
 	}
 
 	@Override
@@ -511,6 +530,7 @@ public class JdbcTest extends BaseTest {
 	}
 
 	@Override
+	@Deprecated	
 	public void testCountLimitOffset() {
 		// TODO Auto-generated method stub
 		super.testCountLimitOffset();
@@ -769,63 +789,219 @@ public class JdbcTest extends BaseTest {
 	}
 
 	@Override
-	public void testFetchPaginate() {
+	public void testFetchPaginateStatelessNextPage() {
 		// TODO Auto-generated method stub
-		super.testFetchPaginate();
+		super.testFetchPaginateStatelessNextPage();
 	}
 
 	@Override
-	public void testFetchPaginateReuse() {
+	public void testFetchPaginateStatelessNextPageToEnd() {
 		// TODO Auto-generated method stub
-		super.testFetchPaginateReuse();
+		super.testFetchPaginateStatelessNextPageToEnd();
 	}
 
 	@Override
-	public void testFetchKeysPaginate() {
+	public void testFetchPaginateStatelessPreviousPageFromScratch() {
 		// TODO Auto-generated method stub
-		super.testFetchKeysPaginate();
+		super.testFetchPaginateStatelessPreviousPageFromScratch();
 	}
 
 	@Override
-	public void testFetchKeysPaginateReuse() {
+	public void testFetchPaginateStatelessPreviousPage() {
 		// TODO Auto-generated method stub
-		super.testFetchKeysPaginateReuse();
+		super.testFetchPaginateStatelessPreviousPage();
 	}
 
 	@Override
-	public void testIterPaginate() {
+	public void testFetchPaginateStatelessSeveralTimes() {
 		// TODO Auto-generated method stub
-		super.testIterPaginate();
+		super.testFetchPaginateStatelessSeveralTimes();
 	}
 
 	@Override
-	public void testIterFetchPaginate() {
+	public void testFetchPaginateStatefulNextPage() {
 		// TODO Auto-generated method stub
-		super.testIterFetchPaginate();
+		super.testFetchPaginateStatefulNextPage();
 	}
 
 	@Override
-	public void testFetchOffset() {
+	public void testFetchPaginateStatefulNextPageToEnd() {
 		// TODO Auto-generated method stub
-		super.testFetchOffset();
+		super.testFetchPaginateStatefulNextPageToEnd();
 	}
 
 	@Override
-	public void testFetchPaginateOffset() {
+	public void testFetchPaginateStatefulPreviousPageFromScratch() {
 		// TODO Auto-generated method stub
-		super.testFetchPaginateOffset();
+		super.testFetchPaginateStatefulPreviousPageFromScratch();
 	}
 
 	@Override
-	public void testIterOffset() {
+	public void testFetchPaginateStatefulPreviousPage() {
 		// TODO Auto-generated method stub
-		super.testIterOffset();
+		super.testFetchPaginateStatefulPreviousPage();
 	}
 
 	@Override
-	public void testIterPaginateOffset() {
+	public void testFetchPaginateStatefulPreviouPageSeveralTimes() {
 		// TODO Auto-generated method stub
-		super.testIterPaginateOffset();
+		super.testFetchPaginateStatefulPreviouPageSeveralTimes();
+	}
+
+	@Override
+	public void testFetchKeysPaginateStatelessNextPage() {
+		// TODO Auto-generated method stub
+		super.testFetchKeysPaginateStatelessNextPage();
+	}
+
+	@Override
+	public void testFetchKeysPaginateStatelessPreviousPageFromScratch() {
+		// TODO Auto-generated method stub
+		super.testFetchKeysPaginateStatelessPreviousPageFromScratch();
+	}
+
+	@Override
+	public void testFetchKeysPaginateStatelessPreviousPage() {
+		// TODO Auto-generated method stub
+		super.testFetchKeysPaginateStatelessPreviousPage();
+	}
+
+	@Override
+	public void testFetchKeysPaginateStatelessPreviouPageSeveralTimes() {
+		// TODO Auto-generated method stub
+		super.testFetchKeysPaginateStatelessPreviouPageSeveralTimes();
+	}
+
+	@Override
+	public void testFetchKeysPaginateStatefulNextPage() {
+		// TODO Auto-generated method stub
+		super.testFetchKeysPaginateStatefulNextPage();
+	}
+
+	@Override
+	public void testFetchKeysPaginateStatefulPreviousPageFromScratch() {
+		// TODO Auto-generated method stub
+		super.testFetchKeysPaginateStatefulPreviousPageFromScratch();
+	}
+
+	@Override
+	public void testFetchKeysPaginateStatefulPreviousPage() {
+		// TODO Auto-generated method stub
+		super.testFetchKeysPaginateStatefulPreviousPage();
+	}
+
+	@Override
+	public void testFetchKeysPaginateStatefulSeveralTimes() {
+		// TODO Auto-generated method stub
+		super.testFetchKeysPaginateStatefulSeveralTimes();
+	}
+
+	@Override
+	public void testIterPaginateStatelessNextPage() {
+		// TODO Auto-generated method stub
+		super.testIterPaginateStatelessNextPage();
+	}
+
+	@Override
+	public void testIterPaginateStatelessPreviousPageFromScratch() {
+		// TODO Auto-generated method stub
+		super.testIterPaginateStatelessPreviousPageFromScratch();
+	}
+
+	@Override
+	public void testIterPaginateStatelessPreviousPage() {
+		// TODO Auto-generated method stub
+		super.testIterPaginateStatelessPreviousPage();
+	}
+
+	@Override
+	public void testIterPaginateStatelessPreviouPageSeveralTimes() {
+		// TODO Auto-generated method stub
+		super.testIterPaginateStatelessPreviouPageSeveralTimes();
+	}
+
+	@Override
+	public void testIterPaginateStatefulNextPage() {
+		// TODO Auto-generated method stub
+		super.testIterPaginateStatefulNextPage();
+	}
+
+	@Override
+	public void testIterPaginateStatefulPreviousPageFromScratch() {
+		// TODO Auto-generated method stub
+		super.testIterPaginateStatefulPreviousPageFromScratch();
+	}
+
+	@Override
+	public void testIterPaginateStatefulPreviousPage() {
+		// TODO Auto-generated method stub
+		super.testIterPaginateStatefulPreviousPage();
+	}
+
+	@Override
+	public void testIterPaginateStatefulPreviouPageSeveralTimes() {
+		// TODO Auto-generated method stub
+		super.testIterPaginateStatefulPreviouPageSeveralTimes();
+	}
+
+	@Override
+	public void testIterLotsOfEntitiesStateless() {
+		// TODO Auto-generated method stub
+		super.testIterLotsOfEntitiesStateless();
+	}
+
+	@Override
+	public void testIterLotsOfEntitiesStateful() {
+		// TODO Auto-generated method stub
+		super.testIterLotsOfEntitiesStateful();
+	}
+
+	@Override
+	public void testIterLotsOfEntitiesStatefulMixed() {
+		// TODO Auto-generated method stub
+		super.testIterLotsOfEntitiesStatefulMixed();
+	}
+
+	@Override
+	public void testIterLotsOfEntitiesStatefulMixed2() {
+		// TODO Auto-generated method stub
+		super.testIterLotsOfEntitiesStatefulMixed2();
+	}
+
+	@Override
+	public void testIterLotsOfEntitiesStatefulMixed3() {
+		// TODO Auto-generated method stub
+		super.testIterLotsOfEntitiesStatefulMixed3();
+	}
+
+	@Override
+	public void testFetchLotsOfEntitiesStatefulMixed() {
+		// TODO Auto-generated method stub
+		super.testFetchLotsOfEntitiesStatefulMixed();
+	}
+
+	@Override
+	public void testFetchLotsOfEntitiesStatefulMixed2() {
+		// TODO Auto-generated method stub
+		super.testFetchLotsOfEntitiesStatefulMixed2();
+	}
+
+	@Override
+	public void testFetchIterLotsOfEntitiesStatefulMixed() {
+		// TODO Auto-generated method stub
+		super.testFetchIterLotsOfEntitiesStatefulMixed();
+	}
+
+	@Override
+	public void testFetchIterLotsOfEntitiesStatefulMixed2() {
+		// TODO Auto-generated method stub
+		super.testFetchIterLotsOfEntitiesStatefulMixed2();
+	}
+
+	@Override
+	public void testFetchIterLotsOfEntitiesStatefulMixed3() {
+		// TODO Auto-generated method stub
+		super.testFetchIterLotsOfEntitiesStatefulMixed3();
 	}
 
 	@Override
@@ -835,52 +1011,66 @@ public class JdbcTest extends BaseTest {
 	}
 
 	@Override
-	public void testFetchLimitReal() {
-		// TODO Auto-generated method stub
-		super.testFetchLimitReal();
-	}
-
-	@Override
-	public void testFetchLimitOffsetReal() {
-		// TODO Auto-generated method stub
-		super.testFetchLimitOffsetReal();
-	}
-
-	@Override
 	public void testBatchInsert() {
 		// TODO Auto-generated method stub
-		//super.testBatchInsert();
+		super.testBatchInsert();
 	}
 
 	@Override
 	public void testBatchInsertList() {
 		// TODO Auto-generated method stub
-		//super.testBatchInsertList();
+		super.testBatchInsertList();
 	}
 
 	@Override
 	public void testBatchDelete() {
 		// TODO Auto-generated method stub
-		//super.testBatchDelete();
+		super.testBatchDelete();
 	}
 
 	@Override
 	public void testBatchDeleteList() {
 		// TODO Auto-generated method stub
-		//super.testBatchDeleteList();
+		super.testBatchDeleteList();
 	}
 
 	@Override
 	public void testBatchDeleteByKeys() {
 		// TODO Auto-generated method stub
-		//super.testBatchDeleteByKeys();
+		super.testBatchDeleteByKeys();
 	}
 
 	@Override
 	public void testBatchDeleteByKeysList() {
 		// TODO Auto-generated method stub
-		//super.testBatchDeleteByKeysList();
+		super.testBatchDeleteByKeysList();
 	}
+
+	@Override
+	public void testBatchGet() {
+		// TODO Auto-generated method stub
+		super.testBatchGet();
+	}
+
+	@Override
+	public void testBatchGetList() {
+		// TODO Auto-generated method stub
+		super.testBatchGetList();
+	}
+
+	@Override
+	public void testBatchGetByKeys() {
+		// TODO Auto-generated method stub
+		super.testBatchGetByKeys();
+	}
+
+	@Override
+	public void testBatchGetByKeysList() {
+		// TODO Auto-generated method stub
+		super.testBatchGetByKeysList();
+	}
+	
+	
 
 
 	

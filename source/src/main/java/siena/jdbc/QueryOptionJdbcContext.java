@@ -2,7 +2,7 @@ package siena.jdbc;
 
 import java.sql.PreparedStatement;
 
-import siena.QueryOption;
+import siena.core.options.QueryOption;
 
 public class QueryOptionJdbcContext extends QueryOption{
     public static final int ID 	= 0x1001;
@@ -10,6 +10,8 @@ public class QueryOptionJdbcContext extends QueryOption{
     public PreparedStatement statement;
     public int limitParamIdx;
     public int offsetParamIdx;
+    public boolean noMoreDataBefore = false;
+    public boolean noMoreDataAfter = false;
     
 	public QueryOptionJdbcContext() {
 		super(ID);
@@ -27,6 +29,8 @@ public class QueryOptionJdbcContext extends QueryOption{
 		this.statement = option.statement;
 		this.limitParamIdx = option.limitParamIdx;
 		this.offsetParamIdx = option.offsetParamIdx;
+		this.noMoreDataAfter = option.noMoreDataAfter;
+		this.noMoreDataBefore = option.noMoreDataBefore;
 	}
 	
 	@Override
@@ -36,6 +40,7 @@ public class QueryOptionJdbcContext extends QueryOption{
 
 	public String toString() {
 		return "type:JDBC_CONTEXT - state:"+this.state
-				+ " - limitParamIdx:"+limitParamIdx+" - offsetParamIdx:"+offsetParamIdx;
+				+ " - limitParamIdx:"+limitParamIdx+" - offsetParamIdx:"+offsetParamIdx
+				+ " - noMoreDataAfter:"+noMoreDataAfter+" - noMoreDataBefore:"+noMoreDataBefore;
 	}
 }

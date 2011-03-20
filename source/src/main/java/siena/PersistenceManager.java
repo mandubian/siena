@@ -19,162 +19,186 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
+import siena.core.async.PersistenceManagerAsync;
+import siena.core.batch.Batch;
+
 /**
  * This is the core interface to implement on <code>Siena</code>.
- * <code>PersistenceManagerFactory</code> will instanciate implementations
- * of this interface when required.
- * Most of the methods of this interface will be called indirectly from the
- * <code>Model</code> class.
- *
+ * <code>PersistenceManagerFactory</code> will instanciate implementations of
+ * this interface when required. Most of the methods of this interface will be
+ * called indirectly from the <code>Model</code> class.
+ * 
  * @author gimenete
- *
+ * 
  */
 public interface PersistenceManager {
 
 	/**
-	 * When <code>PersistenceManagerFactory</code> is called it loads
-	 * the <code>siena.properties</code> file. The only information
-	 * that <code>PersistenceManagerFactory</code> needs is the
-	 * <code>implementation</code> parameter. That parameter indicates
-	 * the qualified class name of the <code>PersistenceManager</code>
+	 * When <code>PersistenceManagerFactory</code> is called it loads the
+	 * <code>siena.properties</code> file. The only information that
+	 * <code>PersistenceManagerFactory</code> needs is the
+	 * <code>implementation</code> parameter. That parameter indicates the
+	 * qualified class name of the <code>PersistenceManager</code>
 	 * implementation that will be used.
-	 *
-	 * The entire <code>Properties</code> object then is passed
-	 * to this method: the <code>init()</code> method. Implementations
-	 * would use this object to set up configuration parameters such
-	 * as the database connection.
-	 *
-	 * @param p The content of the <code>siena.properties</code> file.
+	 * 
+	 * The entire <code>Properties</code> object then is passed to this method:
+	 * the <code>init()</code> method. Implementations would use this object to
+	 * set up configuration parameters such as the database connection.
+	 * 
+	 * @param p
+	 *            The content of the <code>siena.properties</code> file.
 	 */
-	 void init(Properties p);
-	
+	void init(Properties p);
+
 	/**
 	 * Method for obtaining <code>Query</code> implementations.
-	 *
-	 * @param clazz The object types that will be queried.
-	 * @return A <code>Query</code> object that lets make queries of objects of the
-	 * given type.
+	 * 
+	 * @param clazz
+	 *            The object types that will be queried.
+	 * @return A <code>Query</code> object that lets make queries of objects of
+	 *         the given type.
 	 */
-	 <T> Query<T> createQuery(Class<T> clazz);
+	<T> Query<T> createQuery(Class<T> clazz);
+	<T> Query<T> createQuery(BaseQueryData<T> query);
 
 	/**
 	 * Method for obtaining <code>Batch</code> implementations.
-	 *
+	 * 
 	 * @return A <code>Batch</code> object that lets make batch operations
 	 */
-	 Batch createBatch();
+	<T> Batch<T> createBatch(Class<T> clazz);
+ 
+	/**
+	 * This method fills all the fields of the given object using its primary key value
+	 * to extract the entity from DB.
+	 * 
+	 * @param obj The object that contains the primary key values, and also the
+	 *            object where the information will be loaded into.
+	 */
+	void get(Object obj);
+
+	/**
+	 * Inserts an object into the database. Any generated primary key will be
+	 * loaded into the given object. If the object couldn't be inserted a
+	 * <code>SienaException</code> must be thrown.
+	 * 
+	 * @param obj
+	 *            The object that will be inserted into the database
+	 */
+	void insert(Object obj);
 	
 	/**
-	 * This method must read all the information of the given object.
-	 * Typically the object will contain only the primary key values.
-	 *
-	 * @param obj The object that contains the primary key values, and
-	 * also the object where the information will be loaded into.
+	 * Deletes the given object from the database. The object must contain at
+	 * least the primary key values. If the object couldn't be deleted for any
+	 * reason including there is no record with the given primary key values,
+	 * this method must throw a <code>SienaException</code>.
+	 * 
+	 * @param obj
+	 *            The object that will be deleted. The object is deleted from
+	 *            the database but the instance object still lives in the Java
+	 *            Virtual Machine.
 	 */
-	 void get(Object obj);
+	void delete(Object obj);
 
+	/**
+	 * Updates the values of an object from the database. If the object couldn't
+	 * be updated a <code>SienaException</code> must be thrown.
+	 * 
+	 * @param obj
+	 *            The object that will be updated.
+	 */
+	void update(Object obj);
 
-
+	
 	/**
 	 * Inserts objects in a batch mode into the database. Any generated primary
-	 * key will be loaded into the given object. If the object
-	 * couldn't be inserted a <code>SienaException</code>
-	 * must be thrown.
-	 *
-	 * @param objects The objects that will be inserted into the database
+	 * key will be loaded into the given object. If the object couldn't be
+	 * inserted a <code>SienaException</code> must be thrown.
+	 * 
+	 * @param objects
+	 *            The objects that will be inserted into the database
 	 */
-	 void insert(Object... objects);
-	 void insert(Iterable<?> objects);	
-	
-	/**
-	 * Inserts an object into the database. Any generated primary
-	 * key will be loaded into the given object. If the object
-	 * couldn't be inserted a <code>SienaException</code>
-	 * must be thrown.
-	 *
-	 * @param obj The object that will be inserted into the database
-	 */
-	 void insert(Object obj);
+	int insert(Object... objects);
 
-	
-	/**
-	 * Deletes objects (by keys or entities) in a batch mode from the database. Any generated primary
-	 * key will be loaded into the given object. If the object
-	 * couldn't be inserted a <code>SienaException</code>
-	 * must be thrown.
-	 *
-	 * @param objects The objects that will be deleted from the database
-	 */
-	 void delete(Object... models);
-	 void delete(Iterable<?> models);	
-	 <T> void deleteByKeys(Class<T> clazz, Object... keys);	
-	 <T> void deleteByKeys(Class<T> clazz, Iterable<?> keys);	
+	int insert(Iterable<?> objects);
+
+
 
 	/**
-	 * Deletes the given object from the database. The object must
-	 * contain at least the primary key values. If the object
-	 * couldn't be deleted for any reason including there is no
-	 * record with the given primary key values, this method must
-	 * throw a <code>SienaException</code>.
-	 *
-	 * @param obj The object that will be deleted. The object
-	 * is deleted from the database but the instance object still
-	 * lives in the Java Virtual Machine.
+	 * Deletes objects (by keys or entities) in a batch mode from the database.
+	 * Any generated primary key will be loaded into the given object. If the
+	 * object couldn't be inserted a <code>SienaException</code> must be thrown.
+	 * 
+	 * @param objects
+	 *            The objects that will be deleted from the database
 	 */
-	 void delete(Object obj);
-	
+	int delete(Object... models);
+
+	int delete(Iterable<?> models);
+
+	<T> int deleteByKeys(Class<T> clazz, Object... keys);
+
+	<T> int deleteByKeys(Class<T> clazz, Iterable<?> keys);
+
+
 	/**
-	 * Updates the values of an object from the database. If the object
-	 * couldn't be updated a <code>SienaException</code>
-	 * must be thrown.
-	 *
-	 * @param obj The object that will be updated.
+	 * gets objects (by keys or entities) in a batch mode from the database.
+	 * Any generated primary key will be loaded into the given object. If the
+	 * object couldn't be inserted a <code>SienaException</code> must be thrown.
+	 * 
+	 * @param objects
+	 *            The objects that will be deleted from the database
 	 */
-	 void update(Object obj);
+	int get(Object... models);
 
-	 void beginTransaction(int isolationLevel);
+	<T> int get(Iterable<T> models);
 
-	// methods for transactions
+	<T> List<T> getByKeys(Class<T> clazz, Object... keys);
+
+	<T> List<T> getByKeys(Class<T> clazz, Iterable<?> keys);
 	
-	 void commitTransaction();
+	<T> int update(Object... models);
+	<T> int update(Iterable<T> models);
 
-	 void rollbackTransaction();
-
-	 void closeConnection();
 	
+	void beginTransaction(int isolationLevel);
+
+	void commitTransaction();
+
+	void rollbackTransaction();
+
+	void closeConnection();
+	
+	
+
 	// Methods needed by Query class
+	<T> T get(Query<T> query);
+	<T> int delete(Query<T> query);
+	<T> int update(Query<T> query, Map<String, ?> fieldValues);
+	<T> int count(Query<T> query);
 
-	 <T> T get(Query<T> query);
+	<T> List<T> fetch(Query<T> query);
+	<T> List<T> fetch(Query<T> query, int limit);
+	<T> List<T> fetch(Query<T> query, int limit, Object offset);
 
-	 <T> List<T> fetch(Query<T> query);
-	 <T> List<T> fetch(Query<T> query, int limit);
-	 <T> List<T> fetch(Query<T> query, int limit, Object offset);
+	<T> List<T> fetchKeys(Query<T> query);
+	<T> List<T> fetchKeys(Query<T> query, int limit);
+	<T> List<T> fetchKeys(Query<T> query, int limit, Object offset);
 
-	 <T> int count(Query<T> query);
+	<T> Iterable<T> iter(Query<T> query);
+	<T> Iterable<T> iter(Query<T> query, int limit);
+	<T> Iterable<T> iter(Query<T> query, int limit, Object offset);
+
+	<T> void release(Query<T> query);
+	<T> void nextPage(Query<T> query);
+	<T> void previousPage(Query<T> query);
+
+	<T> PersistenceManagerAsync async();
+
+	String[] supportedOperators();
+
 	@Deprecated
-	 <T> int count(Query<T> query, int limit);
+	<T> int count(Query<T> query, int limit);
 	@Deprecated
-	 <T> int count(Query<T> query, int limit, Object offset);
-	
-	 <T> int delete(Query<T> query);
-
-	 <T> List<T> fetchKeys(Query<T> query);
-	 <T> List<T> fetchKeys(Query<T> query, int limit);
-	 <T> List<T> fetchKeys(Query<T> query, int limit, Object offset);
-	
-	 <T> Iterable<T> iter(Query<T> query);
-	 <T> Iterable<T> iter(Query<T> query, int limit);
-	 <T> Iterable<T> iter(Query<T> query, int limit, Object offset);
-
-	/* <T> Iterable<T> iter(Query<T> query, String field);
-	 <T> Iterable<T> iter(Query<T> query, String field, int limit);
-	 <T> Iterable<T> iter(Query<T> query, String field, int limit, Object offset);
-	
-	 <T> List<T> join(Query<T> query, String field, String... sortFields);*/
-	
-	 <T> void release(Query<T> query);
-
-	 void update(Map<String, ?> fieldValues);
-
-	 String[] supportedOperators();
+	<T> int count(Query<T> query, int limit, Object offset);
 }

@@ -2,14 +2,24 @@ package siena;
 
 import java.util.List;
 
+import siena.core.batch.BaseBatch;
+import siena.core.batch.Batch;
+import siena.core.options.QueryOption;
+import siena.core.options.QueryOptionOffset;
+import siena.core.options.QueryOptionState;
+
 public abstract class AbstractPersistenceManager implements PersistenceManager {
 
 	public <T> Query<T> createQuery(Class<T> clazz) {
 		return new BaseQuery<T>(this, clazz);
 	}
+	
+	public <T> Query<T> createQuery(BaseQueryData<T> data) {
+		return new BaseQuery<T>(this, data);
+	}
 
-	public Batch createBatch() {
-		return new BaseBatch(this);
+	public <T> Batch<T> createBatch(Class<T> clazz) {
+		return new BaseBatch<T>(this, clazz);
 	}
 
 	public <T> T get(Query<T> query) {
@@ -17,19 +27,10 @@ public abstract class AbstractPersistenceManager implements PersistenceManager {
 		if(list.isEmpty()) { return null; }
 		return list.get(0);
 	}
-	
-	@Deprecated
-	public <T> int count(Query<T> query, int limit) {
-		return fetch(query, limit).size();
-	}
-	@Deprecated
-	public <T> int count(Query<T> query, int limit, Object offset) {
-		return fetch(query, limit, offset).size();
-	}
 
 	public <T> void release(Query<T> query) {
 		QueryOptionOffset offset = (QueryOptionOffset)query.option(QueryOptionOffset.ID);
-		QueryOption reuse = query.option(QueryOptionReuse.ID);
+		QueryOption reuse = query.option(QueryOptionState.ID);
 		
 		// resets offset
 		if(offset.isActive()) 
@@ -38,5 +39,14 @@ public abstract class AbstractPersistenceManager implements PersistenceManager {
 		if(reuse.isActive()){
 			reuse.passivate();
 		}
+	}
+		
+	@Deprecated
+	public <T> int count(Query<T> query, int limit) {
+		return fetch(query, limit).size();
+	}
+	@Deprecated
+	public <T> int count(Query<T> query, int limit, Object offset) {
+		return fetch(query, limit, offset).size();
 	}
 }

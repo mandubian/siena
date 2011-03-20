@@ -20,6 +20,11 @@ import java.lang.reflect.ParameterizedType;
 import java.util.List;
 import java.util.Map;
 
+import siena.core.async.ModelAsync;
+import siena.core.async.QueryAsync;
+import siena.core.batch.Batch;
+import siena.core.options.QueryOption;
+
 /**
  * This is the base abstract class to extend your domain classes.
  * It's strongly recommended to implement the static method "all". Example:
@@ -38,7 +43,7 @@ import java.util.Map;
  */
 public abstract class Model {
 
-	private PersistenceManager persistenceManager;
+	transient private PersistenceManager persistenceManager;
 
 	public Model() {
 		init();
@@ -71,33 +76,13 @@ public abstract class Model {
 		return PersistenceManagerFactory.getPersistenceManager(clazz).createQuery(clazz);
 	}
 	
-	public static <R> Batch batch(Class<R> clazz) {
-		return PersistenceManagerFactory.getPersistenceManager(clazz).createBatch();
+	public static <R> Batch<R> batch(Class<R> clazz) {
+		return PersistenceManagerFactory.getPersistenceManager(clazz).createBatch(clazz);
 	}
 
-	/*public static <R> void insert(Class<R> clazz, R... models){
-		PersistenceManagerFactory.getPersistenceManager(clazz).insert(models);
+	public ModelAsync async() {
+		return new ModelAsync(this);
 	}
-
-	public static <R> void insert(Class<R> clazz, Iterable<R> models){
-		PersistenceManagerFactory.getPersistenceManager(clazz).insert(models);
-	}
-
-	public static <R> void delete(Class<R> clazz, R... models){
-		PersistenceManagerFactory.getPersistenceManager(clazz).delete(models);
-	}
-
-	public static <R> void delete(Class<R> clazz, Iterable<R> models){
-		PersistenceManagerFactory.getPersistenceManager(clazz).delete(models);
-	}
-	
-	public static <R> void deleteByKeys(Class<R> clazz, Object... keys){
-		PersistenceManagerFactory.getPersistenceManager(clazz).delete(clazz, keys);
-	}
-
-	public static <R> void deleteByKeys(Class<R> clazz, Iterable<?> keys){
-		PersistenceManagerFactory.getPersistenceManager(clazz).delete(clazz, keys);
-	}*/
 	
 	public boolean equals(Object that) {
 		if(this == that) { return true; }
@@ -180,10 +165,12 @@ public abstract class Model {
 			return createQuery().count();
 		}
 
+		@Deprecated
 		public int count(int limit) {
 			return createQuery().count(limit);
 		}
 
+		@Deprecated
 		public int count(int limit, Object offset) {
 			return createQuery().count(limit, offset);
 		}
@@ -208,6 +195,7 @@ public abstract class Model {
 			return createQuery().order(fieldName);
 		}
 
+		@Deprecated
 		public Query<T> search(String match, boolean inBooleanMode, String index) {
 			return createQuery().search(match, inBooleanMode, index);
 		}
@@ -236,6 +224,7 @@ public abstract class Model {
 			return new ProxyQuery<T>(clazz, filter, obj);
 		}
 
+		@Deprecated
 		public Object nextOffset() {
 			return createQuery().nextOffset();
 		}
@@ -272,6 +261,7 @@ public abstract class Model {
 			return createQuery().getJoins();
 		}
 
+		@Deprecated
 		public void setNextOffset(Object nextOffset) {
 			createQuery().setNextOffset(nextOffset);
 		}
@@ -300,34 +290,56 @@ public abstract class Model {
 			return createQuery().options();
 		}
 
-		@Override
-		public Query<T> offset(int offset) {
-			return createQuery().offset(offset);
+		public Query<T> stateful() {
+			return createQuery().stateful();
 		}
 
-		@Override
-		public Query<T> reuse() {
-			return createQuery().reuse();
+		public Query<T> stateless() {
+			return createQuery().stateless();
 		}
 
-		@Override
 		public Query<T> release() {
 			return createQuery().release();
 		}
 
-		@Override
+		public Query<T> resetData() {
+			return createQuery().resetData();
+		}
+
 		public Query<T> search(String match, String... fields) {
 			return createQuery().search(match, fields);
 		}
 
-		@Override
 		public Query<T> search(String match, QueryOption opt, String... fields) {
 			return createQuery().search(match, opt, fields);
 		}
 
-		@Override
-		public void update(Map<String, ?> fieldValues) {
-			createQuery().update(fieldValues);
+		public int update(Map<String, ?> fieldValues) {
+			return createQuery().update(fieldValues);
+		}
+
+		public Query<T> nextPage() {
+			return createQuery().nextPage();
+		}
+
+		public Query<T> previousPage() {
+			return createQuery().previousPage();
+		}
+
+		public String dump() {
+			return createQuery().dump();
+		}
+
+		public Query<T> restore(String dump) {
+			return createQuery().restore(dump);
+		}
+
+		public QueryAsync<T> async() {
+			return createQuery().async();
+		}
+
+		public PersistenceManager getPersistenceManager() {
+			return obj.getPersistenceManager();
 		}	
 		
 	}

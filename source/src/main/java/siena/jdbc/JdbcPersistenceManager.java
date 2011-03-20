@@ -21,42 +21,30 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.sql.Types;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
-import java.util.Date;
-import java.util.Iterator;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.NoSuchElementException;
 import java.util.Properties;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.apache.commons.lang.NotImplementedException;
+
 import siena.AbstractPersistenceManager;
 import siena.ClassInfo;
-import siena.DateTime;
 import siena.Generator;
 import siena.Id;
-import siena.Json;
 import siena.Query;
-import siena.QueryFilter;
-import siena.QueryFilterSearch;
-import siena.QueryFilterSimple;
-import siena.QueryJoin;
-import siena.QueryOption;
-import siena.QueryOptionOffset;
-import siena.QueryOptionPaginate;
-import siena.QueryOptionReuse;
-import siena.QueryOrder;
 import siena.SienaException;
-import siena.SienaRestrictedApiException;
-import siena.SimpleDate;
-import siena.Time;
 import siena.Util;
-import siena.embed.Embedded;
-import siena.embed.JsonSerializer;
+import siena.core.async.PersistenceManagerAsync;
+import siena.core.options.QueryOptionFetchType;
+import siena.core.options.QueryOptionOffset;
+import siena.core.options.QueryOptionPage;
+import siena.core.options.QueryOptionState;
 
 public class JdbcPersistenceManager extends AbstractPersistenceManager {
 	private static final String DB = "JDBC";
@@ -90,24 +78,13 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 		return connectionManager.getConnection();
 	}
 
-	private static Object readField(Object object, Field field) {
-		field.setAccessible(true);
-		try {
-			return field.get(object);
-		} catch (Exception e) {
-			throw new SienaException(e);
-		} finally {
-			field.setAccessible(false);
-		}
-	}
-
 	public void delete(Object obj) {
 		JdbcClassInfo classInfo = JdbcClassInfo.getClassInfo(obj.getClass());
 
 		PreparedStatement ps = null;
 		try {
 			ps = getConnection().prepareStatement(classInfo.deleteSQL);
-			addParameters(obj, classInfo.keys, ps, 1);
+			JdbcDBUtils.addParameters(obj, classInfo.keys, ps, 1);
 			int n = ps.executeUpdate();
 			if(n == 0) {
 				throw new SienaException("No updated rows");
@@ -118,7 +95,7 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 		} catch(SQLException e) {
 			throw new SienaException(e);
 		} finally {
-			closeStatement(ps);
+			JdbcDBUtils.closeStatement(ps);
 		}
 	}
 
@@ -129,52 +106,22 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 		ResultSet rs = null;
 		try {
 			ps = getConnection().prepareStatement(classInfo.selectSQL);
-			addParameters(obj, classInfo.keys, ps, 1);
+			JdbcDBUtils.addParameters(obj, classInfo.keys, ps, 1);
 			rs = ps.executeQuery();
 			if(rs.next()) {
-				mapObject(obj, rs, null, null);
+				JdbcMappingUtils.mapObject(obj, rs, null, null);
 			} else {
 				throw new SienaException("No such object");
 			}
 		} catch(SQLException e) {
 			throw new SienaException(e);
 		} finally {
-			closeResultSet(rs);
-			closeStatement(ps);
+			JdbcDBUtils.closeResultSet(rs);
+			JdbcDBUtils.closeStatement(ps);
 		}
 	}
 
-	public int addParameters(Object obj, List<Field> fields, PreparedStatement ps, int i) throws SQLException {
-		for (Field field : fields) {
-			Class<?> type = field.getType();
-			if(ClassInfo.isModel(type)) {
-				JdbcClassInfo ci = JdbcClassInfo.getClassInfo(type);
-				Object rel = readField(obj, field);
-				for(Field f : ci.keys) {
-					if(rel != null) {
-						Object value = readField(rel, f);
-						if(value instanceof Json)
-							value = ((Json)value).toString();
-						setParameter(ps, i++, value);
-					} else {
-						setParameter(ps, i++, null);
-					}
-				}
-			} else {
-				Object value = readField(obj, field);
-				if(value != null){
-					if(Json.class.isAssignableFrom(field.getType()))
-						value = ((Json)value).toString();
-					else if(field.getAnnotation(Embedded.class) != null)
-						value = JsonSerializer.serialize(value).toString();
-					else if(Enum.class.isAssignableFrom(field.getType()))
-						value = value.toString();
-				}
-				setParameter(ps, i++, value);
-			}
-		}
-		return i;
-	}
+
 
 	public void insert(Object obj) {
 		JdbcClassInfo classInfo = JdbcClassInfo.getClassInfo(obj.getClass());
@@ -193,7 +140,7 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 				insertWithAutoIncrementKey(classInfo, obj);
 			} else {
 				ps = getConnection().prepareStatement(classInfo.insertSQL);
-				addParameters(obj, classInfo.insertFields, ps, 1);
+				JdbcDBUtils.addParameters(obj, classInfo.insertFields, ps, 1);
 				ps.executeUpdate();
 			}
 		} catch (SienaException e) {
@@ -201,7 +148,7 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 		} catch (Exception e) {
 			throw new SienaException(e);
 		} finally {
-			closeStatement(ps);
+			JdbcDBUtils.closeStatement(ps);
 		}
 	}
 
@@ -212,157 +159,13 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 		try {
 			ps = getConnection().prepareStatement(classInfo.updateSQL);
 			int i = 1;
-			i = addParameters(obj, classInfo.updateFields, ps, i);
-			addParameters(obj, classInfo.keys, ps, i);
+			i = JdbcDBUtils.addParameters(obj, classInfo.updateFields, ps, i);
+			JdbcDBUtils.addParameters(obj, classInfo.keys, ps, i);
 			ps.executeUpdate();
 		} catch(SQLException e) {
 			throw new SienaException(e);
 		} finally {
-			closeStatement(ps);
-		}
-	}
-
-	protected static <T> T mapObject(Class<T> clazz, ResultSet rs, String tableName, List<Field >joinFields) {
-		try {
-			T obj = clazz.newInstance();
-			mapObject(obj, rs, tableName, joinFields);
-			return obj;
-		} catch(SienaException e) {
-			throw e;
-		} catch(Exception e) {
-			throw new SienaException(e);
-		}
-	}
-
-	private static void mapObject(Object obj, ResultSet rs, String tableName, List<Field >joinFields) {
-		Class<?> clazz = obj.getClass();
-		for (Field field : JdbcClassInfo.getClassInfo(clazz).allFields) {
-			mapField(obj, field, rs, tableName, joinFields);
-		}
-	}
-
-	protected <T> List<T> mapList(Class<T> clazz, ResultSet rs, String tableName, List<Field> joinFields, int pageSize) {
-		try {
-			List<T> objects = new ArrayList<T>();
-			if(pageSize==0){
-				while(rs.next()) {
-					objects.add(mapObject(clazz, rs, tableName, joinFields));
-				}
-			}else {
-				for(int i=0; i<pageSize && rs.next();i++){
-					objects.add(mapObject(clazz, rs, tableName, joinFields));
-				}
-			}
-			return objects;
-		} catch(SienaException e) {
-			throw e;
-		} catch(Exception e) {
-			throw new SienaException(e);
-		}
-	}
-	
-	
-	protected <T> T mapObjectKeys(Class<T> clazz, ResultSet rs, String tableName, List<Field> joinFields) {
-		try {
-			T obj = clazz.newInstance();
-			mapObjectKeys(obj, rs, tableName, joinFields);
-			return obj;
-		} catch(SienaException e) {
-			throw e;
-		} catch(Exception e) {
-			throw new SienaException(e);
-		}
-	}
-
-	private void mapObjectKeys(Object obj, ResultSet rs, String tableName, List<Field> joinFields) {
-		Class<?> clazz = obj.getClass();
-		for (Field field : JdbcClassInfo.getClassInfo(clazz).keys) {
-			mapField(obj, field, rs, tableName, joinFields);
-		}
-	}
-	
-	protected <T> List<T> mapListKeys(Class<T> clazz, ResultSet rs, String tableName, List<Field> joinFields, int pageSize) {
-		try {
-			List<T> objects = new ArrayList<T>();
-			if(pageSize==0){
-				while(rs.next()) {
-				objects.add(mapObjectKeys(clazz, rs, tableName, joinFields));
-				}
-			}else {
-				for(int i=0; i<pageSize && rs.next();i++){
-					objects.add(mapObjectKeys(clazz, rs, tableName, joinFields));
-				}
-			}
-			return objects;
-		} catch(SienaException e) {
-			throw e;
-		} catch(Exception e) {
-			throw new SienaException(e);
-		}
-	}
-
-	private static void mapField(Object obj, Field field, ResultSet rs, String tableName, List<Field> joinFields) {
-		Class<?> type = field.getType();
-		field.setAccessible(true);
-		try {
-			if(ClassInfo.isModel(type)) {
-				JdbcClassInfo fieldClassInfo = JdbcClassInfo.getClassInfo(type);
-				
-				if(joinFields==null || joinFields.size()==0 || !joinFields.contains(field)){
-					String[] fks = ClassInfo.getColumnNames(field, tableName);
-					Object rel = type.newInstance();
-					boolean none = false;
-					int i = 0;
-					checkForeignKeyMapping(fieldClassInfo.keys, fks, obj.getClass(), field);
-					for(Field f : fieldClassInfo.keys) {
-						Object o = rs.getObject(fks[i++]);
-						if(o == null) {
-							none = true;
-							break;
-						}
-						Util.setFromObject(rel, f, o);
-					}
-					if(!none)
-						field.set(obj, rel);
-				}
-				else {
-					Object rel = mapObject(type, rs, fieldClassInfo.tableName, null);
-					field.set(obj, rel);
-				}
-			} else {
-				Object val = rs.getObject(ClassInfo.getColumnNames(field, tableName)[0]);
-				Util.setFromObject(obj, field, val);
-			}
-		} catch (SienaException e) {
-			throw e;
-		} catch (Exception e) {
-			throw new SienaException(e);
-		}
-	}
-
-	public static void checkForeignKeyMapping(List<Field> keys, String[] columns, Class<?> clazz, Field field) {
-		if (keys.size() != columns.length) {
-			throw new SienaException("Bad mapping for field '"+field.getName()+"'. " +
-					"Related class "+field.getType().getName()+" has "+keys.size()+" primary keys, " +
-					"but '"+clazz.getName()+"' only has mappings for "+columns.length+" foreign keys");
-		}
-	}
-
-	public static void closeStatement(Statement st) {
-		if(st == null) return;
-		try {
-			st.close();
-		} catch (SQLException e) {
-			throw new SienaException(e);
-		}
-	}
-
-	public static void closeResultSet(ResultSet rs) {
-		if(rs == null) return;
-		try {
-			rs.close();
-		} catch (SQLException e) {
-			throw new SienaException(e);
+			JdbcDBUtils.closeStatement(ps);
 		}
 	}
 
@@ -388,7 +191,7 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 		if(parameters != null) {
 			int i = 1;
 			for (Object parameter : parameters) {
-				setParameter(statement, i++, parameter);
+				JdbcDBUtils.setParameter(statement, i++, parameter);
 			}
 		}
 		return statement;
@@ -400,7 +203,7 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 		try {
 			ps = getConnection().prepareStatement(classInfo.insertSQL,
 					Statement.RETURN_GENERATED_KEYS);
-			addParameters(obj, classInfo.insertFields, ps, 1);
+			JdbcDBUtils.addParameters(obj, classInfo.insertFields, ps, 1);
 			ps.executeUpdate();
 			gk = ps.getGeneratedKeys();
 			if (!gk.next())
@@ -413,95 +216,88 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 				i++;
 			}
 		} finally {
-			closeResultSet(gk);
-			closeStatement(ps);
+			JdbcDBUtils.closeResultSet(gk);
+			JdbcDBUtils.closeStatement(ps);
 		}
 	}
 
-	protected void setParameter(PreparedStatement ps, int index, Object value) throws SQLException {
-		ps.setObject(index, value);
-	}
+
 
 	public void setConnectionManager(ConnectionManager connectionManager) {
 		this.connectionManager = connectionManager;
 	}
 
-	private static <T> List<Field> getJoinFields(Query<T> query) {
-		List<Field> joinFields = null;
-		// adds all join fields brought by call to .join() functions
-		if(query.getJoins().size()>0){
-			joinFields = new ArrayList<Field>();
-			for(QueryJoin join:query.getJoins())
-				joinFields.add(join.field);
-		}
-		// then adds the remaining joins coming from @Join if not added yet 
-		ClassInfo ci = ClassInfo.getClassInfo(query.getQueriedClass());
-		if(ci.joinFields.size() > 0){
-			if(joinFields == null) joinFields = new ArrayList<Field>();
-			for(Field f: ci.joinFields){
-				if(!joinFields.contains(f)) joinFields.add(f);
-			}
-		}
-		return joinFields;
-	}
+
 	
-	private static <T> List<Field> getJoinFields(Query<T> query, JdbcClassInfo info) {
-		List<Field> joinFields = null;
-		// adds all join fields brought by call to .join() functions
-		if(query.getJoins()!=null && query.getJoins().size()>0){
-			joinFields = new ArrayList<Field>();
-			for(QueryJoin join:query.getJoins())
-				joinFields.add(join.field);
+	private <T> List<T> doFetch(Query<T> query, int limit, int offset) {
+		// activates page and offset options as there are always used in SQL requests
+		QueryOptionPage pag = (QueryOptionPage)(query.option(QueryOptionPage.ID).activate());
+		if(!pag.isPaginating()){
+			pag.pageSize = limit;
 		}
-		// then adds the remaining joins coming from @Join if not added yet 
-		if(info.joinFields!=null && info.joinFields.size() > 0){
-			if(joinFields == null) joinFields = new ArrayList<Field>();
-			for(Field f: info.joinFields){
-				if(!joinFields.contains(f)) joinFields.add(f);
-			}
-		}
-		return joinFields;
-	}
-	
-	private <T> List<T> fetch(Query<T> query, String suffix) {
-		QueryOptionPaginate pag = (QueryOptionPaginate)query.option(QueryOptionPaginate.ID);
-		QueryOptionOffset offset = (QueryOptionOffset)query.option(QueryOptionOffset.ID);
-		QueryOptionReuse reuse = (QueryOptionReuse)query.option(QueryOptionReuse.ID);
+
+		QueryOptionOffset offsetOpt = (QueryOptionOffset)(query.option(QueryOptionOffset.ID).activate());
+		QueryOptionState state = (QueryOptionState)query.option(QueryOptionState.ID);
 		QueryOptionJdbcContext jdbcCtx = (QueryOptionJdbcContext)query.option(QueryOptionJdbcContext.ID);
 		if(jdbcCtx==null){
 			jdbcCtx = new QueryOptionJdbcContext();
 			query.customize(jdbcCtx);
 		}
 		
-		if(!reuse.isActive() || (reuse.isActive() && !jdbcCtx.isActive())) {
+		// if previousPage has detected there is no more data, simply returns an empty list
+		if(jdbcCtx.noMoreDataBefore){
+			return new ArrayList<T>();
+		}
+		
+		
+		if(offset!=0){
+			// if stateful mode, adds the offset to current offset
+			if(state.isStateful()){
+				offsetOpt.offset += offset;
+			}
+			// if stateless mode, simply replaces the offset
+			else {
+				offsetOpt.offset = offset;
+			}
+		}
+		
+		if(state.isStateless() || (state.isStateful() && !jdbcCtx.isActive())) {
 			Class<T> clazz = query.getQueriedClass();
 			List<Object> parameters = new ArrayList<Object>();
-			StringBuilder sql = buildSqlSelect(query);
-			appendSqlWhere(query, sql, parameters);
-			appendSqlOrder(query, sql);
-			appendSqlLimitOffset(query, sql, parameters);
+			StringBuilder sql = JdbcDBUtils.buildSqlSelect(query);
+			JdbcDBUtils.appendSqlWhere(query, sql, parameters);
+			JdbcDBUtils.appendSqlOrder(query, sql);
+			JdbcDBUtils.appendSqlLimitOffset(query, sql, parameters);
 			//sql.append(suffix);
 			PreparedStatement statement = null;
 			ResultSet rs = null;
 			try {
 				statement = createStatement(sql.toString(), parameters);
-				if(pag.isActive()) {
+				if(pag.isPaginating()) {
 					// this is just a hint to the DB so wonder if it should be used
 					statement.setFetchSize(pag.pageSize);
 				}
 				rs = statement.executeQuery();
-				List<T> result = mapList(clazz, rs, ClassInfo.getClassInfo(clazz).tableName, 
-						getJoinFields(query), pag.pageSize);
-				// increases offset
-				if(offset.isActive())
-					offset.offset=offset.offset+result.size();
-				return result;
-			} catch(SQLException e) {
-				throw new SienaException(e);
-			} finally {
-				if(!reuse.isActive()){
-					closeResultSet(rs);
-					closeStatement(statement);
+				List<T> result = JdbcMappingUtils.mapList(clazz, rs, ClassInfo.getClassInfo(clazz).tableName, 
+						JdbcMappingUtils.getJoinFields(query), pag.pageSize);
+				
+				if(pag.isPaginating()){
+					if(result.size() == 0){
+						jdbcCtx.noMoreDataAfter = true;
+					}
+					else {
+						jdbcCtx.noMoreDataAfter = false;
+					}
+				}else {
+					// if not paginating, increments the offset by the number of results retrieved
+					if(offsetOpt.isActive()){
+						offsetOpt.offset = offsetOpt.offset+result.size();
+					}
+				}
+				
+				if(state.isStateless()){
+					JdbcDBUtils.closeResultSet(rs);
+					JdbcDBUtils.closeStatement(statement);
 				}else {
 					Integer offsetParamIdx = parameters.size();
 					Integer limitParamIdx = offsetParamIdx - 1;
@@ -511,6 +307,13 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 					jdbcCtx.limitParamIdx = limitParamIdx;
 					jdbcCtx.offsetParamIdx = offsetParamIdx;
 				}
+				
+				return result;
+			} 
+			catch(SQLException e) {
+				JdbcDBUtils.closeResultSet(rs);
+				JdbcDBUtils.closeStatement(statement);
+				throw new SienaException(e);
 			}
 		}else {
 			// payload has been initialized so goes on
@@ -522,285 +325,60 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 					// update limit and offset
 					jdbcCtx.statement.setObject(jdbcCtx.limitParamIdx, pag.pageSize);
 				}
-				if(offset.isActive()){
-					jdbcCtx.statement.setObject(jdbcCtx.offsetParamIdx, offset.offset);
+				if(offsetOpt.isActive()){
+					jdbcCtx.statement.setObject(jdbcCtx.offsetParamIdx, offsetOpt.offset);
 				}
 				
 				ResultSet rs = jdbcCtx.statement.executeQuery();
-				List<T> result = mapList(clazz, rs, ClassInfo.getClassInfo(clazz).tableName, 
-					getJoinFields(query), pag.pageSize);
+				List<T> result = JdbcMappingUtils.mapList(clazz, rs, ClassInfo.getClassInfo(clazz).tableName, 
+					JdbcMappingUtils.getJoinFields(query), pag.pageSize);
 				// increases offset
-				if(offset.isActive())
-					offset.offset = offset.offset+result.size();
+				
+				if(pag.isPaginating()){
+					if(result.size() == 0){
+						jdbcCtx.noMoreDataAfter = true;
+					}
+					else {
+						jdbcCtx.noMoreDataAfter = false;
+					}
+				}else {
+					// if not paginating, increments the offset by the number of results retrieved
+					if(offsetOpt.isActive()){
+						offsetOpt.offset = offsetOpt.offset+result.size();
+					}
+				}
 				return result;
 			}catch(SQLException ex){
+				JdbcDBUtils.closeStatement(jdbcCtx.statement);
 				throw new SienaException(ex);
-			} finally {
-				closeStatement(jdbcCtx.statement);
-			}
+			} 
 		}
 	}
 
 
 	@Override
 	public <T> List<T> fetch(Query<T> query) {
-		List<T> result = fetch(query, "");
+		List<T> result = doFetch(query, Integer.MAX_VALUE, 0);
 		//query.setNextOffset(result.size());
 		return result;
 	}
 
 	@Override
 	public <T> List<T> fetch(Query<T> query, int limit) {
-		((QueryOptionPaginate)query.option(QueryOptionPaginate.ID).activate()).pageSize=limit;
-		List<T> result = fetch(query, "");
+		//((QueryOptionPage)query.option(QueryOptionPage.ID).activate()).pageSize=limit;
+		List<T> result = doFetch(query, limit, 0);
 		//List<T> result = fetch(query, " LIMIT "+limit);
 		//query.setNextOffset(result.size());
 		return result;
 	}
 
-	@Override
 	public <T> List<T> fetch(Query<T> query, int limit, Object offset) {
-		((QueryOptionPaginate)query.option(QueryOptionPaginate.ID).activate()).pageSize=limit;
-		((QueryOptionOffset)query.option(QueryOptionOffset.ID).activate()).offset=(Integer)offset;
-		List<T> result = fetch(query, "");
+		//((QueryOptionPage)query.option(QueryOptionPage.ID).activate()).pageSize=limit;
+		//((QueryOptionOffset)query.option(QueryOptionOffset.ID).activate()).offset=(Integer)offset;
+		List<T> result = doFetch(query, limit, (Integer)offset);
 		//List<T> result = fetch(query, " LIMIT "+limit+" OFFSET "+offset);
 		//query.setNextOffset(result.size());
 		return result;
-	}
-
-	private <T> StringBuilder buildSqlSelect(Query<T> query) {
-		Class<T> clazz = query.getQueriedClass();
-		JdbcClassInfo info = JdbcClassInfo.getClassInfo(clazz);
-		List<String> cols = new ArrayList<String>();
-
-		List<Field> joinFields = getJoinFields(query, info);
-		if(joinFields==null){
-			JdbcClassInfo.calculateColumns(info.allFields, cols, null, "");
-			
-			StringBuilder sql = 
-				new StringBuilder("SELECT " + Util.join(cols, ", ") + " FROM " + info.tableName);
-			
-			return sql;
-		}
-
-		// builds fields from primary class
-		JdbcClassInfo.calculateColumns(info.allFields, cols, info.tableName, "");
-		StringBuilder sql = new StringBuilder(" FROM " + info.tableName);
-				
-		for(Field field: joinFields){
-			JdbcClassInfo fieldInfo = JdbcClassInfo.getClassInfo(field.getType());
-			
-			if (!ClassInfo.isModel(field.getType())){
-				throw new SienaRestrictedApiException(DB, "join", "Join not possible: Field "+field.getName()+" is not a relation field");
-			}
-			// removes the field itself from columns
-			cols.remove( info.tableName+"."+field.getName());
-			
-			// adds all field columns
-			JdbcClassInfo.calculateColumns(fieldInfo.allFields, cols, fieldInfo.tableName, "");
-			String[] columns = ClassInfo.getColumnNames(field, info.tableName);		
-			if (columns.length > 1 || fieldInfo.keys.size() > 1){
-				throw new SienaRestrictedApiException(DB, "join", "Join not possible: join field "+field.getName()+" has multiple keys");
-			}
-			sql.append(" JOIN " + fieldInfo.tableName 
-					+ " ON " + columns[0]
-					+ " = " + fieldInfo.tableName+"."+fieldInfo.keys.get(0).getName());
-		}
-
-		sql.insert(0, "SELECT " + Util.join(cols, ", "));
-		return sql;
-	}
-	
-	private static final String WHERE = " WHERE ";
-	private static final String AND = " AND ";
-	private static final String IS_NULL = " IS NULL";
-	private static final String IS_NOT_NULL = " IS NOT NULL";
-
-	private <T> void appendSqlWhere(Query<T> query, StringBuilder sql, List<Object> parameters) {
-		List<QueryFilter> filters = query.getFilters();
-		if(filters.isEmpty()) { return; }
-
-		sql.append(WHERE);
-		boolean first = true;
-		for (QueryFilter filter : filters) {
-			if(QueryFilterSimple.class.isAssignableFrom(filter.getClass())){
-				QueryFilterSimple qf = (QueryFilterSimple)filter;
-				String op    = qf.operator;
-				Object value = qf.value;
-				Field f      = qf.field;
-	
-				if(!first) {
-					sql.append(AND);
-				}
-				first = false;
-	
-				String[] columns = ClassInfo.getColumnNames(f);
-				if("IN".equals(op)) {
-					if(!Collection.class.isAssignableFrom(value.getClass()))
-						throw new SienaException("Collection needed when using IN operator in filter() query");
-					StringBuilder s = new StringBuilder();
-					Collection<?> col = (Collection<?>) value;
-					for (Object object : col) {
-						// TODO: if object isModel
-						parameters.add(object);
-						s.append(",?");
-					}
-					sql.append(columns[0]+" IN("+s.toString().substring(1)+")");
-				} else if(ClassInfo.isModel(f.getType())) {
-					if(!op.equals("=")) {
-						throw new SienaException("Unsupported operator for relationship: "+op);
-					}
-					JdbcClassInfo classInfo = JdbcClassInfo.getClassInfo(f.getType());
-					int i = 0;
-					checkForeignKeyMapping(classInfo.keys, columns, query.getQueriedClass(), f);
-					for (Field key : classInfo.keys) {
-						if(value == null) {
-							sql.append(columns[i++]+IS_NULL);
-						} else {
-							sql.append(columns[i++]+"=?");
-							key.setAccessible(true);
-							Object o;
-							try {
-								o = key.get(value);
-								parameters.add(o);
-							} catch (Exception e) {
-								throw new SienaException(e);
-							}
-						}
-					}
-				} else {
-					if(value == null && op.equals("=")) {
-						sql.append(columns[0]+IS_NULL);
-					} else if(value == null && op.equals("!=")) {
-						sql.append(columns[0]+IS_NOT_NULL);
-					} else {
-						sql.append(columns[0]+op+"?");
-						if(value == null) {
-							parameters.add(Types.NULL);
-						} else {
-							if (value instanceof Date) {
-								value = translateDate(f, (Date) value);
-							}
-							parameters.add(value);
-						}
-					}
-				}
-			}else if(QueryFilterSearch.class.isAssignableFrom(filter.getClass())){
-				// adds querysearch 
-				Class<T> clazz = query.getQueriedClass();
-				QueryFilterSearch qf = (QueryFilterSearch)filter;
-				List<String> cols = new ArrayList<String>();
-				try {
-					for (String field : qf.fields) {
-						Field f = clazz.getDeclaredField(field);
-						String[] columns = ClassInfo.getColumnNames(f);
-						for (String col : columns) {
-							cols.add(col);
-						}
-					}
-					QueryOption opt = qf.option;
-					if(opt != null){
-						// only manages QueryOptionJdbcSearch
-						if(QueryOptionJdbcSearch.class.isAssignableFrom(opt.getClass())){
-							if(((QueryOptionJdbcSearch)opt).booleanMode){
-								sql.append("MATCH("+Util.join(cols, ",")+") AGAINST(? IN BOOLEAN MODE)");
-							}
-							else {
-								
-							}
-						}else{
-							sql.append("MATCH("+Util.join(cols, ",")+") AGAINST(?)");
-						}
-					}else {
-						// as mysql default search is fulltext and as it requires a FULLTEXT index, 
-						// by default, we use boolean mode which works without fulltext index
-						sql.append("MATCH("+Util.join(cols, ",")+") AGAINST(? IN BOOLEAN MODE)");
-					}
-					parameters.add(qf.match);
-				}catch(Exception e){
-					throw new SienaException(e);
-				}
-			}
-		}
-	}
-
-	private <T> void appendSqlOrder(Query<T> query, StringBuilder sql) {
-		List<QueryOrder> orders = query.getOrders();
-		List<QueryJoin> joins = query.getJoins();
-		if(orders.isEmpty() && joins.isEmpty()) { return; }
-
-		sql.append(" ORDER BY ");
-		boolean first = true;
-		for (QueryOrder order : orders) {
-			if(!first) {
-				sql.append(", ");
-			}
-			first = false;
-
-			if(order.parentField==null){
-				String[] columns = ClassInfo.getColumnNames(order.field);
-				for (String column : columns) {
-					sql.append(column+ (order.ascending? "" : " DESC"));
-				}
-			}else {
-				try {
-					ClassInfo parentCi = ClassInfo.getClassInfo(order.parentField.getType());
-					Field subField = order.parentField.getType().getField(order.field.getName());
-					String[] columns = ClassInfo.getColumnNames(subField, parentCi.tableName);
-					for (String column : columns) {
-						sql.append(column+ (order.ascending? "" : " DESC"));
-					}
-				}catch(NoSuchFieldException ex){
-					throw new SienaException("Order not possible: join sort field "+order.field.getName()+" is not a known field of "+order.parentField.getName(), ex);
-				}
-			}
-		}
-	}
-
-	private <T> void appendSqlLimitOffset(Query<T> query, StringBuilder sql, List<Object> parameters) {
-		QueryOptionPaginate pag = (QueryOptionPaginate)query.option(QueryOptionPaginate.ID);
-		QueryOptionOffset offset = (QueryOptionOffset)query.option(QueryOptionOffset.ID);
-
-		if(pag.isActive()) {
-			sql.append(" LIMIT ?");
-			parameters.add(pag.pageSize);
-			
-			if(offset.isActive()) {
-				sql.append(" OFFSET ?");
-				parameters.add(offset.offset);
-			}
-		}
-		// offset without paging is non sens in JDBC
-		// so puts the MAX_VALUE as page size
-		else {
-			if(offset.isActive()) {
-				sql.append(" LIMIT ?");
-				parameters.add(Integer.MAX_VALUE);
-				sql.append(" OFFSET ?");
-				parameters.add(offset.offset);
-			}
-		}
-	}
-	
-	private Object translateDate(Field f, Date value) {
-		long t = value.getTime();
-
-		SimpleDate simpleDate = f.getAnnotation(SimpleDate.class);
-		if(simpleDate != null) {
-			return new java.sql.Date(t);
-		}
-
-		DateTime dateTime = f.getAnnotation(DateTime.class);
-		if(dateTime != null) {
-			return new java.sql.Timestamp(t); 
-		}
-
-		Time time = f.getAnnotation(Time.class);
-		if(time != null) {
-			return new java.sql.Time(t); 
-		}
-
-		return new java.sql.Timestamp(t);
 	}
 
 	public <T> int count(Query<T> query) {
@@ -808,7 +386,7 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 		List<Object> parameters = new ArrayList<Object>();
 		StringBuilder sql = new StringBuilder("SELECT COUNT(*) FROM ");
 		sql.append(info.tableName);
-		appendSqlWhere(query, sql, parameters);
+		JdbcDBUtils.appendSqlWhere(query, sql, parameters);
 		PreparedStatement statement = null;
 		ResultSet rs = null;
 		try {
@@ -819,8 +397,8 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 		} catch(SQLException e) {
 			throw new SienaException(e);
 		} finally {
-			closeResultSet(rs);
-			closeStatement(statement);
+			JdbcDBUtils.closeResultSet(rs);
+			JdbcDBUtils.closeStatement(statement);
 		}
 	}
 
@@ -829,7 +407,7 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 		List<Object> parameters = new ArrayList<Object>();
 		StringBuilder sql = new StringBuilder("DELETE FROM ");
 		sql.append(info.tableName);
-		appendSqlWhere(query, sql, parameters);
+		JdbcDBUtils.appendSqlWhere(query, sql, parameters);
 		PreparedStatement statement = null;
 		ResultSet rs = null;
 		try {
@@ -838,29 +416,49 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 		} catch(SQLException e) {
 			throw new SienaException(e);
 		} finally {
-			closeResultSet(rs);
-			closeStatement(statement);
+			JdbcDBUtils.closeResultSet(rs);
+			JdbcDBUtils.closeStatement(statement);
 		}
 	}
 	
-	private <T> List<T> fetchKeys(Query<T> query, String suffix) {
-		QueryOptionPaginate pag = (QueryOptionPaginate)query.option(QueryOptionPaginate.ID);
-		QueryOptionOffset offset = (QueryOptionOffset)query.option(QueryOptionOffset.ID);
-		QueryOptionReuse reuse = (QueryOptionReuse)query.option(QueryOptionReuse.ID);
+	private <T> List<T> doFetchKeys(Query<T> query, int limit, int offset) {
+		// activates page and offset options as there are always used in SQL requests
+		QueryOptionPage pag = (QueryOptionPage)(query.option(QueryOptionPage.ID).activate());
+		if(!pag.isPaginating()){
+			pag.pageSize = limit;
+		}
+
+		QueryOptionOffset offsetOpt = (QueryOptionOffset)(query.option(QueryOptionOffset.ID).activate());
+		QueryOptionState state = (QueryOptionState)query.option(QueryOptionState.ID);
 		QueryOptionJdbcContext jdbcCtx = (QueryOptionJdbcContext)query.option(QueryOptionJdbcContext.ID);
 		if(jdbcCtx==null){
 			jdbcCtx = new QueryOptionJdbcContext();
 			query.customize(jdbcCtx);
 		}
-		int pageSize = pag.pageSize;
 		
-		if(!reuse.isActive() || (reuse.isActive() && !jdbcCtx.isActive())) {
+		// if previousPage has detected there is no more data, simply returns an empty list
+		if(jdbcCtx.noMoreDataBefore){
+			return new ArrayList<T>();
+		}
+				
+		if(offset!=0){
+			// if stateful mode, adds the offset to current offset
+			if(state.isStateful()){
+				offsetOpt.offset += offset;
+			}
+			// if stateless mode, simply replaces the offset
+			else {
+				offsetOpt.offset = offset;
+			}
+		}
+		
+		if(state.isStateless() || (state.isStateful() && !jdbcCtx.isActive())) {
 			Class<T> clazz = query.getQueriedClass();
 			List<Object> parameters = new ArrayList<Object>();
-			StringBuilder sql = buildSqlSelect(query);
-			appendSqlWhere(query, sql, parameters);
-			appendSqlOrder(query, sql);
-			appendSqlLimitOffset(query, sql, parameters);
+			StringBuilder sql = JdbcDBUtils.buildSqlSelect(query);
+			JdbcDBUtils.appendSqlWhere(query, sql, parameters);
+			JdbcDBUtils.appendSqlOrder(query, sql);
+			JdbcDBUtils.appendSqlLimitOffset(query, sql, parameters);
 			//sql.append(suffix);
 			PreparedStatement statement = null;
 			ResultSet rs = null;
@@ -868,21 +466,29 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 				statement = createStatement(sql.toString(), parameters);
 				if(pag.isActive()) {
 					// this is just a hint to the DB so wonder if it should be used
-					statement.setFetchSize(pageSize);
+					statement.setFetchSize(pag.pageSize);
 				}
 				rs = statement.executeQuery();
-				List<T> result = mapListKeys(clazz, rs, ClassInfo.getClassInfo(clazz).tableName, 
-						getJoinFields(query), pageSize);
-				// increases offset
-				if(offset.isActive())
-					offset.offset += result.size();
-				return result;
-			} catch(SQLException e) {
-				throw new SienaException(e);
-			} finally {
-				if(!reuse.isActive()){
-					closeResultSet(rs);
-					closeStatement(statement);
+				List<T> result = JdbcMappingUtils.mapListKeys(clazz, rs, ClassInfo.getClassInfo(clazz).tableName, 
+						JdbcMappingUtils.getJoinFields(query), pag.pageSize);
+				
+				if(pag.isPaginating()){
+					if(result.size() == 0){
+						jdbcCtx.noMoreDataAfter = true;
+					}
+					else {
+						jdbcCtx.noMoreDataAfter = false;
+					}
+				}else {
+					// if not paginating, increments the offset by the number of results retrieved
+					if(offsetOpt.isActive()){
+						offsetOpt.offset = offsetOpt.offset+result.size();
+					}
+				}
+				
+				if(state.isStateless()){
+					JdbcDBUtils.closeResultSet(rs);
+					JdbcDBUtils.closeStatement(statement);
 				}else {
 					Integer offsetParamIdx = parameters.size();
 					Integer limitParamIdx = offsetParamIdx - 1;
@@ -892,7 +498,12 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 					jdbcCtx.limitParamIdx = limitParamIdx;
 					jdbcCtx.offsetParamIdx = offsetParamIdx;
 				}
-			}
+				return result;
+			} catch(SQLException e) {
+				JdbcDBUtils.closeResultSet(rs);
+				JdbcDBUtils.closeStatement(statement);
+				throw new SienaException(e);
+			} 
 		}else {
 			// payload has been initialized so goes on
 			Class<T> clazz = query.getQueriedClass();
@@ -903,68 +514,101 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 					// update limit and offset
 					jdbcCtx.statement.setObject(jdbcCtx.limitParamIdx, pag.pageSize);
 				}
-				if(offset.isActive()){
-					jdbcCtx.statement.setObject(jdbcCtx.offsetParamIdx, offset.offset);
+				if(offsetOpt.isActive()){
+					jdbcCtx.statement.setObject(jdbcCtx.offsetParamIdx, offsetOpt.offset);
 				}
 				
 				ResultSet rs = jdbcCtx.statement.executeQuery();
-				List<T> result = mapListKeys(clazz, rs, ClassInfo.getClassInfo(clazz).tableName, 
-					getJoinFields(query), pageSize);
-				// increases offset
-				if(offset.isActive())
-					offset.offset += result.size();
+				List<T> result = JdbcMappingUtils.mapListKeys(clazz, rs, ClassInfo.getClassInfo(clazz).tableName, 
+					JdbcMappingUtils.getJoinFields(query), pag.pageSize);
+				
+				if(pag.isPaginating()){
+					if(result.size() == 0){
+						jdbcCtx.noMoreDataAfter = true;
+					}
+					else {
+						jdbcCtx.noMoreDataAfter = false;
+					}
+				}else {
+					// if not paginating, increments the offset by the number of results retrieved
+					if(offsetOpt.isActive()){
+						offsetOpt.offset = offsetOpt.offset+result.size();
+					}
+				}
 				return result;
 			}catch(SQLException ex){
+				JdbcDBUtils.closeStatement(jdbcCtx.statement);
 				throw new SienaException(ex);
-			} finally {
-				closeStatement(jdbcCtx.statement);
-			}
+			} 
 		}
 	}
 	
 	public <T> List<T> fetchKeys(Query<T> query) {
-		List<T> result = fetchKeys(query, "");
+		((QueryOptionFetchType)query.option(QueryOptionFetchType.ID)).type=QueryOptionFetchType.Type.KEYS_ONLY;
+		List<T> result = doFetchKeys(query, Integer.MAX_VALUE, 0);
 		//query.setNextOffset(result.size());
 		return result;
 	}
 
 	public <T> List<T> fetchKeys(Query<T> query, int limit) {
-		((QueryOptionPaginate)query.option(QueryOptionPaginate.ID).activate()).pageSize=limit;
-		List<T> result = fetchKeys(query, " LIMIT "+limit);
+		((QueryOptionFetchType)query.option(QueryOptionFetchType.ID)).type=QueryOptionFetchType.Type.KEYS_ONLY;
+		//((QueryOptionPage)query.option(QueryOptionPage.ID).activate()).pageSize=limit;
+		List<T> result = doFetchKeys(query, limit, 0);
 		//query.setNextOffset(result.size());
 		return result;
 	}
 
 	public <T> List<T> fetchKeys(Query<T> query, int limit, Object offset) {
-		((QueryOptionPaginate)query.option(QueryOptionPaginate.ID).activate()).pageSize=limit;
-		((QueryOptionOffset)query.option(QueryOptionOffset.ID).activate()).offset=(Integer)offset;
-		List<T> result = fetchKeys(query, " LIMIT "+limit+" OFFSET "+offset);
+		((QueryOptionFetchType)query.option(QueryOptionFetchType.ID)).type=QueryOptionFetchType.Type.KEYS_ONLY;
+//		((QueryOptionPage)query.option(QueryOptionPage.ID).activate()).pageSize=limit;
+//		((QueryOptionOffset)query.option(QueryOptionOffset.ID).activate()).offset=(Integer)offset;
+		List<T> result = doFetchKeys(query, limit, (Integer)offset);
 		//query.setNextOffset(result.size());
 		return result;
 	}
 	
 	
-	private <T> Iterable<T> iter(Query<T> query, String suffix) {
-		QueryOptionPaginate pag = (QueryOptionPaginate)query.option(QueryOptionPaginate.ID);
-		QueryOptionOffset offset = (QueryOptionOffset)query.option(QueryOptionOffset.ID);
-		QueryOptionReuse reuse = (QueryOptionReuse)query.option(QueryOptionReuse.ID);
+	private <T> Iterable<T> doIter(Query<T> query, int limit, int offset) {
+		// activates page and offset options as there are always used in SQL requests
+		QueryOptionPage pag = (QueryOptionPage)(query.option(QueryOptionPage.ID).activate());
+		if(!pag.isPaginating()){
+			pag.pageSize = limit;
+		}
+
+		QueryOptionOffset offsetOpt = (QueryOptionOffset)(query.option(QueryOptionOffset.ID).activate());
+		QueryOptionState state = (QueryOptionState)query.option(QueryOptionState.ID);
 		QueryOptionJdbcContext jdbcCtx = (QueryOptionJdbcContext)query.option(QueryOptionJdbcContext.ID);
 		if(jdbcCtx==null){
 			jdbcCtx = new QueryOptionJdbcContext();
 			query.customize(jdbcCtx);
 		}
 
+		// if previousPage has detected there is no more data, simply returns an empty list
+		if(jdbcCtx.noMoreDataBefore){
+			return new ArrayList<T>();
+		}
+		
+		if(offset!=0){
+			// if stateful mode, adds the offset to current offset
+			if(state.isStateful()){
+				offsetOpt.offset += offset;
+			}
+			// if stateless mode, simply replaces the offset
+			else {
+				offsetOpt.offset = offset;
+			}
+		}
+		
 		// forces the reusable option since iteration requires it!!!
-		reuse.activate();
+		query.stateful();
 		
-		int pageSize = pag.pageSize;
 		
-		if(!reuse.isActive() || (reuse.isActive() && !jdbcCtx.isActive())) {
+		if(state.isStateless() || (state.isStateful() && !jdbcCtx.isActive())) {
 			List<Object> parameters = new ArrayList<Object>();
-			StringBuilder sql = buildSqlSelect(query);
-			appendSqlWhere(query, sql, parameters);
-			appendSqlOrder(query, sql);
-			appendSqlLimitOffset(query, sql, parameters);
+			StringBuilder sql = JdbcDBUtils.buildSqlSelect(query);
+			JdbcDBUtils.appendSqlWhere(query, sql, parameters);
+			JdbcDBUtils.appendSqlOrder(query, sql);
+			JdbcDBUtils.appendSqlLimitOffset(query, sql, parameters);
 			//sql.append(suffix);
 			PreparedStatement statement = null;
 			ResultSet rs = null;
@@ -972,21 +616,13 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 				statement = createStatement(sql.toString(), parameters);
 				if(pag.isActive()) {
 					// this is just a hint to the DB so wonder if it should be used
-					statement.setFetchSize(pageSize);
+					statement.setFetchSize(pag.pageSize);
 				}
 				rs = statement.executeQuery();
 				
-				// increases offset with pageSize
-				if(offset.isActive())
-					offset.offset+=pageSize;
-				
-				return new SienaJdbcIterable<T>(statement, rs, query);
-			} catch(SQLException e) {
-				throw new SienaException(e);
-			} finally {
-				if(!reuse.isActive()){
-					closeResultSet(rs);
-					closeStatement(statement);
+				if(state.isStateless()){
+					JdbcDBUtils.closeResultSet(rs);
+					JdbcDBUtils.closeStatement(statement);
 				}else {
 					Integer offsetParamIdx = parameters.size();
 					Integer limitParamIdx = offsetParamIdx - 1;
@@ -996,7 +632,14 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 					jdbcCtx.limitParamIdx = limitParamIdx;
 					jdbcCtx.offsetParamIdx = offsetParamIdx;
 				}
-			}
+				
+				return new JdbcSienaIterable<T>(statement, rs, query);
+			} 
+			catch(SQLException e) {
+				JdbcDBUtils.closeResultSet(rs);
+				JdbcDBUtils.closeStatement(statement);
+				throw new SienaException(e);
+			} 
 		}else {
 			// payload has been initialized so goes on
 
@@ -1006,40 +649,38 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 					// update limit and offset
 					jdbcCtx.statement.setObject(jdbcCtx.limitParamIdx, pag.pageSize);
 				}
-				if(offset.isActive()){
-					jdbcCtx.statement.setObject(jdbcCtx.offsetParamIdx, offset.offset);
+				if(offsetOpt.isActive()){
+					jdbcCtx.statement.setObject(jdbcCtx.offsetParamIdx, offsetOpt.offset);
 				}
 				
 				ResultSet rs = jdbcCtx.statement.executeQuery();
 
-				// increases offset with pageSize
-				if(offset.isActive())
-					offset.offset += pageSize;
-
-				return new SienaJdbcIterable<T>(jdbcCtx.statement, rs, query);
+				return new JdbcSienaIterable<T>(jdbcCtx.statement, rs, query);
 			}catch(SQLException ex){
+				JdbcDBUtils.closeStatement(jdbcCtx.statement);
 				throw new SienaException(ex);
-			} finally {
-				if(!reuse.isActive()){
-					closeStatement(jdbcCtx.statement);
-				}
-			}
+			} 
 		}
 	}
 
 	public <T> Iterable<T> iter(Query<T> query) {
-		return iter(query, "");
+		((QueryOptionFetchType)query.option(QueryOptionFetchType.ID)).type=QueryOptionFetchType.Type.ITER;
+		return doIter(query, Integer.MAX_VALUE, 0);
 	}
 
 	public <T> Iterable<T> iter(Query<T> query, int limit) {
-		((QueryOptionPaginate)query.option(QueryOptionPaginate.ID).activate()).pageSize=limit;
-		return iter(query, " LIMIT "+limit);
+		((QueryOptionFetchType)query.option(QueryOptionFetchType.ID)).type=QueryOptionFetchType.Type.ITER;
+		//((QueryOptionPage)query.option(QueryOptionPage.ID).activate()).pageSize=limit;
+		return doIter(query, limit, 0);
 	}
 
 	public <T> Iterable<T> iter(Query<T> query, int limit, Object offset) {
-		((QueryOptionPaginate)query.option(QueryOptionPaginate.ID).activate()).pageSize=limit;
-		((QueryOptionOffset)query.option(QueryOptionOffset.ID).activate()).offset=(Integer)offset;
-		return iter(query, " LIMIT "+limit+" OFFSET "+offset);
+		((QueryOptionFetchType)query.option(QueryOptionFetchType.ID)).type=QueryOptionFetchType.Type.ITER;
+		//((QueryOptionPage)query.option(QueryOptionPage.ID).activate()).pageSize=limit;
+		
+		// if in stateful mode, the offset should be added to the current one
+		//((QueryOptionOffset)query.option(QueryOptionOffset.ID).activate()).offset=(Integer)offset;
+		return doIter(query, limit, (Integer)offset);
 	}
 
 	public <T> void release(Query<T> query) {
@@ -1047,79 +688,551 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 		QueryOptionJdbcContext jdbcCtx = (QueryOptionJdbcContext)query.option(QueryOptionJdbcContext.ID);
 		
 		if(jdbcCtx != null && jdbcCtx.isActive()){
-			closeStatement(jdbcCtx.statement);
+			JdbcDBUtils.closeStatement(jdbcCtx.statement);
 			jdbcCtx.statement = null;
 			jdbcCtx.passivate();
 		}
 	}
 
-
-	
-	@Override
-	public void insert(Object... objects) {
-		/*JdbcClassInfo classInfo = JdbcClassInfo.getClassInfo(obj.getClass());
-
-		PreparedStatement ps = null;
-		try {
-			for (Field field : classInfo.keys) {
-				Id id = field.getAnnotation(Id.class);
-				if (id.value() == Generator.UUID) {
-					field.set(obj, UUID.randomUUID().toString());
+	public <T> void previousPage(Query<T> query) {
+		QueryOptionJdbcContext jdbcCtx = (QueryOptionJdbcContext)query.option(QueryOptionJdbcContext.ID);
+		if(jdbcCtx==null){
+			jdbcCtx = new QueryOptionJdbcContext();
+			query.customize(jdbcCtx);
+		}
+		
+		// if no more data before, doesn't try to go before
+		if(jdbcCtx.noMoreDataBefore){
+			return;
+		}
+		
+		// if no more data after, removes flag to be able to go before
+		if(jdbcCtx.noMoreDataAfter){
+			jdbcCtx.noMoreDataAfter = false;
+		}
+		
+		QueryOptionPage pag = (QueryOptionPage)query.option(QueryOptionPage.ID);
+		
+		if(pag.isPaginating()){
+			QueryOptionOffset offset = (QueryOptionOffset)query.option(QueryOptionOffset.ID);
+			if(offset.isActive()){
+				if(offset.offset>=pag.pageSize) {
+					offset.offset-=pag.pageSize;
+				}
+				else {
+					offset.offset = 0;
+					jdbcCtx.noMoreDataBefore = true;
 				}
 			}
-			// TODO: implement primary key generation: SEQUENCE
+		}
+	}
 
-			if (!classInfo.generatedKeys.isEmpty()) {
-				insertWithAutoIncrementKey(classInfo, obj);
-			} else {
-				ps = getConnection().prepareStatement(classInfo.insertSQL);
-				addParameters(obj, classInfo.insertFields, ps, 1);
-				ps.executeUpdate();
+	public <T> void nextPage(Query<T> query) {
+		QueryOptionJdbcContext jdbcCtx = (QueryOptionJdbcContext)query.option(QueryOptionJdbcContext.ID);
+		if(jdbcCtx==null){
+			jdbcCtx = new QueryOptionJdbcContext();
+			query.customize(jdbcCtx);
+		}
+
+		// if no more data after, doesn't try to go after
+		if(jdbcCtx.noMoreDataAfter){
+			return;
+		}
+		
+		// if no more data before, removes flag to be able and stay there
+		if(jdbcCtx.noMoreDataBefore){
+			jdbcCtx.noMoreDataBefore = false;
+			return;
+		}
+		
+		QueryOptionPage pag = (QueryOptionPage)query.option(QueryOptionPage.ID);
+		
+		if(pag.isPaginating()){
+			QueryOptionOffset offset = (QueryOptionOffset)query.option(QueryOptionOffset.ID);
+			if(offset.isActive()){
+				offset.offset+=pag.pageSize;
 			}
+		}
+	}
+
+	
+	public int get(Object... objects) {
+		Map<JdbcClassInfo, List<Object>> objMap = new HashMap<JdbcClassInfo, List<Object>>();
+		PreparedStatement ps = null;
+		
+		for(Object obj:objects){
+			JdbcClassInfo classInfo = JdbcClassInfo.getClassInfo(obj.getClass());
+			if(!objMap.containsKey(classInfo)){
+				List<Object> l = new ArrayList<Object>();
+				l.add(obj);
+				objMap.put(classInfo, l);
+			}else{
+				objMap.get(classInfo).add(obj);
+			}
+		}
+		int total = 0;
+		try {
+			for(JdbcClassInfo classInfo: objMap.keySet()){
+				// doesn't manage multiple keys case
+				if(classInfo.keys.size()>1){
+					throw new SienaException("Can't batch select multiple keys objects");
+				}
+				
+				Field f = classInfo.keys.get(0);
+				
+				HashMap<Object, Object> keyObj = new HashMap<Object, Object>();
+				
+				for(Object obj: objMap.get(classInfo)){
+					Object key = Util.readField(obj, f);
+					keyObj.put(key, obj);
+				}
+				
+				Query<?> q = createQuery(classInfo.info.clazz);
+				List<?> results = q.filter(f.getName()+ " IN", keyObj.keySet()).fetch();
+				
+				for(Object res:results){
+					Object resKey = Util.readField(res, f);
+					Util.copyObject(res, keyObj.get(resKey));
+				}
+				total+=results.size();
+			}
+			return total;
+
 		} catch (SienaException e) {
 			throw e;
 		} catch (Exception e) {
 			throw new SienaException(e);
 		} finally {
-			closeStatement(ps);
-		}*/
+			JdbcDBUtils.closeStatement(ps);
+		}
 	}
 
-	@Override
-	public void insert(Iterable<?> objects) {
-		// TODO Auto-generated method stub
+	public <T> int get(Iterable<T> objects) {
+		Map<JdbcClassInfo, List<Object>> objMap = new HashMap<JdbcClassInfo, List<Object>>();
+		PreparedStatement ps = null;
+		
+		for(Object obj:objects){
+			JdbcClassInfo classInfo = JdbcClassInfo.getClassInfo(obj.getClass());
+			if(!objMap.containsKey(classInfo)){
+				List<Object> l = new ArrayList<Object>();
+				l.add(obj);
+				objMap.put(classInfo, l);
+			}else{
+				objMap.get(classInfo).add(obj);
+			}
+		}
+		
+		int total = 0;
+		try {
+			for(JdbcClassInfo classInfo: objMap.keySet()){
+				// doesn't manage multiple keys case
+				if(classInfo.keys.size()>1){
+					throw new SienaException("Can't batch select multiple keys objects");
+				}
+				
+				Field f = classInfo.keys.get(0);
+				
+				HashMap<Object, Object> keyObj = new HashMap<Object, Object>();
+				
+				for(Object obj: objMap.get(classInfo)){
+					Object key = Util.readField(obj, f);
+					keyObj.put(key, obj);
+				}
+				
+				Query<?> q = createQuery(classInfo.info.clazz);
+				List<?> results = q.filter(f.getName()+ " IN", keyObj.keySet()).fetch();
+				
+				for(Object res:results){
+					Object resKey = Util.readField(res, f);
+					Util.copyObject(res, keyObj.get(resKey));
+				}
+				
+				total+=results.size();
+			}
+			
+			return total;
+		} catch (SienaException e) {
+			throw e;
+		} catch (Exception e) {
+			throw new SienaException(e);
+		} finally {
+			JdbcDBUtils.closeStatement(ps);
+		}
+	}
+
+	public <T> List<T> getByKeys(Class<T> clazz, Object... keys) {
+		PreparedStatement ps = null;
+		JdbcClassInfo classInfo = JdbcClassInfo.getClassInfo(clazz);
+		
+		try {
+			// doesn't manage multiple keys case
+			if(classInfo.keys.size()>1){
+				throw new SienaException("Can't batch select multiple keys objects");
+			}
+				
+			Field f = classInfo.keys.get(0);
+			List<Object> keyList = new ArrayList<Object>();
+			Collections.addAll(keyList, keys);
+			
+			Query<T> q = createQuery(clazz);
+			List<T> results = q.filter(f.getName()+ " IN", keyList).fetch();
+			List<T> realResults = new ArrayList<T>();
+			HashMap<Object, T> keyObj = new HashMap<Object, T>();
+			
+			for(Object key: keys){
+				if(!keyObj.containsKey(key)){
+					for(int i=0; i<results.size();i++){
+						T res = results.get(i);
+						Object resKey = Util.readField(res, f);
+						if(key.equals(resKey)){
+							keyObj.put(key, res);
+							results.remove(i);
+							break;
+						}
+					}
+				}
+				
+				realResults.add(keyObj.get(key));
+			}
+			
+			return realResults;
+		} catch (SienaException e) {
+			throw e;
+		} catch (Exception e) {
+			throw new SienaException(e);
+		} finally {
+			JdbcDBUtils.closeStatement(ps);
+		}	
+	}
+
+	public <T> List<T> getByKeys(Class<T> clazz, Iterable<?> keys) {
+		PreparedStatement ps = null;
+		JdbcClassInfo classInfo = JdbcClassInfo.getClassInfo(clazz);
+		
+		try {
+			// doesn't manage multiple keys case
+			if(classInfo.keys.size()>1){
+				throw new SienaException("Can't batch select multiple keys objects");
+			}
+				
+			Field f = classInfo.keys.get(0);
+			List<Object> keyList = new ArrayList<Object>();
+			for(Object key:keys){
+				keyList.add(key);
+			}
+			
+			Query<T> q = createQuery(clazz);
+			List<T> results = q.filter(f.getName()+ " IN", keyList).fetch();
+			List<T> realResults = new ArrayList<T>();
+			HashMap<Object, T> keyObj = new HashMap<Object, T>();
+			
+			for(Object key: keys){
+				if(!keyObj.containsKey(key)){
+					for(int i=0; i<results.size();i++){
+						T res = results.get(i);
+						Object resKey = Util.readField(res, f);
+						if(key.equals(resKey)){
+							keyObj.put(key, res);
+							results.remove(i);
+							break;
+						}
+					}
+				}
+				
+				realResults.add(keyObj.get(key));
+			}
+			
+			return realResults;
+		} catch (SienaException e) {
+			throw e;
+		} catch (Exception e) {
+			throw new SienaException(e);
+		} finally {
+			JdbcDBUtils.closeStatement(ps);
+		}	
+	}
+
+	public <T> PersistenceManagerAsync async() {
+		throw new NotImplementedException();
+	}
+
+	public int insert(Object... objects) {
+		Map<JdbcClassInfo, List<Object>> objMap = new HashMap<JdbcClassInfo, List<Object>>();
+		PreparedStatement ps = null;
+		
+		for(Object obj:objects){
+			JdbcClassInfo classInfo = JdbcClassInfo.getClassInfo(obj.getClass());
+			if(!objMap.containsKey(classInfo)){
+				List<Object> l = new ArrayList<Object>();
+				l.add(obj);
+				objMap.put(classInfo, l);
+			}else{
+				objMap.get(classInfo).add(obj);
+			}
+		}
+
+		int total = 0;
+		try {
+			for(JdbcClassInfo classInfo: objMap.keySet()){
+				if(classInfo.generatedKeys.isEmpty()){
+					ps = getConnection().prepareStatement(classInfo.insertSQL);
+				}else {
+					ps = getConnection().prepareStatement(classInfo.insertSQL,
+							Statement.RETURN_GENERATED_KEYS);
+				}
+				
+				for(Object obj: objMap.get(classInfo)){
+					for (Field field : classInfo.keys) {
+						Id id = field.getAnnotation(Id.class);
+						if (id.value() == Generator.UUID) {
+							field.set(obj, UUID.randomUUID().toString());
+						}
+					}
+					// TODO: implement primary key generation: SEQUENCE
+					JdbcDBUtils.addParameters(obj, classInfo.insertFields, ps, 1);
+					ps.addBatch();
+				}
+				
+				// TODO what to do with results of executeBatch ??????
+				int[] res = ps.executeBatch();
+				
+				if(!classInfo.generatedKeys.isEmpty()){
+					ResultSet gk = ps.getGeneratedKeys();
+					int i;
+					int idx = 0;
+					while(gk.next()) {
+						i=1;
+						for (Field field : classInfo.generatedKeys) {
+							field.setAccessible(true);
+							Util.setFromObject(objMap.get(classInfo).get(idx++), field, gk.getObject(i++));
+						}
+					}
+				}	
+				total+=res.length;
+			}
+			
+			return total;
+		} catch (SienaException e) {
+			throw e;
+		} catch (Exception e) {
+			throw new SienaException(e);
+		} finally {
+			JdbcDBUtils.closeStatement(ps);
+		}
 		
 	}
 
-	@Override
-	public void delete(Object... models) {
-		// TODO Auto-generated method stub
+	public int insert(Iterable<?> objects) {
+		Map<JdbcClassInfo, List<Object>> objMap = new HashMap<JdbcClassInfo, List<Object>>();
+		PreparedStatement ps = null;
 		
+		for(Object obj:objects){
+			JdbcClassInfo classInfo = JdbcClassInfo.getClassInfo(obj.getClass());
+			if(!objMap.containsKey(classInfo)){
+				List<Object> l = new ArrayList<Object>();
+				l.add(obj);
+				objMap.put(classInfo, l);
+			}else{
+				objMap.get(classInfo).add(obj);
+			}
+		}
+
+		int total = 0;
+		try {
+			for(JdbcClassInfo classInfo: objMap.keySet()){
+				if(classInfo.generatedKeys.isEmpty()){
+					ps = getConnection().prepareStatement(classInfo.insertSQL);
+				}else {
+					ps = getConnection().prepareStatement(classInfo.insertSQL,
+							Statement.RETURN_GENERATED_KEYS);
+				}
+				
+				for(Object obj: objMap.get(classInfo)){
+					for (Field field : classInfo.keys) {
+						Id id = field.getAnnotation(Id.class);
+						if (id.value() == Generator.UUID) {
+							field.set(obj, UUID.randomUUID().toString());
+						}
+					}
+					// TODO: implement primary key generation: SEQUENCE
+					JdbcDBUtils.addParameters(obj, classInfo.insertFields, ps, 1);
+					ps.addBatch();
+				}
+				
+				// TODO what to do with results of executeBatch ??????
+				int[] res = ps.executeBatch();
+				
+				if(!classInfo.generatedKeys.isEmpty()){
+					ResultSet gk = ps.getGeneratedKeys();
+					int i;
+					int idx = 0;
+					while(gk.next()) {
+						i=1;
+						for (Field field : classInfo.generatedKeys) {
+							field.setAccessible(true);
+							Util.setFromObject(objMap.get(classInfo).get(idx++), field, gk.getObject(i++));
+						}
+					}
+				}
+				
+				total+=res.length;
+			}
+			
+			return total;
+		} catch (SienaException e) {
+			throw e;
+		} catch (Exception e) {
+			throw new SienaException(e);
+		} finally {
+			JdbcDBUtils.closeStatement(ps);
+		}
 	}
 
-	@Override
-	public void delete(Iterable<?> models) {
-		// TODO Auto-generated method stub
+	public int delete(Object... objects) {
+		Map<JdbcClassInfo, List<Object>> objMap = new HashMap<JdbcClassInfo, List<Object>>();
+		PreparedStatement ps = null;
 		
+		for(Object obj:objects){
+			JdbcClassInfo classInfo = JdbcClassInfo.getClassInfo(obj.getClass());
+			if(!objMap.containsKey(classInfo)){
+				List<Object> l = new ArrayList<Object>();
+				l.add(obj);
+				objMap.put(classInfo, l);
+			}else{
+				objMap.get(classInfo).add(obj);
+			}
+		}
+
+		int total = 0;
+		try {
+			for(JdbcClassInfo classInfo: objMap.keySet()){
+				
+				ps = getConnection().prepareStatement(classInfo.deleteSQL);
+				
+				for(Object obj: objMap.get(classInfo)){
+					JdbcDBUtils.addParameters(obj, classInfo.keys, ps, 1);
+					ps.addBatch();
+				}
+				
+				// TODO what to do with results of executeBatch ??????
+				int[] res = ps.executeBatch();
+				
+				total+=res.length;
+
+			}
+			return total;
+		} catch (SienaException e) {
+			throw e;
+		} catch (Exception e) {
+			throw new SienaException(e);
+		} finally {
+			JdbcDBUtils.closeStatement(ps);
+		}
 	}
 
-	@Override
-	public <T> void deleteByKeys(Class<T> clazz, Object... keys) {
-		// TODO Auto-generated method stub
+	public int delete(Iterable<?> objects) {
+		Map<JdbcClassInfo, List<Object>> objMap = new HashMap<JdbcClassInfo, List<Object>>();
+		PreparedStatement ps = null;
 		
+		for(Object obj:objects){
+			JdbcClassInfo classInfo = JdbcClassInfo.getClassInfo(obj.getClass());
+			if(!objMap.containsKey(classInfo)){
+				List<Object> l = new ArrayList<Object>();
+				l.add(obj);
+				objMap.put(classInfo, l);
+			}else{
+				objMap.get(classInfo).add(obj);
+			}
+		}
+		
+		int total = 0;
+
+		try {
+			for(JdbcClassInfo classInfo: objMap.keySet()){
+				
+				ps = getConnection().prepareStatement(classInfo.deleteSQL);
+				
+				for(Object obj: objMap.get(classInfo)){
+					JdbcDBUtils.addParameters(obj, classInfo.keys, ps, 1);
+					ps.addBatch();
+				}
+				
+				// TODO what to do with results of executeBatch ??????
+				int[] res = ps.executeBatch();
+				
+				total+=res.length;
+			}
+			
+			return total;
+		} catch (SienaException e) {
+			throw e;
+		} catch (Exception e) {
+			throw new SienaException(e);
+		} finally {
+			JdbcDBUtils.closeStatement(ps);
+		}
 	}
 
-	@Override
-	public <T> void deleteByKeys(Class<T> clazz, Iterable<?> keys) {
-		// TODO Auto-generated method stub
-		
+	public <T> int deleteByKeys(Class<T> clazz, Object... keys) {
+		JdbcClassInfo classInfo = JdbcClassInfo.getClassInfo(clazz);
+		PreparedStatement ps = null;
+		try {
+			ps = getConnection().prepareStatement(classInfo.deleteSQL);
+			
+			for(Object key: keys){
+				JdbcDBUtils.setParameter(ps, 1, key);
+				ps.addBatch();
+			}
+				
+			// TODO what to do with results of executeBatch ??????
+			int res[] = ps.executeBatch();
+			return res.length;
+		} catch (SienaException e) {
+			throw e;
+		} catch (Exception e) {
+			throw new SienaException(e);
+		} finally {
+			JdbcDBUtils.closeStatement(ps);
+		}
 	}
 
-	@Override
-	public void update(Map<String, ?> fieldValues) {
-		// TODO Auto-generated method stub
-		
+	public <T> int deleteByKeys(Class<T> clazz, Iterable<?> keys) {
+		JdbcClassInfo classInfo = JdbcClassInfo.getClassInfo(clazz);
+		PreparedStatement ps = null;
+		try {
+			ps = getConnection().prepareStatement(classInfo.deleteSQL);
+			
+			for(Object key: keys){
+				JdbcDBUtils.setParameter(ps, 1, key);
+				ps.addBatch();
+			}
+				
+			// TODO what to do with results of executeBatch ??????
+			int res[] = ps.executeBatch();
+			
+			return res.length;
+		} catch (SienaException e) {
+			throw e;
+		} catch (Exception e) {
+			throw new SienaException(e);
+		} finally {
+			JdbcDBUtils.closeStatement(ps);
+		}
 	}
+
+
+	public <T> int update(Object... models) {
+		throw new NotImplementedException("update not implemented for JDBC yet");
+	}
+
+	public <T> int update(Iterable<T> models) {
+		throw new NotImplementedException("update not implemented for JDBC yet");
+	}
+
+	public <T> int update(Query<T> query, Map<String, ?> fieldValues) {
+		throw new NotImplementedException("update not implemented for JDBC yet");
+	}
+
 
 	private static final String[] supportedOperators = new String[]{ "<", ">", ">=", "<=", "!=", "=", "IN" };
 
@@ -1150,6 +1263,7 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 		public List<Field> joinFields = null;
 
 		public JdbcClassInfo(ClassInfo info) {
+			this.info = info;
 			keys = info.keys;
 			insertFields = info.insertFields;
 			updateFields = info.updateFields;
@@ -1170,7 +1284,7 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 			calculateColumns(info.keys, keyWhereColumns, null, "=?");
 			calculateColumns(info.allFields, allColumns, null, "");
 
-			deleteSQL = "DELETE FROM " + tableName + WHERE + Util.join(keyWhereColumns, AND);
+			deleteSQL = "DELETE FROM " + tableName + JdbcDBUtils.WHERE + Util.join(keyWhereColumns, JdbcDBUtils.AND);
 
 			String[] is = new String[insertColumns.size()];
 			Arrays.fill(is, "?");
@@ -1178,14 +1292,14 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 
 			updateSQL = "UPDATE "+tableName+" SET ";
 			updateSQL += Util.join(updateColumns, ", ");
-			updateSQL += WHERE;
-			updateSQL += Util.join(keyWhereColumns, AND);
+			updateSQL += JdbcDBUtils.WHERE;
+			updateSQL += Util.join(keyWhereColumns, JdbcDBUtils.AND);
 
 			baseSelectSQL = "SELECT "+Util.join(allColumns, ", ")+" FROM "+tableName;
 			baseKeySelectSQL = "SELECT "+Util.join(keyColumns, ", ")+" FROM "+tableName;
 
-			selectSQL = baseSelectSQL + WHERE + Util.join(keyWhereColumns, AND);
-			keySelectSQL = baseKeySelectSQL+WHERE+Util.join(keyWhereColumns, AND);
+			selectSQL = baseSelectSQL + JdbcDBUtils.WHERE + Util.join(keyWhereColumns, JdbcDBUtils.AND);
+			keySelectSQL = baseKeySelectSQL+JdbcDBUtils.WHERE+Util.join(keyWhereColumns, JdbcDBUtils.AND);
 		}
 
 		public static void calculateColumns(List<Field> fields, List<String> columns, String tableName, String suffix) {
@@ -1208,119 +1322,7 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 		}
 	}
 
-	/**
-	 * @author mandubian
-	 * 
-	 *         A Siena Iterable<Model> encapsulating a Jdbc ResultSet
-	 *         its Iterator<Model>...
-	 */
-	public static class SienaJdbcIterable<T> implements Iterable<T> {
-	    /**
-	     * The wrapped <code>Statement</code>.
-	     */
-	    private final Statement st;
-		
-		/**
-	     * The wrapped <code>ResultSet</code>.
-	     */
-	    private final ResultSet rs;
-	    
-	    /**
-	     * The wrapped <code>Query</code>.
-	     */
-	    private Query<T> query;
-	    
-	    /**
-	     * The wrapped <code>Pagination QueryOption</code>.
-	     */
-	    private QueryOptionPaginate pag;
 
-	    
-		SienaJdbcIterable(Statement st, ResultSet rs, Query<T> query) {
-			this.st = st;
-			this.rs = rs;
-			this.query = query;
-			this.pag = (QueryOptionPaginate)query.option(QueryOptionPaginate.ID);
-
-		}
-
-		public Iterator<T> iterator() {
-			return new SienaJdbcIterator<T>(query);
-		}
-
-		// only constructs the iterator with Class<V> in order to transmit the generic type T
-		public class SienaJdbcIterator<V> implements Iterator<V> {
-			private Query<V> query;
-			private int idx = 0;
-
-			SienaJdbcIterator(Query<V> query) {
-				this.query = query;
-			}
-
-			@Override
-			public boolean hasNext() {
-				try {
-		            if(!rs.isLast()){
-		            	if(pag.isActive()) {
-		            		return idx<(Integer)pag.pageSize;
-		            	}
-		            	return true;
-		            }
-		            return false;
-		        } catch (SQLException ex) {
-		            throw new SienaException(ex);
-		        }
-			}
-
-			@Override
-			public V next() {
-				try {
-					if(rs.next()){
-						Class<V> clazz = query.getQueriedClass();
-						if(pag.isActive() && idx<(Integer)pag.pageSize){
-							idx++;
-							return mapObject(clazz, rs, ClassInfo.getClassInfo(clazz).tableName, getJoinFields(query));
-						}else {
-							return mapObject(clazz, rs, ClassInfo.getClassInfo(clazz).tableName, getJoinFields(query));
-						}
-					}
-					else {
-						throw new NoSuchElementException();
-					}
-				} catch (SQLException e) {
-					throw new SienaException(e);
-		        }
-			}
-
-			@Override
-			public void remove() {
-				// doesn't delete row because it REALLY deletes row from DB!!!
-				// need to think about it
-				/*try {
-					
-		            rs.deleteRow();
-		        } catch (SQLException e) {
-		        	throw new SienaException(e);
-		        }*/
-			}
-
-			@Override
-			protected void finalize() throws Throwable {
-				closeResultSet(rs);
-				closeStatement(st);
-				super.finalize();
-			}
-
-		}
-
-		@Override
-		protected void finalize() throws Throwable {
-			closeResultSet(rs);
-			closeStatement(st);
-			super.finalize();
-		}
-
-	}
 
 	
 }

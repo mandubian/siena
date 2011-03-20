@@ -14,7 +14,6 @@ import siena.Util;
 
 public class PostgresqlPersistenceManager extends JdbcPersistenceManager {
 
-    @Override
     protected void setParameter(PreparedStatement ps, int index, Object value) throws SQLException {
         if (value != null && value instanceof Date) {
             Date date = (Date) value;
@@ -36,7 +35,7 @@ public class PostgresqlPersistenceManager extends JdbcPersistenceManager {
 		try {
 			ps = getConnection().prepareStatement(
 					classInfo.insertSQL + " RETURNING " + Util.join(keyNames, ","));
-			addParameters(obj, classInfo.insertFields, ps, 1);
+			JdbcDBUtils.addParameters(obj, classInfo.insertFields, ps, 1);
 			gk = ps.executeQuery();
 			if (!gk.next())
 				throw new SienaException("No such generated keys");
@@ -49,8 +48,8 @@ public class PostgresqlPersistenceManager extends JdbcPersistenceManager {
 				i++;
 			}
 		} finally {
-			closeResultSet(gk);
-			closeStatement(ps);
+			JdbcDBUtils.closeResultSet(gk);
+			JdbcDBUtils.closeStatement(ps);
 		}
 	}
 }

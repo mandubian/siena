@@ -7,6 +7,7 @@ import siena.PersistenceManager;
 import siena.Query;
 import siena.SienaException;
 import siena.SienaRestrictedApiException;
+import siena.base.test.model.Discovery;
 import siena.base.test.model.Discovery4Search;
 import siena.base.test.model.PersonUUID;
 import siena.gae.GaePersistenceManager;
@@ -19,12 +20,16 @@ public class GaeTest extends BaseTest {
 	private final LocalServiceTestHelper helper =
         new LocalServiceTestHelper(new LocalDatastoreServiceTestConfig());
 
+	private static GaePersistenceManager pm;
+	
 	@Override
 	public PersistenceManager createPersistenceManager(List<Class<?>> classes)
 			throws Exception {
-		GaePersistenceManager pm = new GaePersistenceManager();
-		//PersistenceManagerFactory.install(pm, Discovery4GeneratorNone.class);
-		pm.init(null);
+		if(pm==null){
+			pm = new GaePersistenceManager();
+			//PersistenceManagerFactory.install(pm, Discovery4GeneratorNone.class);
+			pm.init(null);
+		}
 		return pm;
 	}
 
@@ -45,10 +50,6 @@ public class GaeTest extends BaseTest {
 
     @Override
     public void setUp() throws Exception {
-		/*ApiProxy.setEnvironmentForCurrentThread(new TestEnvironment());
-		ApiProxy.setDelegate(new ApiProxyLocalImpl(new File(".")){});
-        ApiProxyLocalImpl proxy = (ApiProxyLocalImpl) ApiProxy.getDelegate();
-        proxy.setProperty(LocalDatastoreService.NO_STORAGE_PROPERTY, Boolean.TRUE.toString());*/
     	helper.setUp();
         super.setUp();
     }
@@ -56,11 +57,6 @@ public class GaeTest extends BaseTest {
     @Override
     public void tearDown() throws Exception {
         super.tearDown();
-        /*ApiProxyLocalImpl proxy = (ApiProxyLocalImpl) ApiProxy.getDelegate();
-        LocalDatastoreService datastoreService = (LocalDatastoreService) proxy.getService("datastore_v3");
-        datastoreService.clearProfiles();
-		ApiProxy.setDelegate(null);
-		ApiProxy.setEnvironmentForCurrentThread(null);*/
         helper.tearDown();
     }
     
@@ -75,23 +71,24 @@ public class GaeTest extends BaseTest {
 		
 		fail();
 	}
-
-	public void testReuseWithOperatorIN() {
+	
+	
+	public void testFilterWithOperatorINStateful() {
 		List<PersonUUID> l = getOrderedPersonUUIDs();
 		Query<PersonUUID> query = 
 			pm.createQuery(PersonUUID.class)
 			.filter("id IN", Arrays.asList( l.get(0).id, l.get(1).id))
-			.reuse()
+			.stateful()
 			.paginate(1);
-		List<PersonUUID> people = query.fetch();
 
+		List<PersonUUID> people = query.fetch();
 		QueryOptionGaeContext gaeCtx = (QueryOptionGaeContext)query.option(QueryOptionGaeContext.ID);
 		assertFalse(gaeCtx.useCursor);		
 		assertNotNull(people);
 		assertEquals(1, people.size());
 		assertEquals(l.get(0), people.get(0));
 		
-		people = query.fetch();
+		people = query.nextPage().fetch();
 		gaeCtx = (QueryOptionGaeContext)query.option(QueryOptionGaeContext.ID);
 		assertFalse(gaeCtx.useCursor);
 		assertNotNull(people);
@@ -99,23 +96,139 @@ public class GaeTest extends BaseTest {
 		assertEquals(l.get(1), people.get(0));
 	}
 	
-	public void testReuseWithOperatorNotEqual() {
+	public void testFilterWithOperatorINLotsOfEntitiesStateful() {
+		Discovery[] discs = new Discovery[200];
+		for(int i=0; i<200; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs);
+		
+		Query<Discovery> query = 
+			pm.createQuery(Discovery.class)
+			.filter("id IN", Arrays.asList( discs[48].id, discs[73].id, discs[86].id));
+		List<Discovery> people = query.fetch();
+
+		QueryOptionGaeContext gaeCtx = (QueryOptionGaeContext)query.option(QueryOptionGaeContext.ID);
+		assertFalse(gaeCtx.useCursor);		
+		assertNotNull(people);
+		assertEquals(3, people.size());
+		assertEquals(discs[48], people.get(0));
+		assertEquals(discs[73], people.get(1));
+		assertEquals(discs[86], people.get(2));
+	}
+	
+	public void testFilterWithOperatorINLotsOfEntitiesPaginateStateless() {
+		Discovery[] discs = new Discovery[200];
+		for(int i=0; i<200; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs);
+		
+		Query<Discovery> query = 
+			pm.createQuery(Discovery.class)
+			.filter("id IN", Arrays.asList( discs[48].id, discs[73].id, discs[86].id))
+			.paginate(2);
+		List<Discovery> people = query.fetch();
+
+		QueryOptionGaeContext gaeCtx = (QueryOptionGaeContext)query.option(QueryOptionGaeContext.ID);
+		assertFalse(gaeCtx.useCursor);		
+		assertNotNull(people);
+		assertEquals(2, people.size());
+		assertEquals(discs[48], people.get(0));
+		assertEquals(discs[73], people.get(1));
+		
+		people = query.nextPage().fetch();
+		assertFalse(gaeCtx.useCursor);		
+		assertNotNull(people);
+		assertEquals(1, people.size());
+		assertEquals(discs[86], people.get(0));
+		
+		people = query.nextPage().fetch();
+		assertNotNull(people);
+		assertEquals(0, people.size());
+		
+		people = query.previousPage().fetch();
+		assertNotNull(people);
+		assertEquals(1, people.size());
+		assertEquals(discs[86], people.get(0));
+		
+		people = query.previousPage().fetch();
+		assertNotNull(people);
+		assertEquals(2, people.size());
+		assertEquals(discs[48], people.get(0));
+		assertEquals(discs[73], people.get(1));
+		
+		people = query.previousPage().fetch();
+		assertNotNull(people);
+		assertEquals(0, people.size());
+	}
+	
+	public void testFilterWithOperatorINLotsOfEntitiesPaginateStateful() {
+		Discovery[] discs = new Discovery[200];
+		for(int i=0; i<200; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs);
+		
+		Query<Discovery> query = 
+			pm.createQuery(Discovery.class)
+			.filter("id IN", Arrays.asList( discs[48].id, discs[73].id, discs[86].id))
+			.stateful()
+			.paginate(2);
+		List<Discovery> people = query.fetch();
+
+		QueryOptionGaeContext gaeCtx = (QueryOptionGaeContext)query.option(QueryOptionGaeContext.ID);
+		assertFalse(gaeCtx.useCursor);		
+		assertNotNull(people);
+		assertEquals(2, people.size());
+		assertEquals(discs[48], people.get(0));
+		assertEquals(discs[73], people.get(1));
+		
+		people = query.nextPage().fetch();
+		assertFalse(gaeCtx.useCursor);		
+		assertNotNull(people);
+		assertEquals(1, people.size());
+		assertEquals(discs[86], people.get(0));
+		
+		people = query.nextPage().fetch();
+		assertNotNull(people);
+		assertEquals(0, people.size());
+		
+		people = query.previousPage().fetch();
+		assertNotNull(people);
+		assertEquals(1, people.size());
+		assertEquals(discs[86], people.get(0));
+		
+		people = query.previousPage().fetch();
+		assertNotNull(people);
+		assertEquals(2, people.size());
+		assertEquals(discs[48], people.get(0));
+		assertEquals(discs[73], people.get(1));
+		
+		people = query.previousPage().fetch();
+		assertNotNull(people);
+		assertEquals(0, people.size());
+	}
+	
+	public void testFilterWithOperatorNotEqualStateful() {
 		List<PersonUUID> l = getOrderedPersonUUIDs();
 		Query<PersonUUID> query = 
 			pm.createQuery(PersonUUID.class)
 			.filter("id!=", l.get(0).id)
 			.order("id")
-			.reuse()
+			.stateful()
 			.paginate(1);
 		
 		List<PersonUUID> people = query.fetch();
+
 		QueryOptionGaeContext gaeCtx = (QueryOptionGaeContext)query.option(QueryOptionGaeContext.ID);
 		assertFalse(gaeCtx.useCursor);		
 		assertNotNull(people);
 		assertEquals(1, people.size());
 		assertEquals(l.get(1), people.get(0));
 		
-		people = query.fetch();
+		people = query.nextPage().fetch();
+
 		gaeCtx = (QueryOptionGaeContext)query.option(QueryOptionGaeContext.ID);
 		assertFalse(gaeCtx.useCursor);
 		assertNotNull(people);
@@ -124,113 +237,141 @@ public class GaeTest extends BaseTest {
 	}
 	
 	
+	public void testFilterWithOperatorNotEqualLotsOfEntitiesStateful() {
+		Discovery[] discs = new Discovery[200];
+		for(int i=0; i<200; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs);
+		
+		Query<Discovery> query = 
+			pm.createQuery(Discovery.class)
+			.stateful()
+			.filter("id !=", discs[48].id);
+		List<Discovery> res = query.fetch();
+
+		QueryOptionGaeContext gaeCtx = (QueryOptionGaeContext)query.option(QueryOptionGaeContext.ID);
+		assertFalse(gaeCtx.useCursor);		
+		assertNotNull(res);
+		assertEquals(200-1, res.size());
+		for(Discovery disc:res){
+			assertFalse(discs[48].equals(disc));
+		}
+	}
+	
+	public void testFilterWithOperatorNotEqualLotsOfEntitiesStateless() {
+		Discovery[] discs = new Discovery[200];
+		for(int i=0; i<200; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs);
+		
+		Query<Discovery> query = 
+			pm.createQuery(Discovery.class)
+			.filter("id !=", discs[48].id);
+		List<Discovery> res = query.fetch();
+
+		QueryOptionGaeContext gaeCtx = (QueryOptionGaeContext)query.option(QueryOptionGaeContext.ID);
+		assertFalse(gaeCtx.useCursor);		
+		assertNotNull(res);
+		assertEquals(200-1, res.size());
+		for(Discovery disc:res){
+			assertFalse(discs[48].equals(disc));
+		}
+	}
+	
 	public void testSearchSingleFieldEqualsSingleResult() {
 		Discovery4Search[] discs = new Discovery4Search[10];
 		for(int i=0; i<10; i++){
 			if(i%2==0) discs[i] = new Discovery4Search("even_"+i, LongAutoID_CURIE);
 			else discs[i] = new Discovery4Search("odd_"+i, LongAutoID_CURIE);
-			pm.insert(discs[i]);
 		}
+		pm.insert((Object[])discs);
 		
 		Query<Discovery4Search> query = 
 			pm.createQuery(Discovery4Search.class).search("even_4", "name").order("name");
 		
 		List<Discovery4Search> res = query.fetch();
+
 		assertEquals(1, res.size());
 		assertEquals(discs[4], res.get(0));
-		/*assertEquals(5, res.size());
-		for(int i=0; i<res.size();i++){
-			assertEquals(discs[2*i], res.get(i));
-		}*/		
 	}
 
 	public void testSearchSingleFieldEqualsSeveralResults() {
-		Discovery4Search[] discs = new Discovery4Search[10];
+		Discovery4Search[] discs = new Discovery4Search[5];
 		discs[0] = new Discovery4Search("alpha", LongAutoID_CURIE);
-		pm.insert(discs[0]);
 		discs[1] = new Discovery4Search("beta", LongAutoID_CURIE);
-		pm.insert(discs[1]);
 		discs[2] = new Discovery4Search("gamma", LongAutoID_CURIE);
-		pm.insert(discs[2]);
 		discs[3] = new Discovery4Search("delta", LongAutoID_CURIE);
-		pm.insert(discs[3]);
 		discs[4] = new Discovery4Search("eta", LongAutoID_CURIE);
-		pm.insert(discs[4]);		
+		pm.insert((Object[])discs);		
 		
 		Query<Discovery4Search> query = 
 			pm.createQuery(Discovery4Search.class).search("beta eta", "name");
 		
 		List<Discovery4Search> res = query.fetch();
+
 		assertEquals(2, res.size());
 		assertEquals(discs[1], res.get(0));
 		assertEquals(discs[4], res.get(1));
 	}
 	
 	public void testSearchSingleFieldBeginSingleResults() {
-		Discovery4Search[] discs = new Discovery4Search[10];
+		Discovery4Search[] discs = new Discovery4Search[5];
 		discs[0] = new Discovery4Search("alpha", LongAutoID_CURIE);
-		pm.insert(discs[0]);
 		discs[1] = new Discovery4Search("beta", LongAutoID_CURIE);
-		pm.insert(discs[1]);
 		discs[2] = new Discovery4Search("gamma", LongAutoID_CURIE);
-		pm.insert(discs[2]);
 		discs[3] = new Discovery4Search("delta", LongAutoID_CURIE);
-		pm.insert(discs[3]);
 		discs[4] = new Discovery4Search("eta", LongAutoID_CURIE);
-		pm.insert(discs[4]);		
+		pm.insert((Object[])discs);		
 		
 		Query<Discovery4Search> query = 
 			pm.createQuery(Discovery4Search.class).search("gamma*", "name");
 		
-		List<Discovery4Search> res = query.fetch();
+		List<Discovery4Search>res = query.fetch();
+
 		assertEquals(1, res.size());
 		assertEquals(discs[2], res.get(0));
 	}
 	
 	public void testSearchSingleFieldBeginSeveralResults() {
-		Discovery4Search[] discs = new Discovery4Search[10];
+		Discovery4Search[] discs = new Discovery4Search[5];
 		discs[0] = new Discovery4Search("alpha", LongAutoID_CURIE);
-		pm.insert(discs[0]);
 		discs[1] = new Discovery4Search("beta", LongAutoID_CURIE);
-		pm.insert(discs[1]);
 		discs[2] = new Discovery4Search("alphagamma", LongAutoID_CURIE);
-		pm.insert(discs[2]);
 		discs[3] = new Discovery4Search("delta", LongAutoID_CURIE);
-		pm.insert(discs[3]);
 		discs[4] = new Discovery4Search("eta", LongAutoID_CURIE);
-		pm.insert(discs[4]);		
+		pm.insert((Object[])discs);		
 		
 		Query<Discovery4Search> query = 
 			pm.createQuery(Discovery4Search.class).search("alpha*", "name");
 		
 		List<Discovery4Search> res = query.fetch();
+
 		assertEquals(2, res.size());
 		assertEquals(discs[0], res.get(0));
 		assertEquals(discs[2], res.get(1));
 	}
 	
 	public void testSearchSingleFieldEndException() {
-		Discovery4Search[] discs = new Discovery4Search[10];
+		Discovery4Search[] discs = new Discovery4Search[5];
 		discs[0] = new Discovery4Search("alpha", LongAutoID_CURIE);
-		pm.insert(discs[0]);
 		discs[1] = new Discovery4Search("beta", LongAutoID_CURIE);
-		pm.insert(discs[1]);
 		discs[2] = new Discovery4Search("alphagamma", LongAutoID_CURIE);
-		pm.insert(discs[2]);
 		discs[3] = new Discovery4Search("delta", LongAutoID_CURIE);
-		pm.insert(discs[3]);
 		discs[4] = new Discovery4Search("eta", LongAutoID_CURIE);
-		pm.insert(discs[4]);		
+		pm.insert((Object[])discs);			
 		try {
-		Query<Discovery4Search> query = 
-			pm.createQuery(Discovery4Search.class).search("*gamma", "name");
-			List<Discovery4Search> res = query.fetch();
+			Query<Discovery4Search> query = 
+				pm.createQuery(Discovery4Search.class).search("*gamma", "name");
+			query.fetch();
 		}catch(SienaException ex ){
 			return;
 		}
 		fail();
 	}
 	
+
 	// GENERIC TESTS OVERRIDE
 	@Override
 	public void testCount() {
@@ -350,6 +491,12 @@ public class GaeTest extends BaseTest {
 	public void testFilterOperatorEqualLongManualID() {
 		// TODO Auto-generated method stub
 		super.testFilterOperatorEqualLongManualID();
+	}
+
+	@Override
+	public void testFilterOperatorEqualStringID() {
+		// TODO Auto-generated method stub
+		super.testFilterOperatorEqualStringID();
 	}
 
 	@Override
@@ -605,6 +752,7 @@ public class GaeTest extends BaseTest {
 	}
 
 	@Override
+	@Deprecated
 	public void testCountLimit() {
 		// TODO Auto-generated method stub
 		super.testCountLimit();
@@ -623,42 +771,6 @@ public class GaeTest extends BaseTest {
 	}
 
 	@Override
-	public void testFetchPaginateReuse() {
-		// TODO Auto-generated method stub
-		super.testFetchPaginateReuse();
-	}
-
-	@Override
-	public void testFetchKeysPaginateReuse() {
-		// TODO Auto-generated method stub
-		super.testFetchKeysPaginateReuse();
-	}
-
-	@Override
-	public void testFetchOffset() {
-		// TODO Auto-generated method stub
-		super.testFetchOffset();
-	}
-
-	@Override
-	public void testFetchPaginateOffset() {
-		// TODO Auto-generated method stub
-		super.testFetchPaginateOffset();
-	}
-
-	@Override
-	public void testIterOffset() {
-		// TODO Auto-generated method stub
-		super.testIterOffset();
-	}
-
-	@Override
-	public void testIterPaginateOffset() {
-		// TODO Auto-generated method stub
-		super.testIterPaginateOffset();
-	}
-
-	@Override
 	public void testSearchSingle() {
 		// TODO Auto-generated method stub
 		super.testSearchSingle();
@@ -672,6 +784,7 @@ public class GaeTest extends BaseTest {
 	}
 
 	@Override
+	@Deprecated
 	public void testCountLimitOffset() {
 		// TODO Auto-generated method stub
 		super.testCountLimitOffset();
@@ -924,27 +1037,219 @@ public class GaeTest extends BaseTest {
 	}
 
 	@Override
-	public void testFetchPaginate() {
+	public void testFetchPaginateStatelessNextPage() {
 		// TODO Auto-generated method stub
-		//super.testFetchPaginate();
+		super.testFetchPaginateStatelessNextPage();
 	}
 
 	@Override
-	public void testFetchKeysPaginate() {
+	public void testFetchPaginateStatelessNextPageToEnd() {
 		// TODO Auto-generated method stub
-		//super.testFetchKeysPaginate();
+		super.testFetchPaginateStatelessNextPageToEnd();
 	}
 
 	@Override
-	public void testIterPaginate() {
+	public void testFetchPaginateStatelessPreviousPageFromScratch() {
 		// TODO Auto-generated method stub
-		//super.testIterPaginate();
+		super.testFetchPaginateStatelessPreviousPageFromScratch();
 	}
 
 	@Override
-	public void testIterFetchPaginate() {
+	public void testFetchPaginateStatelessPreviousPage() {
 		// TODO Auto-generated method stub
-		//super.testIterFetchPaginate();
+		super.testFetchPaginateStatelessPreviousPage();
+	}
+
+	@Override
+	public void testFetchPaginateStatelessSeveralTimes() {
+		// TODO Auto-generated method stub
+		super.testFetchPaginateStatelessSeveralTimes();
+	}
+
+	@Override
+	public void testFetchPaginateStatefulNextPage() {
+		// TODO Auto-generated method stub
+		super.testFetchPaginateStatefulNextPage();
+	}
+
+	@Override
+	public void testFetchPaginateStatefulNextPageToEnd() {
+		// TODO Auto-generated method stub
+		super.testFetchPaginateStatefulNextPageToEnd();
+	}
+
+	@Override
+	public void testFetchPaginateStatefulPreviousPageFromScratch() {
+		// TODO Auto-generated method stub
+		super.testFetchPaginateStatefulPreviousPageFromScratch();
+	}
+
+	@Override
+	public void testFetchPaginateStatefulPreviousPage() {
+		// TODO Auto-generated method stub
+		super.testFetchPaginateStatefulPreviousPage();
+	}
+
+	@Override
+	public void testFetchPaginateStatefulPreviouPageSeveralTimes() {
+		// TODO Auto-generated method stub
+		super.testFetchPaginateStatefulPreviouPageSeveralTimes();
+	}
+
+	@Override
+	public void testFetchKeysPaginateStatelessNextPage() {
+		// TODO Auto-generated method stub
+		super.testFetchKeysPaginateStatelessNextPage();
+	}
+
+	@Override
+	public void testFetchKeysPaginateStatelessPreviousPageFromScratch() {
+		// TODO Auto-generated method stub
+		super.testFetchKeysPaginateStatelessPreviousPageFromScratch();
+	}
+
+	@Override
+	public void testFetchKeysPaginateStatelessPreviousPage() {
+		// TODO Auto-generated method stub
+		super.testFetchKeysPaginateStatelessPreviousPage();
+	}
+
+	@Override
+	public void testFetchKeysPaginateStatelessPreviouPageSeveralTimes() {
+		// TODO Auto-generated method stub
+		super.testFetchKeysPaginateStatelessPreviouPageSeveralTimes();
+	}
+
+	@Override
+	public void testFetchKeysPaginateStatefulNextPage() {
+		// TODO Auto-generated method stub
+		super.testFetchKeysPaginateStatefulNextPage();
+	}
+
+	@Override
+	public void testFetchKeysPaginateStatefulPreviousPageFromScratch() {
+		// TODO Auto-generated method stub
+		super.testFetchKeysPaginateStatefulPreviousPageFromScratch();
+	}
+
+	@Override
+	public void testFetchKeysPaginateStatefulPreviousPage() {
+		// TODO Auto-generated method stub
+		super.testFetchKeysPaginateStatefulPreviousPage();
+	}
+
+	@Override
+	public void testFetchKeysPaginateStatefulSeveralTimes() {
+		// TODO Auto-generated method stub
+		super.testFetchKeysPaginateStatefulSeveralTimes();
+	}
+
+	@Override
+	public void testIterPaginateStatelessNextPage() {
+		// TODO Auto-generated method stub
+		super.testIterPaginateStatelessNextPage();
+	}
+
+	@Override
+	public void testIterPaginateStatelessPreviousPageFromScratch() {
+		// TODO Auto-generated method stub
+		super.testIterPaginateStatelessPreviousPageFromScratch();
+	}
+
+	@Override
+	public void testIterPaginateStatelessPreviousPage() {
+		// TODO Auto-generated method stub
+		super.testIterPaginateStatelessPreviousPage();
+	}
+
+	@Override
+	public void testIterPaginateStatelessPreviouPageSeveralTimes() {
+		// TODO Auto-generated method stub
+		super.testIterPaginateStatelessPreviouPageSeveralTimes();
+	}
+
+	@Override
+	public void testIterPaginateStatefulNextPage() {
+		// TODO Auto-generated method stub
+		super.testIterPaginateStatefulNextPage();
+	}
+
+	@Override
+	public void testIterPaginateStatefulPreviousPageFromScratch() {
+		// TODO Auto-generated method stub
+		super.testIterPaginateStatefulPreviousPageFromScratch();
+	}
+
+	@Override
+	public void testIterPaginateStatefulPreviousPage() {
+		// TODO Auto-generated method stub
+		super.testIterPaginateStatefulPreviousPage();
+	}
+
+	@Override
+	public void testIterPaginateStatefulPreviouPageSeveralTimes() {
+		// TODO Auto-generated method stub
+		super.testIterPaginateStatefulPreviouPageSeveralTimes();
+	}
+
+	@Override
+	public void testIterLotsOfEntitiesStateless() {
+		// TODO Auto-generated method stub
+		super.testIterLotsOfEntitiesStateless();
+	}
+
+	@Override
+	public void testIterLotsOfEntitiesStateful() {
+		// TODO Auto-generated method stub
+		super.testIterLotsOfEntitiesStateful();
+	}
+
+	@Override
+	public void testIterLotsOfEntitiesStatefulMixed() {
+		// TODO Auto-generated method stub
+		super.testIterLotsOfEntitiesStatefulMixed();
+	}
+
+	@Override
+	public void testIterLotsOfEntitiesStatefulMixed2() {
+		// TODO Auto-generated method stub
+		super.testIterLotsOfEntitiesStatefulMixed2();
+	}
+
+	@Override
+	public void testIterLotsOfEntitiesStatefulMixed3() {
+		// TODO Auto-generated method stub
+		super.testIterLotsOfEntitiesStatefulMixed3();
+	}
+
+	@Override
+	public void testFetchLotsOfEntitiesStatefulMixed() {
+		// TODO Auto-generated method stub
+		super.testFetchLotsOfEntitiesStatefulMixed();
+	}
+
+	@Override
+	public void testFetchLotsOfEntitiesStatefulMixed2() {
+		// TODO Auto-generated method stub
+		super.testFetchLotsOfEntitiesStatefulMixed2();
+	}
+
+	@Override
+	public void testFetchIterLotsOfEntitiesStatefulMixed() {
+		// TODO Auto-generated method stub
+		super.testFetchIterLotsOfEntitiesStatefulMixed();
+	}
+
+	@Override
+	public void testFetchIterLotsOfEntitiesStatefulMixed2() {
+		// TODO Auto-generated method stub
+		super.testFetchIterLotsOfEntitiesStatefulMixed2();
+	}
+
+	@Override
+	public void testFetchIterLotsOfEntitiesStatefulMixed3() {
+		// TODO Auto-generated method stub
+		super.testFetchIterLotsOfEntitiesStatefulMixed3();
 	}
 
 	@Override
@@ -982,6 +1287,31 @@ public class GaeTest extends BaseTest {
 		// TODO Auto-generated method stub
 		super.testBatchDeleteByKeysList();
 	}
+
+	@Override
+	public void testBatchGet() {
+		// TODO Auto-generated method stub
+		super.testBatchGet();
+	}
+
+	@Override
+	public void testBatchGetList() {
+		// TODO Auto-generated method stub
+		super.testBatchGetList();
+	}
+
+	@Override
+	public void testBatchGetByKeys() {
+		// TODO Auto-generated method stub
+		super.testBatchGetByKeysList();
+	}
+
+	@Override
+	public void testBatchGetByKeysList() {
+		// TODO Auto-generated method stub
+		super.testBatchGetByKeysList();
+	}
+
 
 	
 }

@@ -164,9 +164,10 @@ public class DdlGenerator {
 				columnType = Types.VARCHAR;
 				
 				Max max = field.getAnnotation(Max.class);
-				if(max == null)
+				if(max == null){
 					throw new SienaRestrictedApiException(DB, "createColumn", "Field "+field.getName()+" in class "
 							+clazz.getName()+" doesn't have a @Max annotation");
+				}
 				column.setSize(""+max.value());
 			}
 		}

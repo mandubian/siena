@@ -1,29 +1,122 @@
 package siena.gae;
 
-import siena.QueryOption;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+import siena.core.options.QueryOption;
 
 import com.google.appengine.api.datastore.PreparedQuery;
 
 public class QueryOptionGaeContext extends QueryOption{
     public static final int ID 	= 0x2001;
 	
-    public String cursor;
+    public List<String> cursors = new ArrayList<String>();
+    // -1 means empty
+    public int cursorIdx = -1;
     public boolean useCursor = true;
-    public PreparedQuery query;
+    // this is the current offset synchronized with the cursor by the PM
+    //public int offset = 0;
+    // a flag that can be used when there is no more data to fetch (when previous page is the first one for ex)
+    public boolean noMoreDataBefore = false;
+    public boolean noMoreDataAfter = false;
+    //public PreparedQuery query;
 	public QueryOptionGaeContext() {
 		super(ID);
 	}
     
-	public QueryOptionGaeContext(String cursor, PreparedQuery query) {
+	public QueryOptionGaeContext(PreparedQuery query) {
 		super(ID);
-		this.cursor = cursor;
-		this.query = query;
+		//this.query = query;
 	}
 
 	public QueryOptionGaeContext(QueryOptionGaeContext option) {
 		super(option);
-		this.cursor = option.cursor;
-		this.query = option.query;
+		Collections.copy(this.cursors, option.cursors);
+		this.cursorIdx = option.cursorIdx;
+		this.useCursor = option.useCursor;
+		this.noMoreDataBefore = option.noMoreDataBefore;
+		this.noMoreDataAfter = option.noMoreDataAfter;
+		//this.query = option.query;
+	}
+	
+	public void addCursor(String cursor){
+		// if cursor in the middle of the list, replace next one
+		if(cursorIdx < cursors.size()-1 && cursorIdx>=0){
+			cursors.set(cursorIdx+1, cursor);
+		}
+		// if first or last cursor in the list, adds a new cursor
+		else{
+			cursors.add(cursorIdx+1, cursor);
+		}
+	}
+	
+	public void addAndMoveCursor(String cursor){
+		// if cursor in the middle of the list, replace next one
+		if(cursorIdx < cursors.size()-1 && cursorIdx>=0){
+			cursors.set(++cursorIdx, cursor);
+		}
+		// if first or last cursor in the list, adds a new cursor
+		else{
+			cursors.add(++cursorIdx, cursor);
+		}
+	}
+	
+	public void setCurrentCursor(String cursor){
+		// replaces the cursor at current index (useful for iterators)
+		if(cursorIdx!=-1)
+			cursors.set(cursorIdx, cursor);
+		else {
+			addAndMoveCursor(cursor);
+		}
+	}
+	
+	public String currentCursor() {
+		if(cursorIdx!=-1){
+			return cursors.get(cursorIdx);
+		}else {
+			return null;
+		}
+	}
+	
+	public String nextCursor(){
+		int sz = cursors.size();
+		if(sz==0){
+			return null;
+		}else {
+			if(cursorIdx<sz-1){
+				return cursors.get(++cursorIdx);
+			}
+			else {
+				return cursors.get(cursorIdx);
+			}
+		}
+	}
+	
+	public boolean hasNextCursor(){
+		int sz = cursors.size();
+		if(sz==0){
+			return false;
+		}else {
+			return true;
+		}
+	}
+	
+	public String previousCursor(){
+		int sz = cursors.size();
+		if(sz==0){
+			return null;
+		}else {
+			if(cursorIdx>0){
+				return cursors.get(--cursorIdx);
+			}
+			else if(cursorIdx==0){
+				cursorIdx=-1;
+				return null;
+			} else {
+				return null;
+			}
+		}
 	}
 	
 	@Override
@@ -32,6 +125,7 @@ public class QueryOptionGaeContext extends QueryOption{
 	}
 
 	public String toString() {
-		return "type:JDBC_CONTEXT - state:"+this.state+ " - cursor:"+cursor+" - useCursor:"+useCursor;
+		return "type:GAE_CONTEXT - state:"+this.state+ " - useCursor:"
+			+useCursor+ " - cursors:"+cursors+" - cursorIdx:"+cursorIdx;
 	}
 }

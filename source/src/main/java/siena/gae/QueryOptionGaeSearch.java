@@ -1,6 +1,6 @@
 package siena.gae;
 
-import siena.QueryOption;
+import siena.core.options.QueryOption;
 
 public class QueryOptionGaeSearch extends QueryOption{
     public static final int ID 	= 0x2002;

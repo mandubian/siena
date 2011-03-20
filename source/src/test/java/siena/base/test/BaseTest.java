@@ -28,7 +28,6 @@ import siena.base.test.model.PersonLongAutoID;
 import siena.base.test.model.PersonLongManualID;
 import siena.base.test.model.PersonStringID;
 import siena.base.test.model.PersonUUID;
-import siena.jdbc.QueryOptionJdbcSearch;
 
 public abstract class BaseTest extends TestCase {
 	
@@ -58,7 +57,53 @@ public abstract class BaseTest extends TestCase {
 	
 	public abstract boolean mustFilterToOrder();
 	
+	@Override
+	protected void setUp() throws Exception {
+		super.setUp();
+		List<Class<?>> classes = new ArrayList<Class<?>>();
+		classes.add(PersonUUID.class);
+		classes.add(PersonLongAutoID.class);
+		classes.add(PersonLongManualID.class);
+		classes.add(PersonStringID.class);
+		if(supportsAutoincrement())
+			classes.add(AutoInc.class);
+		if(supportsMultipleKeys())
+			classes.add(MultipleKeys.class);
+		classes.add(Discovery.class);
+		classes.add(Discovery4Join.class);
+		classes.add(DiscoveryPrivate.class);
+		classes.add(Discovery4Search.class);
+		classes.add(DataTypes.class);
+		pm = createPersistenceManager(classes);
+		
+		for (Class<?> clazz : classes) {
+			pm.createQuery(clazz).delete();			
+		}
+		
+//		pm.insert(UUID_TESLA);
+//		pm.insert(UUID_CURIE);
+//		pm.insert(UUID_EINSTEIN);
+//
+//		pm.insert(LongAutoID_TESLA);
+//		pm.insert(LongAutoID_CURIE);
+//		pm.insert(LongAutoID_EINSTEIN);
+//
+//		pm.insert(LongManualID_TESLA);
+//		pm.insert(LongManualID_CURIE);
+//		pm.insert(LongManualID_EINSTEIN);
+//
+//		pm.insert(StringID_TESLA);
+//		pm.insert(StringID_CURIE);
+//		pm.insert(StringID_EINSTEIN);
+
+		pm.insert(UUID_TESLA, UUID_CURIE, UUID_EINSTEIN);
+		pm.insert(LongAutoID_TESLA, LongAutoID_CURIE, LongAutoID_EINSTEIN);
+		pm.insert(LongManualID_TESLA, LongManualID_CURIE, LongManualID_EINSTEIN);
+		pm.insert(StringID_TESLA, StringID_CURIE, StringID_EINSTEIN);
+	}
+	
 	protected List<PersonUUID> getOrderedPersonUUIDs() {
+		@SuppressWarnings("serial")
 		ArrayList<PersonUUID> l = new ArrayList<PersonUUID>() {{ 
 			add(UUID_TESLA); 
 			add(UUID_CURIE);
@@ -303,6 +348,12 @@ public abstract class BaseTest extends TestCase {
 		assertEquals(LongManualID_EINSTEIN, person);
 	}
 	
+	public void testFilterOperatorEqualStringID() {
+		PersonStringID person = pm.createQuery(PersonStringID.class).filter("id", "EINSTEIN").get();
+		assertNotNull(person);
+		assertEquals(StringID_EINSTEIN, person);
+	}
+	
 	public void testFilterOperatorNotEqualString() {
 		List<PersonStringID> people = pm.createQuery(PersonStringID.class).filter("firstName!=", "Albert").order("firstName").fetch();
 
@@ -365,6 +416,7 @@ public abstract class BaseTest extends TestCase {
 	}
 
 	public void testFilterOperatorIn() {
+		@SuppressWarnings("serial")
 		List<PersonUUID> people = 
 			pm.createQuery(PersonUUID.class)
 				.filter("n IN", new ArrayList<Integer>(){{ 
@@ -382,6 +434,7 @@ public abstract class BaseTest extends TestCase {
 	}
 	
 	public void testFilterOperatorInOrder() {
+		@SuppressWarnings("serial")
 		List<PersonUUID> people = 
 			pm.createQuery(PersonUUID.class)
 				.filter("n IN", new ArrayList<Integer>(){{ 
@@ -414,6 +467,7 @@ public abstract class BaseTest extends TestCase {
 	}
 	
 	public void testFilterOperatorInForLongAutoID() {
+		@SuppressWarnings("serial")
 		List<PersonLongAutoID> people = 
 			pm.createQuery(PersonLongAutoID.class)
 				.filter("id IN", new ArrayList<Long>(){{ 
@@ -430,6 +484,7 @@ public abstract class BaseTest extends TestCase {
 	}
 
 	public void testFilterOperatorInForLongManualID() {
+		@SuppressWarnings("serial")
 		List<PersonLongManualID> people = 
 			pm.createQuery(PersonLongManualID.class)
 				.filter("id IN", new ArrayList<Long>(){{ 
@@ -446,6 +501,7 @@ public abstract class BaseTest extends TestCase {
 	}
 	
 	public void testFilterOperatorInForStringID() {
+		@SuppressWarnings("serial")
 		List<PersonStringID> people = 
 			pm.createQuery(PersonStringID.class)
 				.filter("id IN", new ArrayList<String>(){{ 
@@ -938,6 +994,7 @@ public abstract class BaseTest extends TestCase {
 
 		assertNotNull(people);
 
+		@SuppressWarnings("serial")
 		ArrayList<PersonUUID> l = new ArrayList<PersonUUID>() {{ 
 			add(UUID_TESLA); 
 			add(UUID_CURIE);
@@ -946,7 +1003,8 @@ public abstract class BaseTest extends TestCase {
 		
 		int i = 0;
 		for (PersonUUID person : people) {
-			assertEquals( l.get(i), person);
+			PersonUUID p = l.get(i);
+			assertEquals(p, person);
 			i++;
 		}
 	}
@@ -998,6 +1056,7 @@ public abstract class BaseTest extends TestCase {
 
 		assertNotNull(people);
 
+		@SuppressWarnings("serial")
 		ArrayList<PersonUUID> l = new ArrayList<PersonUUID>() {{ 
 			add(UUID_TESLA); 
 			add(UUID_CURIE);
@@ -1057,6 +1116,7 @@ public abstract class BaseTest extends TestCase {
 
 		assertNotNull(people);
 
+		@SuppressWarnings("serial")
 		ArrayList<PersonUUID> l = new ArrayList<PersonUUID>() {{ 
 			add(UUID_CURIE);
 			add(UUID_EINSTEIN);
@@ -1518,7 +1578,7 @@ public abstract class BaseTest extends TestCase {
 		assertEquals(teslaCoil, res.get(3));
 	}
 	
-	public void testFetchPaginate() {
+/*	public void testFetchPaginate() {
 		Discovery[] discs = new Discovery[10];
 		for(int i=0; i<10; i++){
 			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
@@ -1545,7 +1605,7 @@ public abstract class BaseTest extends TestCase {
 			pm.insert(discs[i]);
 		}
 		
-		Query<Discovery> query = pm.createQuery(Discovery.class).paginate(5).order("name").reuse();
+		Query<Discovery> query = pm.createQuery(Discovery.class).paginate(5).order("name").stateful();
 		try {
 			List<Discovery> res = query.fetch();
 			assertEquals(5, res.size());
@@ -1594,7 +1654,7 @@ public abstract class BaseTest extends TestCase {
 			pm.insert(discs[i]);
 		}
 
-		Query<Discovery> query = pm.createQuery(Discovery.class).paginate(5).order("name").reuse();
+		Query<Discovery> query = pm.createQuery(Discovery.class).paginate(5).order("name").stateful();
 		try {
 			List<Discovery> res = query.fetchKeys();
 			assertEquals(5, res.size());
@@ -1663,110 +1723,7 @@ public abstract class BaseTest extends TestCase {
 		}
 	}
 	
-	public void testFetchOffset() {
-		Discovery[] discs = new Discovery[10];
-		for(int i=0; i<10; i++){
-			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
-			pm.insert(discs[i]);
-		}
 
-		Query<Discovery> query = pm.createQuery(Discovery.class).order("name").offset(3);
-		List<Discovery> res = query.fetch();
-
-		assertEquals(7, res.size());
-		for(int i=0; i<7; i++){
-			assertEquals(discs[i+3], res.get(i));
-		}
-	}
-	
-	public void testFetchPaginateOffset() {
-		Discovery[] discs = new Discovery[10];
-		for(int i=0; i<10; i++){
-			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
-			pm.insert(discs[i]);
-		}
-
-		Query<Discovery> query = pm.createQuery(Discovery.class).order("name").paginate(3).offset(3);
-		
-		// 3.4.5
-		List<Discovery> res = query.fetch();
-		assertEquals(3, res.size());
-		for(int i=0; i<3; i++){
-			assertEquals(discs[i+3], res.get(i));
-		}
-		
-		// 6.7.8
-		res = query.fetch();
-		assertEquals(3, res.size());
-		for(int i=0; i<3; i++){
-			assertEquals(discs[i+6], res.get(i));
-		}
-		
-		// 9
-		res = query.fetch();
-		assertEquals(1, res.size());
-		for(int i=0; i<1; i++){
-			assertEquals(discs[i+9], res.get(i));
-		}
-	}
-	
-	
-	public void testIterOffset() {
-		Discovery[] discs = new Discovery[10];
-		for(int i=0; i<10; i++){
-			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
-			pm.insert(discs[i]);
-		}
-
-		Query<Discovery> query = pm.createQuery(Discovery.class).order("name").offset(4);
-		try {
-			Iterable<Discovery> res = query.iter();
-	
-			int i=4;
-			Iterator<Discovery> it = res.iterator();
-			while(it.hasNext()){
-				assertEquals(discs[i++], it.next());
-			}
-			assertEquals(10, i);
-		}finally {
-			query.release();
-		}
-	}
-	
-	public void testIterPaginateOffset() {
-		Discovery[] discs = new Discovery[10];
-		for(int i=0; i<10; i++){
-			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
-			pm.insert(discs[i]);
-		}
-
-		Query<Discovery> query = pm.createQuery(Discovery.class).order("name").paginate(3).offset(3);
-		try {
-			int i=3;
-			
-			Iterator<Discovery> it = query.iter().iterator();	
-			while(it.hasNext()){
-				assertEquals(discs[i++], it.next());
-			}
-			assertEquals(6, i);
-			
-			it = query.iter().iterator();	
-			while(it.hasNext()){
-				assertEquals(discs[i++], it.next());
-			}
-			assertEquals(9, i);
-
-			it = query.iter().iterator();	
-			while(it.hasNext()){
-				assertEquals(discs[i++], it.next());
-			}
-			assertEquals(10, i);
-
-		}finally {
-			query.release();
-		}
-	}
-	
 	public void testSearchSingle() {
 		Discovery4Search[] discs = new Discovery4Search[10];
 		for(int i=0; i<10; i++){
@@ -1876,7 +1833,1355 @@ public abstract class BaseTest extends TestCase {
 		assertEquals(1, res.size());
 		assertEquals(StringID_EINSTEIN, res.get(0));
 	}
+	*/
 	
+	
+	public void testFetchPaginateStatelessNextPage() {
+		Discovery[] discs = new Discovery[10];
+		for(int i=0; i<10; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs);
+
+		Query<Discovery> query = pm.createQuery(Discovery.class).paginate(5).order("name");
+		List<Discovery> res = query.fetch();
+		assertEquals(5, res.size());
+		for(int i=0; i<5; i++){
+			assertEquals(discs[i], res.get(i));
+		}
+		res = query.nextPage().fetch();
+		assertEquals(5, res.size());
+		for(int i=0; i<5; i++){
+			assertEquals(discs[i+5], res.get(i));
+		}
+	}
+
+	public void testFetchPaginateStatelessNextPageToEnd() {
+		Discovery[] discs = new Discovery[10];
+		for(int i=0; i<10; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs);
+
+		Query<Discovery> query = pm.createQuery(Discovery.class).paginate(5).order("name");
+		List<Discovery> res = query.fetch();
+		assertEquals(5, res.size());
+		for(int i=0; i<5; i++){
+			assertEquals(discs[i], res.get(i));
+		}
+		res = query.nextPage().fetch();
+		assertEquals(5, res.size());
+		for(int i=0; i<5; i++){
+			assertEquals(discs[i+5], res.get(i));
+		}
+		
+		res = query.nextPage().fetch();
+		assertEquals(0, res.size());
+
+		res = query.nextPage().fetch();
+		assertEquals(0, res.size());
+
+		res = query.previousPage().fetch();
+		assertEquals(5, res.size());
+		for(int i=0; i<5; i++){
+			assertEquals(discs[i+5], res.get(i));
+		}
+		
+		res = query.nextPage().fetch();
+		assertEquals(0, res.size());
+	}
+	
+	public void testFetchPaginateStatelessPreviousPageFromScratch() {
+		Discovery[] discs = new Discovery[10];
+		for(int i=0; i<10; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs);
+
+		Query<Discovery> query = pm.createQuery(Discovery.class).paginate(5).order("name");
+		List<Discovery> res = query.previousPage().fetch();
+		assertEquals(0, res.size());
+
+		res = query.nextPage().fetch();
+		assertEquals(5, res.size());
+		for(int i=0; i<5; i++){
+			assertEquals(discs[i], res.get(i));
+		}
+		
+		res = query.previousPage().fetch();
+		assertEquals(0, res.size());
+		
+		res = query.previousPage().fetch();
+		assertEquals(0, res.size());
+	}
+	
+	public void testFetchPaginateStatelessPreviousPage() {
+		Discovery[] discs = new Discovery[10];
+		for(int i=0; i<10; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs);
+
+		Query<Discovery> query = pm.createQuery(Discovery.class).paginate(5).order("name");
+		List<Discovery> res = query.nextPage().fetch();
+		assertEquals(5, res.size());
+		for(int i=0; i<5; i++){
+			assertEquals(discs[i+5], res.get(i));
+		}
+		
+		res = query.previousPage().fetch();
+		assertEquals(5, res.size());
+		for(int i=0; i<5; i++){
+			assertEquals(discs[i], res.get(i));
+		}
+	}
+	
+	public void testFetchPaginateStatelessSeveralTimes() {
+		Discovery[] discs = new Discovery[15];
+		for(int i=0; i<15; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs);
+
+		Query<Discovery> query = pm.createQuery(Discovery.class).paginate(5).order("id");
+		List<Discovery> res = query.fetch();
+		assertEquals(5, res.size());
+		for(int i=0; i<5; i++){
+			assertEquals(discs[i], res.get(i));
+		}		
+		
+		res = query.nextPage().fetch();
+		assertEquals(5, res.size());
+		for(int i=0; i<5; i++){
+			assertEquals(discs[i+5], res.get(i));
+		}
+		
+		res = query.nextPage().fetch();
+		assertEquals(5, res.size());
+		for(int i=0; i<5; i++){
+			assertEquals(discs[i+10], res.get(i));
+		}
+		
+		res = query.previousPage().fetch();
+		assertEquals(5, res.size());
+		for(int i=0; i<5; i++){
+			assertEquals(discs[i+5], res.get(i));
+		}
+		
+		res = query.previousPage().fetch();
+		assertEquals(5, res.size());
+		for(int i=0; i<5; i++){
+			assertEquals(discs[i], res.get(i));
+		}
+	}
+	
+	public void testFetchPaginateStatefulNextPage() {
+		Discovery[] discs = new Discovery[10];
+		for(int i=0; i<10; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs);
+
+		Query<Discovery> query = pm.createQuery(Discovery.class).paginate(5).stateful().order("id");
+		List<Discovery> res = query.fetch();
+		assertEquals(5, res.size());
+		for(int i=0; i<5; i++){
+			assertEquals(discs[i], res.get(i));
+		}
+		res = query.nextPage().fetch();
+		assertEquals(5, res.size());
+		for(int i=0; i<5; i++){
+			assertEquals(discs[i+5], res.get(i));
+		}
+		
+		res = query.nextPage().fetch();
+		assertEquals(0, res.size());
+	}
+	
+	public void testFetchPaginateStatefulNextPageToEnd() {
+		Discovery[] discs = new Discovery[10];
+		for(int i=0; i<10; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs);
+
+		Query<Discovery> query = pm.createQuery(Discovery.class).paginate(5).order("name").stateful();
+		List<Discovery> res = query.fetch();
+		assertEquals(5, res.size());
+		for(int i=0; i<5; i++){
+			assertEquals(discs[i], res.get(i));
+		}
+		res = query.nextPage().fetch();
+		assertEquals(5, res.size());
+		for(int i=0; i<5; i++){
+			assertEquals(discs[i+5], res.get(i));
+		}
+		
+		res = query.nextPage().fetch();
+		assertEquals(0, res.size());
+
+		res = query.nextPage().fetch();
+		assertEquals(0, res.size());
+
+		res = query.previousPage().fetch();
+		assertEquals(5, res.size());
+		for(int i=0; i<5; i++){
+			assertEquals(discs[i+5], res.get(i));
+		}
+		
+		res = query.nextPage().fetch();
+		assertEquals(0, res.size());
+	}	
+
+	public void testFetchPaginateStatefulPreviousPageFromScratch() {
+		Discovery[] discs = new Discovery[10];
+		for(int i=0; i<10; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs);
+
+		Query<Discovery> query = pm.createQuery(Discovery.class).paginate(5).stateful().order("name");
+		List<Discovery> res = query.previousPage().fetch();
+		assertEquals(0, res.size());
+
+		res = query.nextPage().fetch();
+		assertEquals(5, res.size());
+		for(int i=0; i<5; i++){
+			assertEquals(discs[i], res.get(i));
+		}
+		
+		res = query.previousPage().fetch();
+		assertEquals(0, res.size());
+		
+		res = query.previousPage().fetch();
+		assertEquals(0, res.size());
+	}
+	
+	public void testFetchPaginateStatefulPreviousPage() {
+		Discovery[] discs = new Discovery[10];
+		for(int i=0; i<10; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs);
+
+		Query<Discovery> query = pm.createQuery(Discovery.class).paginate(5).stateful().order("name");
+		List<Discovery> res = query.fetch();
+		assertEquals(5, res.size());
+		for(int i=0; i<5; i++){
+			assertEquals(discs[i], res.get(i));
+		}
+
+		res = query.nextPage().fetch();
+		assertEquals(5, res.size());
+		for(int i=0; i<5; i++){
+			assertEquals(discs[i+5], res.get(i));
+		}
+		
+		res = query.previousPage().fetch();
+		assertEquals(5, res.size());
+		for(int i=0; i<5; i++){
+			assertEquals(discs[i], res.get(i));
+		}
+	}
+	
+	public void testFetchPaginateStatefulPreviouPageSeveralTimes() {
+		Discovery[] discs = new Discovery[15];
+		for(int i=0; i<15; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs);
+
+		Query<Discovery> query = pm.createQuery(Discovery.class).paginate(5).stateful().order("id");
+		List<Discovery> res = query.fetch();
+		assertEquals(5, res.size());
+		for(int i=0; i<5; i++){
+			assertEquals(discs[i], res.get(i));
+		}		
+		
+		res = query.nextPage().fetch();
+		assertEquals(5, res.size());
+		for(int i=0; i<5; i++){
+			assertEquals(discs[i+5], res.get(i));
+		}
+		
+		res = query.nextPage().fetch();
+		assertEquals(5, res.size());
+		for(int i=0; i<5; i++){
+			assertEquals(discs[i+10], res.get(i));
+		}
+		
+		res = query.previousPage().fetch();
+		assertEquals(5, res.size());
+		for(int i=0; i<5; i++){
+			assertEquals(discs[i+5], res.get(i));
+		}
+		
+		res = query.previousPage().fetch();
+		assertEquals(5, res.size());
+		for(int i=0; i<5; i++){
+			assertEquals(discs[i], res.get(i));
+		}
+	}
+	
+	public void testFetchKeysPaginateStatelessNextPage() {
+		Discovery[] discs = new Discovery[10];
+		for(int i=0; i<10; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs);
+
+		Query<Discovery> query = pm.createQuery(Discovery.class).paginate(5).order("name");
+		List<Discovery> res = query.fetchKeys();
+		assertEquals(5, res.size());
+		for(int i=0; i<5; i++){
+			assertEquals(discs[i].id, res.get(i).id);
+			assertTrue(res.get(i).isOnlyIdFilled());
+		}
+		res = query.nextPage().fetchKeys();
+		assertEquals(5, res.size());
+		for(int i=0; i<5; i++){
+			assertEquals(discs[i+5].id, res.get(i).id);
+			assertTrue(res.get(i).isOnlyIdFilled());
+		}
+	}
+	
+	public void testFetchKeysPaginateStatelessPreviousPageFromScratch() {
+		Discovery[] discs = new Discovery[10];
+		for(int i=0; i<10; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs);
+
+		Query<Discovery> query = pm.createQuery(Discovery.class).paginate(5).order("name");
+		List<Discovery> res = query.previousPage().fetchKeys();
+		assertEquals(0, res.size());
+
+		res = query.previousPage().fetchKeys();
+		assertEquals(0, res.size());
+	}
+	
+	public void testFetchKeysPaginateStatelessPreviousPage() {
+		Discovery[] discs = new Discovery[10];
+		for(int i=0; i<10; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs);
+
+		Query<Discovery> query = pm.createQuery(Discovery.class).paginate(5).order("name");
+		List<Discovery> res = query.nextPage().fetchKeys();
+		assertEquals(5, res.size());
+		for(int i=0; i<5; i++){
+			assertEquals(discs[i+5].id, res.get(i).id);
+			assertTrue(res.get(i).isOnlyIdFilled());
+		}
+		
+		res = query.previousPage().fetchKeys();
+		assertEquals(5, res.size());
+		for(int i=0; i<5; i++){
+			assertEquals(discs[i].id, res.get(i).id);
+			assertTrue(res.get(i).isOnlyIdFilled());
+		}
+	}
+	
+	public void testFetchKeysPaginateStatelessPreviouPageSeveralTimes() {
+		Discovery[] discs = new Discovery[15];
+		for(int i=0; i<15; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs);
+
+		Query<Discovery> query = pm.createQuery(Discovery.class).paginate(5).order("id");
+		List<Discovery> res = query.fetchKeys();
+		assertEquals(5, res.size());
+		for(int i=0; i<5; i++){
+			assertEquals(discs[i].id, res.get(i).id);
+			assertTrue(res.get(i).isOnlyIdFilled());
+		}		
+		
+		res = query.nextPage().fetchKeys();
+		assertEquals(5, res.size());
+		for(int i=0; i<5; i++){
+			assertEquals(discs[i+5].id, res.get(i).id);
+			assertTrue(res.get(i).isOnlyIdFilled());
+		}
+		
+		res = query.nextPage().fetchKeys();
+		assertEquals(5, res.size());
+		for(int i=0; i<5; i++){
+			assertEquals(discs[i+10].id, res.get(i).id);
+			assertTrue(res.get(i).isOnlyIdFilled());
+		}
+		
+		res = query.previousPage().fetchKeys();
+		assertEquals(5, res.size());
+		for(int i=0; i<5; i++){
+			assertEquals(discs[i+5].id, res.get(i).id);
+			assertTrue(res.get(i).isOnlyIdFilled());
+		}
+		
+		res = query.previousPage().fetchKeys();
+		assertEquals(5, res.size());
+		for(int i=0; i<5; i++){
+			assertEquals(discs[i].id, res.get(i).id);
+			assertTrue(res.get(i).isOnlyIdFilled());
+		}
+	}
+	
+	public void testFetchKeysPaginateStatefulNextPage() {
+		Discovery[] discs = new Discovery[10];
+		for(int i=0; i<10; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs);
+
+		Query<Discovery> query = pm.createQuery(Discovery.class).paginate(5).stateful().order("id");
+		List<Discovery> res = query.fetchKeys();
+		assertEquals(5, res.size());
+		for(int i=0; i<5; i++){
+			assertEquals(discs[i].id, res.get(i).id);
+			assertTrue(res.get(i).isOnlyIdFilled());
+		}
+		res = query.nextPage().fetchKeys();
+		assertEquals(5, res.size());
+		for(int i=0; i<5; i++){
+			assertEquals(discs[i+5].id, res.get(i).id);
+			assertTrue(res.get(i).isOnlyIdFilled());
+		}
+	}
+
+	
+	public void testFetchKeysPaginateStatefulPreviousPageFromScratch() {
+		Discovery[] discs = new Discovery[10];
+		for(int i=0; i<10; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs);
+
+		Query<Discovery> query = pm.createQuery(Discovery.class).paginate(5).stateful().order("name");
+		List<Discovery> res = query.previousPage().fetchKeys();
+		assertEquals(0, res.size());
+
+		res = query.previousPage().fetchKeys();
+		assertEquals(0, res.size());
+	}
+	
+	public void testFetchKeysPaginateStatefulPreviousPage() {
+		Discovery[] discs = new Discovery[10];
+		for(int i=0; i<10; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs);
+
+		Query<Discovery> query = pm.createQuery(Discovery.class).paginate(5).stateful().order("name");
+		List<Discovery> res = query.fetchKeys();
+		assertEquals(5, res.size());
+		for(int i=0; i<5; i++){
+			assertEquals(discs[i].id, res.get(i).id);
+			assertTrue(res.get(i).isOnlyIdFilled());
+		}
+
+		res = query.nextPage().fetchKeys();
+		assertEquals(5, res.size());
+		for(int i=0; i<5; i++){
+			assertEquals(discs[i+5].id, res.get(i).id);
+			assertTrue(res.get(i).isOnlyIdFilled());
+		}
+		
+		res = query.previousPage().fetchKeys();
+		assertEquals(5, res.size());
+		for(int i=0; i<5; i++){
+			assertEquals(discs[i].id, res.get(i).id);
+			assertTrue(res.get(i).isOnlyIdFilled());
+		}
+	}
+	
+	public void testFetchKeysPaginateStatefulSeveralTimes() {
+		Discovery[] discs = new Discovery[15];
+		for(int i=0; i<15; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs);
+
+		Query<Discovery> query = pm.createQuery(Discovery.class).paginate(5).stateful().order("id");
+		List<Discovery> res = query.fetchKeys();
+		assertEquals(5, res.size());
+		for(int i=0; i<5; i++){
+			assertEquals(discs[i].id, res.get(i).id);
+		}		
+		
+		res = query.nextPage().fetchKeys();
+		assertEquals(5, res.size());
+		for(int i=0; i<5; i++){
+			assertEquals(discs[i+5].id, res.get(i).id);
+		}
+		
+		res = query.nextPage().fetchKeys();
+		assertEquals(5, res.size());
+		for(int i=0; i<5; i++){
+			assertEquals(discs[i+10].id, res.get(i).id);
+		}
+		
+		res = query.previousPage().fetchKeys();
+		assertEquals(5, res.size());
+		for(int i=0; i<5; i++){
+			assertEquals(discs[i+5].id, res.get(i).id);
+		}
+		
+		res = query.previousPage().fetchKeys();
+		assertEquals(5, res.size());
+		for(int i=0; i<5; i++){
+			assertEquals(discs[i].id, res.get(i).id);
+		}
+	}
+	
+	public void testIterPaginateStatelessNextPage() {
+		Discovery[] discs = new Discovery[10];
+		for(int i=0; i<10; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs);
+
+		Query<Discovery> query = pm.createQuery(Discovery.class).paginate(5).order("name");
+		try {
+			Iterable<Discovery> res = query.iter();
+			Iterator<Discovery> it = res.iterator();
+			int i=0;
+			while(it.hasNext()){
+				assertEquals(discs[i++], it.next());
+			}
+			assertEquals(5, i);
+
+			res = query.nextPage().iter();
+			it = res.iterator();
+			while(it.hasNext()){
+				assertEquals(discs[i++], it.next());
+			}
+			assertEquals(10, i);
+		}finally {
+			query.release();
+		}
+	}
+
+	public void testIterPaginateStatelessPreviousPageFromScratch() {
+		Discovery[] discs = new Discovery[10];
+		for(int i=0; i<10; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs);
+
+		Query<Discovery> query = pm.createQuery(Discovery.class).paginate(5).order("name");
+		Iterable<Discovery> future = query.previousPage().iter();
+		Iterator<Discovery> it = future.iterator();
+		int i=0;
+		while(it.hasNext()){
+			assertEquals(discs[i++], it.next());
+		}
+		assertEquals(0, i);
+
+		future = query.previousPage().iter();
+		i=0;
+		it = future.iterator();
+		while(it.hasNext()){
+			assertEquals(discs[i++], it.next());
+		}
+		assertEquals(0, i);
+
+	}
+	
+	public void testIterPaginateStatelessPreviousPage() {
+		Discovery[] discs = new Discovery[10];
+		for(int i=0; i<10; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs);
+
+		Query<Discovery> query = pm.createQuery(Discovery.class).paginate(5).order("name");
+		Iterable<Discovery> future = query.nextPage().iter();
+		Iterator<Discovery> it = future.iterator();
+		int i=5;
+		while(it.hasNext()){
+			assertEquals(discs[i++], it.next());
+		}
+		assertEquals(10, i);
+
+		future = query.previousPage().iter();
+		it = future.iterator();
+		i=0;
+		while(it.hasNext()){
+			assertEquals(discs[i++], it.next());
+		}
+		assertEquals(5, i);
+
+	}
+	
+	public void testIterPaginateStatelessPreviouPageSeveralTimes() {
+		Discovery[] discs = new Discovery[15];
+		for(int i=0; i<15; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs);
+
+		Query<Discovery> query = pm.createQuery(Discovery.class).paginate(5).order("id");
+		Iterable<Discovery> future = query.iter();
+		Iterator<Discovery> it = future.iterator();
+		int i=0;
+		while(it.hasNext()){
+			assertEquals(discs[i++], it.next());
+		}	
+		assertEquals(5, i);
+		
+		future = query.nextPage().iter();
+		it = future.iterator();
+		while(it.hasNext()){
+			assertEquals(discs[i++], it.next());
+		}	
+		assertEquals(10, i);
+		
+		future = query.nextPage().iter();
+		it = future.iterator();
+		while(it.hasNext()){
+			assertEquals(discs[i++], it.next());
+		}
+		assertEquals(15, i);
+	
+		future = query.previousPage().iter();
+		it = future.iterator();
+		i=5;
+		while(it.hasNext()){
+			assertEquals(discs[i++], it.next());
+		}
+		assertEquals(10, i);
+
+		future = query.previousPage().iter();
+		it = future.iterator();
+		i=0;
+		while(it.hasNext()){
+			assertEquals(discs[i++], it.next());
+		}
+		assertEquals(5, i);
+
+	}
+	
+	public void testIterPaginateStatefulNextPage() {
+		Discovery[] discs = new Discovery[10];
+		for(int i=0; i<10; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs);
+
+		Query<Discovery> query = pm.createQuery(Discovery.class).paginate(5).stateful().order("id");
+		Iterable<Discovery> future = query.iter();
+		Iterator<Discovery> it = future.iterator();
+		int i=0;
+		while(it.hasNext()){
+			assertEquals(discs[i++], it.next());
+		}	
+		future = query.nextPage().iter();
+		it = future.iterator();
+		while(it.hasNext()){
+			assertEquals(discs[i++], it.next());
+		}	
+		
+		assertEquals(10, i);
+	}
+	
+
+	
+	public void testIterPaginateStatefulPreviousPageFromScratch() {
+		Discovery[] discs = new Discovery[10];
+		for(int i=0; i<10; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs);
+
+		Query<Discovery> query = pm.createQuery(Discovery.class).paginate(5).stateful().order("name");
+		Iterable<Discovery> future = query.previousPage().iter();
+		Iterator<Discovery> it = future.iterator();
+		int i=0;
+		while(it.hasNext()){
+			Discovery disc = it.next();
+			assertEquals(discs[i++], disc);
+		}	
+		assertEquals(0, i);
+
+		it = future.iterator();
+		i=0;
+		while(it.hasNext()){
+			Discovery disc = it.next();
+			assertEquals(discs[i++], disc);
+		}	
+		assertEquals(0, i);
+	}
+	
+	public void testIterPaginateStatefulPreviousPage() {
+		Discovery[] discs = new Discovery[10];
+		for(int i=0; i<10; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs);
+
+		Query<Discovery> query = pm.createQuery(Discovery.class).paginate(5).stateful().order("name");
+		Iterable<Discovery> future = query.iter();
+		Iterator<Discovery> it = future.iterator();
+		int i=0;
+		while(it.hasNext()){
+			Discovery disc = it.next();
+			assertEquals(discs[i++], disc);
+		}	
+		assertEquals(5, i);
+
+		future = query.nextPage().iter();
+		it = future.iterator();
+		while(it.hasNext()){
+			Discovery disc = it.next();
+			assertEquals(discs[i++], disc);
+		}	
+		assertEquals(10, i);
+		
+		future = query.previousPage().iter();
+		it = future.iterator();
+		i=0;
+		while(it.hasNext()){
+			Discovery disc = it.next();
+			assertEquals(discs[i++], disc);
+		}	
+		assertEquals(5, i);
+	}
+	
+	
+	public void testIterPaginateStatefulPreviouPageSeveralTimes() {
+		Discovery[] discs = new Discovery[15];
+		for(int i=0; i<15; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs);
+
+		Query<Discovery> query = pm.createQuery(Discovery.class).paginate(5).stateful().order("id");
+		Iterable<Discovery> future = query.iter();
+		Iterator<Discovery> it = future.iterator();
+		int i=0;
+		while(it.hasNext()){
+			Discovery disc = it.next();
+			assertEquals(discs[i++], disc);
+		}	
+		assertEquals(5, i);	
+		
+		future = query.nextPage().iter();
+		it = future.iterator();
+		while(it.hasNext()){
+			Discovery disc = it.next();
+			assertEquals(discs[i++], disc);
+		}	
+		assertEquals(10, i);	
+		
+		future = query.nextPage().iter();
+		it = future.iterator();
+		while(it.hasNext()){
+			Discovery disc = it.next();
+			assertEquals(discs[i++], disc);
+		}	
+		assertEquals(15, i);	
+		
+		future = query.previousPage().iter();
+		i=5;
+		it = future.iterator();
+		while(it.hasNext()){
+			Discovery disc = it.next();
+			assertEquals(discs[i++], disc);
+		}	
+		assertEquals(10, i);	
+		
+		future = query.previousPage().iter();
+		i=0;
+		it = future.iterator();
+		while(it.hasNext()){
+			Discovery disc = it.next();
+			assertEquals(discs[i++], disc);
+		}	
+		assertEquals(5, i);
+	}
+	
+	
+	public void testIterLotsOfEntitiesStateless(){
+		Discovery[] discs = new Discovery[150];
+		for(int i=0; i<150; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs);
+		
+		Query<Discovery> query = pm.createQuery(Discovery.class).order("id");
+		Iterable<Discovery> future = query.iter();
+		Iterator<Discovery> it = future.iterator();
+		int i=0;
+		while(it.hasNext()){
+			Discovery disc = it.next();
+			assertEquals(discs[i++], disc);
+		}	
+		assertEquals(150, i);	
+	}
+	
+	public void testIterLotsOfEntitiesStateful(){
+		Discovery[] discs = new Discovery[150];
+		for(int i=0; i<150; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs);
+		
+		Query<Discovery> query = pm.createQuery(Discovery.class).stateful().order("id");
+		Iterable<Discovery> future = query.iter();
+		Iterator<Discovery> it = future.iterator();
+		int i=0;
+		while(it.hasNext()){
+			Discovery disc = it.next();
+			assertEquals(discs[i++], disc);
+		}	
+		assertEquals(150, i);	
+	}
+	
+	public void testIterLotsOfEntitiesStatefulMixed(){
+		Discovery[] discs = new Discovery[150];
+		for(int i=0; i<150; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs);
+		
+		Query<Discovery> query = pm.createQuery(Discovery.class).stateful().order("id");
+		Iterable<Discovery> res = query.iter(50);
+		Iterator<Discovery> it = res.iterator();
+		int i=0;
+		while(it.hasNext()){
+			Discovery disc = it.next();
+			assertEquals(discs[i++], disc);
+		}	
+		assertEquals(50, i);	
+
+		res = query.iter(50,50);
+		it = res.iterator();
+		i=100;
+		while(it.hasNext()){
+			Discovery disc = it.next();
+			assertEquals(discs[i++], disc);
+		}	
+		assertEquals(150, i);	
+
+		res = query.iter(50,100);
+		it = res.iterator();
+		while(it.hasNext()){
+			Discovery disc = it.next();
+			assertEquals(discs[i++], disc);
+		}	
+		assertEquals(150, i);	
+	}
+	
+	public void testIterLotsOfEntitiesStatefulMixed2(){
+		Discovery[] discs = new Discovery[150];
+		for(int i=0; i<150; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs);
+		
+		Query<Discovery> query = pm.createQuery(Discovery.class).stateful().order("id");
+		Iterable<Discovery> future = query.paginate(50).iter();
+		Iterator<Discovery> it = future.iterator();
+		int i=0;
+		while(it.hasNext()){
+			Discovery disc = it.next();
+			assertEquals(discs[i++], disc);
+		}	
+		assertEquals(50, i);	
+
+		future = query.iter(50,50);
+		it = future.iterator();
+		while(it.hasNext()){
+			Discovery disc = it.next();
+			assertEquals(discs[i++], disc);
+		}	
+		assertEquals(100, i);	
+
+	}
+
+	public void testIterLotsOfEntitiesStatefulMixed3(){
+		Discovery[] discs = new Discovery[150];
+		for(int i=0; i<150; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs);
+		
+		Query<Discovery> query = pm.createQuery(Discovery.class).stateful().order("id");
+		Iterable<Discovery> future = query.iter(50);
+		Iterator<Discovery> it = future.iterator();
+		int i=0;
+		while(it.hasNext()){
+			Discovery disc = it.next();
+			assertEquals(discs[i++], disc);
+		}	
+		assertEquals(50, i);	
+				
+		future = query.paginate(50).iter();
+		it = future.iterator();
+		i=50;
+		while(it.hasNext()){
+			Discovery disc = it.next();
+			assertEquals(discs[i++], disc);
+		}	
+		assertEquals(100, i);	
+	
+		future = query.iter();
+		it = future.iterator();
+		i=50;
+		while(it.hasNext()){
+			Discovery disc = it.next();
+			assertEquals(discs[i++], disc);
+		}	
+		assertEquals(100, i);	
+
+		future = query.nextPage().iter();
+		it = future.iterator();
+		while(it.hasNext()){
+			Discovery disc = it.next();
+			assertEquals(discs[i++], disc);
+		}	
+		assertEquals(150, i);	
+	}
+	
+	public void testFetchLotsOfEntitiesStatefulMixed(){
+		Discovery[] discs = new Discovery[150];
+		for(int i=0; i<150; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs);
+		
+		Query<Discovery> query = pm.createQuery(Discovery.class).stateful().order("id");
+		List<Discovery> res = query.paginate(50).fetch();
+		assertEquals(50, res.size());
+		for(int i=0; i<50; i++){
+			assertEquals(discs[i], res.get(i));
+		}
+		
+		res = query.fetch(50);
+		assertEquals(50, res.size());
+		for(int i=0; i<50; i++){
+			assertEquals(discs[i], res.get(i));
+		}
+		
+		res = query.nextPage().fetch();
+		assertEquals(50, res.size());
+		for(int i=0; i<50; i++){
+			assertEquals(discs[i+50], res.get(i));
+		}
+
+		res = query.fetch(50);
+		assertEquals(50, res.size());
+		for(int i=0; i<50; i++){
+			assertEquals(discs[i+50], res.get(i));
+		}
+	}
+	
+	public void testFetchLotsOfEntitiesStatefulMixed2(){
+		Discovery[] discs = new Discovery[150];
+		for(int i=0; i<150; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs);
+		
+		Query<Discovery> query = pm.createQuery(Discovery.class).stateful().order("id");
+		List<Discovery> res = query.fetch(50);
+		assertEquals(50, res.size());
+		for(int i=0; i<50; i++){
+			assertEquals(discs[i], res.get(i));
+		}
+		
+		res = query.paginate(50).fetch(50);
+		assertEquals(50, res.size());
+		for(int i=0; i<50; i++){
+			assertEquals(discs[i+50], res.get(i));
+		}
+		
+		res = query.nextPage().fetch();
+		assertEquals(50, res.size());
+		for(int i=0; i<50; i++){
+			assertEquals(discs[i+100], res.get(i));
+		}
+
+		res = query.fetch(50);
+		assertEquals(50, res.size());
+		for(int i=0; i<50; i++){
+			assertEquals(discs[i+100], res.get(i));
+		}
+	}
+	
+	public void testFetchIterLotsOfEntitiesStatefulMixed(){
+		Discovery[] discs = new Discovery[150];
+		for(int i=0; i<150; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs);
+		
+		Query<Discovery> query = pm.createQuery(Discovery.class).stateful().order("id");
+		List<Discovery> res = query.fetch(50);
+		assertEquals(50, res.size());
+		for(int i=0; i<50; i++){
+			assertEquals(discs[i], res.get(i));
+		}
+		
+		Iterable<Discovery> res2 = query.iter(50);
+		Iterator<Discovery> it2 = res2.iterator();
+		int i=50;
+		while(it2.hasNext()){
+			Discovery disc = it2.next();
+			assertEquals(discs[i++], disc);
+		}	
+		assertEquals(100, i);	
+
+		res = query.paginate(25).fetch();
+		assertEquals(25, res.size());
+		for(i=0; i<25; i++){
+			assertEquals(discs[i+100], res.get(i));
+		}
+		
+		res2 = query.nextPage().iter();
+		it2 = res2.iterator();
+		i=125;
+		while(it2.hasNext()){
+			Discovery disc = it2.next();
+			assertEquals(discs[i++], disc);
+		}	
+		assertEquals(150, i);	
+		
+		res = query.previousPage().fetch();
+		assertEquals(25, res.size());
+		for(i=0; i<25; i++){
+			assertEquals(discs[i+100], res.get(i));
+		}
+		
+		res = query.previousPage().fetch();
+		assertEquals(25, res.size());
+		for(i=0; i<25; i++){
+			assertEquals(discs[i+75], res.get(i));
+		}
+		
+		res = query.previousPage().fetch();
+		assertEquals(25, res.size());
+		for(i=0; i<25; i++){
+			assertEquals(discs[i+50], res.get(i));
+		}
+		
+		res = query.nextPage().fetch();
+		assertEquals(25, res.size());
+		for(i=0; i<25; i++){
+			assertEquals(discs[i+75], res.get(i));
+		}
+		
+		res = query.nextPage().fetch();
+		assertEquals(25, res.size());
+		for(i=0; i<25; i++){
+			assertEquals(discs[i+100], res.get(i));
+		}
+		
+		res = query.nextPage().fetch();
+		assertEquals(25, res.size());
+		for(i=0; i<25; i++){
+			assertEquals(discs[i+125], res.get(i));
+		}
+		
+		res = query.nextPage().fetch();
+		assertEquals(0, res.size());
+		
+		res = query.previousPage().fetch();
+		assertEquals(25, res.size());
+		for(i=0; i<25; i++){
+			assertEquals(discs[i+125], res.get(i));
+		}
+		
+		res = query.previousPage().fetch();
+		assertEquals(25, res.size());
+		for(i=0; i<25; i++){
+			assertEquals(discs[i+100], res.get(i));
+		}
+		
+		res = query.previousPage().fetch();
+		assertEquals(25, res.size());
+		for(i=0; i<25; i++){
+			assertEquals(discs[i+75], res.get(i));
+		}
+		
+		res = query.previousPage().fetch();
+		assertEquals(25, res.size());
+		for(i=0; i<25; i++){
+			assertEquals(discs[i+50], res.get(i));
+		}
+		
+		res = query.previousPage().fetch();
+		assertEquals(25, res.size());
+		for(i=0; i<25; i++){
+			assertEquals(discs[i+25], res.get(i));
+		}
+		
+		res = query.previousPage().fetch();
+		assertEquals(25, res.size());
+		for(i=0; i<25; i++){
+			assertEquals(discs[i], res.get(i));
+		}
+	}
+	
+	public void testFetchIterLotsOfEntitiesStatefulMixed2(){
+		Discovery[] discs = new Discovery[200];
+		for(int i=0; i<200; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs);
+		
+		Query<Discovery> query = pm.createQuery(Discovery.class).stateful().order("id");
+		List<Discovery> res = query.fetch(50);
+		assertEquals(50, res.size());
+		for(int i=0; i<50; i++){
+			assertEquals(discs[i], res.get(i));
+		}
+
+		Iterable<Discovery> res2 = query.iter(50);
+		Iterator<Discovery> it2 = res2.iterator();
+		int i=50;
+		while(it2.hasNext()){
+			Discovery disc = it2.next();
+			assertEquals(discs[i++], disc);
+		}	
+		assertEquals(100, i);	
+		
+		res = query.fetch(50);
+		assertEquals(50, res.size());
+		for(i=0; i<50; i++){
+			assertEquals(discs[i+100], res.get(i));
+		}
+		
+		res2 = query.iter(50);
+		it2 = res2.iterator();
+		i=150;
+		while(it2.hasNext()){
+			Discovery disc = it2.next();
+			assertEquals(discs[i++], disc);
+		}	
+		assertEquals(200, i);	
+
+	}
+	
+	public void testFetchIterLotsOfEntitiesStatefulMixed3(){
+		Discovery[] discs = new Discovery[150];
+		for(int i=0; i<150; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs);
+		
+		Query<Discovery> query = pm.createQuery(Discovery.class).stateful().order("id");
+		List<Discovery> res = query.fetch(50);
+		assertEquals(50, res.size());
+		for(int i=0; i<50; i++){
+			assertEquals(discs[i], res.get(i));
+		}
+		
+		Iterable<Discovery> res2 = query.iter();
+		Iterator<Discovery> it2 = res2.iterator();
+		int i=50;
+		while(it2.hasNext()){
+			Discovery disc = it2.next();
+			assertEquals(discs[i++], disc);
+		}	
+		assertEquals(150, i);	
+	}
+	
+	public void testSearchSingle() {
+		Discovery4Search[] discs = new Discovery4Search[100];
+		for(int i=0; i<100; i++){
+			discs[i] = new Discovery4Search("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs);
+
+		Query<Discovery4Search> query = 
+			pm.createQuery(Discovery4Search.class).search("Disc_5", "name");
+		
+		List<Discovery4Search> res = query.fetch();
+				
+		assertEquals(1, res.size());
+		assertEquals(discs[5], res.get(0));
+	}
+	
+	public void testBatchInsert() {
+		Object[] discs = new Discovery[100];
+		for(int i=0; i<100; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		int nb = pm.insert(discs);
+		assertEquals(discs.length, nb);
+		
+		List<Discovery> res = 
+			pm.createQuery(Discovery.class).fetch();
+		
+		assertEquals(discs.length, res.size());
+		int i=0;
+		for(Discovery disc:res){
+			assertEquals(discs[i++], disc);
+		}
+	}
+	public void testBatchInsertList() {
+		List<Discovery> discs = new ArrayList<Discovery>();
+		for(int i=0; i<100; i++){
+			discs.add(new Discovery("Disc_"+i, LongAutoID_CURIE));
+		}
+		int nb = pm.insert(discs);
+		assertEquals(discs.size(), nb);
+		
+		List<Discovery> res = 
+			pm.createQuery(Discovery.class).fetch();
+		
+		assertEquals(discs.size(), res.size());
+		int i=0;
+		for(Discovery disc:res){
+			assertEquals(discs.get(i++), disc);
+		}
+	}
+	
+	public void testBatchDelete() {
+		Object[] discs = new Discovery[100];
+		for(int i=0; i<100; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert(discs);
+
+		List<Discovery> res = 
+			pm.createQuery(Discovery.class).fetch();
+		
+		assertEquals(discs.length, res.size());
+		
+		int nb = pm.delete(discs);
+		assertEquals(discs.length, nb);
+
+		res = 
+			pm.createQuery(Discovery.class).fetch();
+		
+		assertEquals(0, res.size());
+	}
+	
+	public void testBatchDeleteList() {
+		List<Discovery> discs = new ArrayList<Discovery>();
+		for(int i=0; i<100; i++){
+			Discovery disc = new Discovery("Disc_"+i, LongAutoID_CURIE);
+			discs.add(disc);
+		}
+		pm.insert(discs);
+
+		List<Discovery> res = 
+			pm.createQuery(Discovery.class).fetch();
+		
+		assertEquals(discs.size(), res.size());
+		
+		int nb = pm.delete(discs);
+		assertEquals(discs.size(), nb);
+		
+		res = 
+			pm.createQuery(Discovery.class).fetch();
+		
+		assertEquals(0, res.size());
+	}
+	
+	
+	public void testBatchDeleteByKeys() {
+		int nb = pm.deleteByKeys(PersonStringID.class, "TESLA", "CURIE");
+		assertEquals(2, nb);
+		
+		List<PersonStringID> res = 
+			pm.createQuery(PersonStringID.class).fetch();
+		
+		assertEquals(1, res.size());
+		assertEquals(StringID_EINSTEIN, res.get(0));
+	}
+	
+	public void testBatchDeleteByKeysList() {
+		int nb = pm.deleteByKeys(PersonStringID.class, new ArrayList<String>(){
+			private static final long serialVersionUID = 1L;
+			{add("TESLA"); add( "CURIE");}
+		});
+		assertEquals(2, nb);
+		
+		List<PersonStringID> res = 
+			pm.createQuery(PersonStringID.class).fetch();
+		
+		assertEquals(1, res.size());
+		assertEquals(StringID_EINSTEIN, res.get(0));
+	}
+	
+	public void testBatchGet() {
+		Discovery[] discs = new Discovery[100];
+		
+		for(int i=0; i<100; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs);
+
+		Discovery[] discs2Get = new Discovery[100];
+		for(int i=0; i<100; i++){
+			discs2Get[i] = new Discovery();
+			discs2Get[i].id = discs[i].id;
+		}
+		
+		int nb = pm.get((Object[])discs2Get);
+		assertEquals(discs.length, nb);
+		
+		assertEquals(discs.length, discs2Get.length);
+		for(int i=0; i<discs.length; i++){
+			assertEquals(discs[i], discs2Get[i]);
+		}		
+	}
+	
+	public void testBatchGetList() {
+		Discovery[] discs = new Discovery[100];
+		
+		for(int i=0; i<100; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs);
+
+		List<Discovery> discs2Get = new ArrayList<Discovery>();
+		for(int i=0; i<100; i++){
+			Discovery disc = new Discovery();
+			disc.id = discs[i].id;
+			discs2Get.add(disc);
+		}
+		
+		int nb = pm.get(discs2Get);
+		assertEquals(nb, discs.length);
+		int i=0;
+		for(Discovery disc:discs2Get){
+			assertEquals(discs[i++], disc);
+		}		
+	}
+	
+	public void testBatchGetByKeys() {
+		List<PersonStringID> res = pm.getByKeys(PersonStringID.class, "TESLA", "CURIE");
+		
+		assertEquals(2, res.size());
+		assertEquals(StringID_TESLA, res.get(0));
+		assertEquals(StringID_CURIE, res.get(1));
+	}
+	
+	public void testBatchGetByKeysList() {
+		Discovery[] discs = new Discovery[100];
+		
+		for(int i=0; i<100; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs);
+
+		List<Long> discsKeys = new ArrayList<Long>();
+		for(int i=0; i<100; i++){
+			discsKeys.add(discs[i].id);
+		}
+		
+		List<Discovery> discs2Get = pm.getByKeys(Discovery.class, discsKeys);
+		assertEquals(discs.length, discs2Get.size());
+		int i=0;
+		for(Discovery disc:discs2Get){
+			assertEquals(discs[i++], disc);
+		}		
+	}
 	
 	private PersonUUID getPersonUUID(String id) {
 		PersonUUID p = new PersonUUID();
@@ -1906,47 +3211,6 @@ public abstract class BaseTest extends TestCase {
 		return p;
 	}
 
-	@Override
-	protected void setUp() throws Exception {
-		super.setUp();
-		List<Class<?>> classes = new ArrayList<Class<?>>();
-		classes.add(PersonUUID.class);
-		classes.add(PersonLongAutoID.class);
-		classes.add(PersonLongManualID.class);
-		classes.add(PersonStringID.class);
-		if(supportsAutoincrement())
-			classes.add(AutoInc.class);
-		if(supportsMultipleKeys())
-			classes.add(MultipleKeys.class);
-		classes.add(Discovery.class);
-		classes.add(Discovery4Join.class);
-		classes.add(DiscoveryPrivate.class);
-		classes.add(Discovery4Search.class);
-		classes.add(DataTypes.class);
-		pm = createPersistenceManager(classes);
-		
-		for (Class<?> clazz : classes) {
-			List<?> items = pm.createQuery(clazz).fetch();
-			for (Object object : items) {
-				pm.delete(object);
-			}
-		}
-		
-		pm.insert(UUID_TESLA);
-		pm.insert(UUID_CURIE);
-		pm.insert(UUID_EINSTEIN);
-				
-		pm.insert(LongAutoID_TESLA);
-		pm.insert(LongAutoID_CURIE);
-		pm.insert(LongAutoID_EINSTEIN);
 
-		pm.insert(LongManualID_TESLA);
-		pm.insert(LongManualID_CURIE);
-		pm.insert(LongManualID_EINSTEIN);
-
-		pm.insert(StringID_TESLA);
-		pm.insert(StringID_CURIE);
-		pm.insert(StringID_EINSTEIN);
-}
 
 }

@@ -36,6 +36,7 @@ import siena.QueryFilterSimple;
 import siena.QueryOrder;
 import siena.SienaException;
 import siena.Util;
+import siena.core.async.PersistenceManagerAsync;
 
 public class RemotePersistenceManager extends AbstractPersistenceManager {
 	
@@ -269,45 +270,101 @@ public class RemotePersistenceManager extends AbstractPersistenceManager {
 	}
 
 	@Override
-	public void insert(Object... objects) {
+	public int insert(Object... objects) {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+
+	@Override
+	public int insert(Iterable<?> objects) {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+
+	@Override
+	public int delete(Object... models) {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+
+	@Override
+	public int delete(Iterable<?> models) {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+
+	@Override
+	public <T> int deleteByKeys(Class<T> clazz, Object... keys) {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+
+	@Override
+	public <T> int deleteByKeys(Class<T> clazz, Iterable<?> keys) {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+
+	@Override
+	public int get(Object... models) {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+
+	@Override
+	public <T> int get(Iterable<T> models) {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+
+	@Override
+	public <T> List<T> getByKeys(Class<T> clazz, Object... keys) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public <T> List<T> getByKeys(Class<T> clazz, Iterable<?> keys) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public <T> int update(Object... models) {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+
+	@Override
+	public <T> int update(Iterable<T> models) {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+
+	@Override
+	public <T> int update(Query<T> query, Map<String, ?> fieldValues) {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+
+	@Override
+	public <T> void nextPage(Query<T> query) {
 		// TODO Auto-generated method stub
 		
 	}
 
 	@Override
-	public void insert(Iterable<?> objects) {
+	public <T> void previousPage(Query<T> query) {
 		// TODO Auto-generated method stub
 		
 	}
 
 	@Override
-	public void delete(Object... models) {
+	public <T> PersistenceManagerAsync async() {
 		// TODO Auto-generated method stub
-		
+		return null;
 	}
 
-	@Override
-	public void delete(Iterable<?> models) {
-		// TODO Auto-generated method stub
-		
-	}
 
-	@Override
-	public <T> void deleteByKeys(Class<T> clazz, Object... keys) {
-		// TODO Auto-generated method stub
-		
-	}
-
-	@Override
-	public <T> void deleteByKeys(Class<T> clazz, Iterable<?> keys) {
-		// TODO Auto-generated method stub
-		
-	}
-
-	@Override
-	public void update(Map<String, ?> fieldValues) {
-		// TODO Auto-generated method stub
-		
-	}
 	
 }

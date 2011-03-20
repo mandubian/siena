@@ -1,5 +1,7 @@
 package siena;
 
+import siena.core.options.QueryOption;
+
 public class QueryFilterSearch extends QueryFilter {
 	
 	public String match;

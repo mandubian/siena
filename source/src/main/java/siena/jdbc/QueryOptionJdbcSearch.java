@@ -1,6 +1,6 @@
 package siena.jdbc;
 
-import siena.QueryOption;
+import siena.core.options.QueryOption;
 
 public class QueryOptionJdbcSearch extends QueryOption{
     public static final int ID 	= 0x1002;

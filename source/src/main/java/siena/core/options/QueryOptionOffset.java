@@ -1,4 +1,4 @@
-package siena;
+package siena.core.options;
 
 
 public class QueryOptionOffset extends QueryOption{

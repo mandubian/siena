@@ -27,6 +27,8 @@ public class ClassInfo {
 	
 	protected static Map<Class<?>, ClassInfo> infoClasses = new ConcurrentHashMap<Class<?>, ClassInfo>();
 	
+	public Class<?> clazz;
+	
 	public String tableName;
 
 	public List<Field> keys = new ArrayList<Field>();
@@ -37,6 +39,7 @@ public class ClassInfo {
 	public List<Field> joinFields = new ArrayList<Field>();
 
 	protected ClassInfo(Class<?> clazz) {
+		this.clazz = clazz;
 		tableName = getTableName(clazz);
 
 		Field[] fields = clazz.getDeclaredFields();	

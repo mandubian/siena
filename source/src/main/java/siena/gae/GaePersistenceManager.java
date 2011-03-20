@@ -12,592 +12,135 @@
  *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
+ *   
+ *   @author mandubian <pascal.voitot@mandubian.org>
  */
 package siena.gae;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import java.util.UUID;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+
+import org.apache.commons.lang.NotImplementedException;
 
 import siena.AbstractPersistenceManager;
 import siena.ClassInfo;
-import siena.Id;
-import siena.Json;
 import siena.Query;
-import siena.QueryFilter;
-import siena.QueryFilterSearch;
-import siena.QueryFilterSimple;
-import siena.QueryJoin;
-import siena.QueryOptionFetchType;
-import siena.QueryOptionOffset;
-import siena.QueryOptionPaginate;
-import siena.QueryOptionReuse;
-import siena.QueryOrder;
 import siena.SienaException;
-import siena.SienaRestrictedApiException;
-import siena.Util;
-import siena.embed.Embedded;
-import siena.embed.JsonSerializer;
+import siena.core.async.PersistenceManagerAsync;
+import siena.core.options.QueryOptionFetchType;
+import siena.core.options.QueryOptionOffset;
+import siena.core.options.QueryOptionPage;
+import siena.core.options.QueryOptionState;
 
-import com.google.appengine.api.datastore.Blob;
 import com.google.appengine.api.datastore.Cursor;
 import com.google.appengine.api.datastore.DatastoreService;
 import com.google.appengine.api.datastore.DatastoreServiceFactory;
 import com.google.appengine.api.datastore.Entity;
 import com.google.appengine.api.datastore.FetchOptions;
 import com.google.appengine.api.datastore.Key;
-import com.google.appengine.api.datastore.KeyFactory;
 import com.google.appengine.api.datastore.PreparedQuery;
-import com.google.appengine.api.datastore.Query.FilterOperator;
-import com.google.appengine.api.datastore.Query.SortDirection;
 import com.google.appengine.api.datastore.QueryResultIterable;
 import com.google.appengine.api.datastore.QueryResultList;
-import com.google.appengine.api.datastore.Text;
+import com.google.appengine.api.datastore.Transaction;
 
 public class GaePersistenceManager extends AbstractPersistenceManager {
 
 	private DatastoreService ds;
+	private PersistenceManagerAsync asyncPm;
+	/*
+	 * properties are not used but keeps it in case of...
+	 */
+	private Properties props;
 	
 	public static final String DB = "GAE";
 
+	public void init(Properties p) {
+		ds = DatastoreServiceFactory.getDatastoreService();
+		props = p;
+	}
+
+	public <T> PersistenceManagerAsync async() {
+		if(asyncPm==null){
+			asyncPm = new GaePersistenceManagerAsync();
+			asyncPm.init(props);
+		}
+		return asyncPm;		
+	}
+
+	
 	public void beginTransaction(int isolationLevel) {
+		ds.beginTransaction();
 	}
 
 	public void closeConnection() {
+		// does nothing
 	}
 
 	public void commitTransaction() {
+		Transaction txn = ds.getCurrentTransaction();
+		txn.commit();
 	}
 
+	public void rollbackTransaction() {
+		Transaction txn = ds.getCurrentTransaction();
+		txn.rollback();
+	}
+	
 	public void delete(Object obj) {
-		ds.delete(getKey(obj));
+		ds.delete(GaeMappingUtils.getKey(obj));
 	}
 
 	public void get(Object obj) {
-		Key key = getKey(obj);
+		Key key = GaeMappingUtils.getKey(obj);
 		try {
 			Entity entity = ds.get(key);
-			fillModel(obj, entity);
+			GaeMappingUtils.fillModel(obj, entity);
 		} catch (Exception e) {
 			throw new SienaException(e);
 		}
 	}
 
-	public void init(Properties p) {
-		ds = DatastoreServiceFactory.getDatastoreService();
-	}
 
 	public void insert(Object obj) {
 		Class<?> clazz = obj.getClass();
 		ClassInfo info = ClassInfo.getClassInfo(clazz);
 		Field idField = info.getIdField();
-		Entity entity = createEntityInstance(idField, info, obj);
-		fillEntity(obj, entity);
+		Entity entity = GaeMappingUtils.createEntityInstance(idField, info, obj);
+		GaeMappingUtils.fillEntity(obj, entity);
 		ds.put(entity);
-		setKey(idField, obj, entity.getKey());
+		GaeMappingUtils.setKey(idField, obj, entity.getKey());
 	}
 
-	protected static Entity createEntityInstance(Field idField, ClassInfo info, Object obj){
-		Entity entity = null;
-		Id id = idField.getAnnotation(Id.class);
-		if(id != null){
-			switch(id.value()) {
-			case NONE:
-				Object idVal = null;
-				try {
-					idVal = readField(obj, idField);
-				}catch(Exception ex){
-					throw new SienaException("Id Field " + idField.getName() + " access error", ex);
-				}
-				if(idVal == null)
-					throw new SienaException("Id Field " + idField.getName() + " value null");
-				String keyVal = Util.toString(idField, idVal);				
-				entity = new Entity(info.tableName, keyVal);
-				break;
-			case AUTO_INCREMENT:
-				entity = new Entity(info.tableName);
-				break;
-			case UUID:
-				entity = new Entity(info.tableName, UUID.randomUUID().toString());
-				break;
-			default:
-				throw new SienaRestrictedApiException("DB", "createEntityInstance", "Id Generator "+id.value()+ " not supported");
-			}
-		}
-		else throw new SienaException("Field " + idField.getName() + " is not an @Id field");
-		
-		return entity;
-	}
-	
-	protected static void setKey(Field idField, Object obj, Key key) {
-		Id id = idField.getAnnotation(Id.class);
-		if(id != null){
-			switch(id.value()) {
-			case NONE:
-				idField.setAccessible(true);
-				Object val = null;
-				if (idField.getType().isAssignableFrom(String.class))
-					val = key.getName();
-				else if (idField.getType().isAssignableFrom(Long.class))
-					val = Long.parseLong((String) key.getName());
-				else
-					throw new SienaRestrictedApiException("DB", "setKey", "Id Type "+idField.getType()+ " not supported");
-					
-				try {
-					idField.set(obj, val);
-				}catch(Exception ex){
-					throw new SienaException("Field " + idField.getName() + " access error", ex);
-				}
-				break;
-			case AUTO_INCREMENT:
-				// Long value means key.getId()
-				try {
-					idField.setAccessible(true);
-					idField.set(obj, key.getId());
-				}catch(Exception ex){
-					throw new SienaException("Field " + idField.getName() + " access error", ex);
-				}
-				break;
-			case UUID:
-				try {
-					idField.setAccessible(true);
-					idField.set(obj, key.getName());					
-				}catch(Exception ex){
-					throw new SienaException("Field " + idField.getName() + " access error", ex);
-				}
-				break;
-			default:
-				throw new SienaException("Id Generator "+id.value()+ " not supported");
-			}
-		}
-		else throw new SienaException("Field " + idField.getName() + " is not an @Id field");
-	}
 
-	public void rollbackTransaction() {
-	}
+
 
 	public void update(Object obj) {
 		try {
-			Entity entity = new Entity(getKey(obj));
-			fillEntity(obj, entity);
+			Entity entity = new Entity(GaeMappingUtils.getKey(obj));
+			GaeMappingUtils.fillEntity(obj, entity);
 			ds.put(entity);
 		} catch (Exception e) {
 			throw new SienaException(e);
 		}
 	}
 
-	protected static Key getKey(Object obj) {
-		Class<?> clazz = obj.getClass();
-		ClassInfo info = ClassInfo.getClassInfo(clazz);
-		
-		try {
-			Field idField = info.getIdField();
-			Object value = readField(obj, idField);
-			
-			if(idField.isAnnotationPresent(Id.class)){
-				Id id = idField.getAnnotation(Id.class);
-				switch(id.value()) {
-				case NONE:
-					// long or string goes toString
-					return KeyFactory.createKey(
-							ClassInfo.getClassInfo(clazz).tableName,
-							value.toString());
-				case AUTO_INCREMENT:
-					if (value instanceof String)
-						value = Long.parseLong((String) value);
-					return KeyFactory.createKey(
-							ClassInfo.getClassInfo(clazz).tableName,
-							(Long)value);
-				case UUID:
-					return KeyFactory.createKey(
-							ClassInfo.getClassInfo(clazz).tableName,
-							value.toString());
-				default:
-					throw new SienaException("Id Generator "+id.value()+ " not supported");
-				}
-			}
-			else throw new SienaException("Field " + idField.getName() + " is not an @Id field");
-		} catch (Exception e) {
-			throw new SienaException(e);
-		}
-	}
-
-	protected static Key makeKey(Class<?> clazz, Object value) {
-		ClassInfo info = ClassInfo.getClassInfo(clazz);
-		
-		try {
-			Field idField = info.getIdField();
-			
-			if(idField.isAnnotationPresent(Id.class)){
-				Id id = idField.getAnnotation(Id.class);
-				switch(id.value()) {
-				case NONE:
-					// long or string goes toString
-					return KeyFactory.createKey(
-							ClassInfo.getClassInfo(clazz).tableName,
-							value.toString());
-				case AUTO_INCREMENT:
-					if (value instanceof String)
-						value = Long.parseLong((String) value);
-					return KeyFactory.createKey(
-							ClassInfo.getClassInfo(clazz).tableName,
-							(Long)value);
-				case UUID:
-					return KeyFactory.createKey(
-							ClassInfo.getClassInfo(clazz).tableName,
-							value.toString());
-				default:
-					throw new SienaException("Id Generator "+id.value()+ " not supported");
-				}
-			}
-			else throw new SienaException("Field " + idField.getName() + " is not an @Id field");
-		} catch (Exception e) {
-			throw new SienaException(e);
-		}
-	}
-	
-	private static Object readField(Object object, Field field) {
-		field.setAccessible(true);
-		try {
-			return field.get(object);
-		} catch (Exception e) {
-			throw new SienaException(e);
-		} finally {
-			field.setAccessible(false);
-		}
-	}
-
-	protected static void fillEntity(Object obj, Entity entity) {
-		Class<?> clazz = obj.getClass();
-
-		for (Field field : ClassInfo.getClassInfo(clazz).updateFields) {
-			String property = ClassInfo.getColumnNames(field)[0];
-			Object value = readField(obj, field);
-			Class<?> fieldClass = field.getType();
-			if (ClassInfo.isModel(fieldClass)) {
-				if (value == null) {
-					entity.setProperty(property, null);
-				} else {
-					Key key = getKey(value);
-					entity.setProperty(property, key);
-				}
-			} else {
-				if (value != null) {
-					if (field.getType() == Json.class) {
-						value = value.toString();
-					} else if (value instanceof String) {
-						String s = (String) value;
-						if (s.length() > 500)
-							value = new Text(s);
-					} else if (value instanceof byte[]) {
-						byte[] arr = (byte[]) value;
-						// GAE Blob doesn't accept more than 1MB
-						if (arr.length < 1000000)
-							value = new Blob(arr);
-						else
-							value = new Blob(Arrays.copyOf(arr, 1000000));
-					}
-					else if (field.getAnnotation(Embedded.class) != null) {
-						value = JsonSerializer.serialize(value).toString();
-						String s = (String) value;
-						if (s.length() > 500)
-							value = new Text(s);
-					}
-					// enum is after embedded because an enum can be embedded
-					// don't know if anyone will use it but it will work :)
-					else if (Enum.class.isAssignableFrom(field.getType())) {
-						value = value.toString();
-					} 
-				}
-				Unindexed ui = field.getAnnotation(Unindexed.class);
-				if (ui == null) {
-					entity.setProperty(property, value);
-				} else {
-					entity.setUnindexedProperty(property, value);
-				}
-			}
-		}
-	}
-
-	protected static void fillModel(Object obj, Entity entity) {
-		Class<?> clazz = obj.getClass();
-
-		for (Field field : ClassInfo.getClassInfo(clazz).updateFields) {
-			field.setAccessible(true);
-			String property = ClassInfo.getColumnNames(field)[0];
-			try {
-				Class<?> fieldClass = field.getType();
-				if (ClassInfo.isModel(fieldClass)) {
-					Key key = (Key) entity.getProperty(property);
-					if (key != null) {
-						Object value = fieldClass.newInstance();
-						Field id = ClassInfo.getIdField(fieldClass);
-						setKey(id, value, key);
-						field.set(obj, value);
-					}
-				} else {
-					setFromObject(obj, field, entity.getProperty(property));
-				}
-			} catch (Exception e) {
-				throw new SienaException(e);
-			}
-		}
-	}
-
-	protected static void setFromObject(Object object, Field f, Object value)
-			throws IllegalArgumentException, IllegalAccessException {
-		if(value instanceof Text)
-			value = ((Text) value).getValue();
-		else if(value instanceof Blob && f.getType() == byte[].class) {
-			value = ((Blob) value).getBytes();
-		}
-		Util.setFromObject(object, f, value);
-	}
-
 	protected DatastoreService getDatastoreService() {
 		return ds;
 	}
 
-	protected static <T> List<T> mapEntities(List<Entity> entities,
-			Class<T> clazz) {
-		Field id = ClassInfo.getIdField(clazz);
-		List<T> list = new ArrayList<T>(entities.size());
-		for (Entity entity : entities) {
-			T obj;
-			try {
-				obj = clazz.newInstance();
-				fillModel(obj, entity);
-				list.add(obj);
-				setKey(id, obj, entity.getKey());
-			} catch (SienaException e) {
-				throw e;
-			} catch (Exception e) {
-				throw new SienaException(e);
-			}
-		}
-		return list;
-	}
 
-	protected static <T> List<T> mapEntitiesKeysOnly(List<Entity> entities,
-			Class<T> clazz) {
-		Field id = ClassInfo.getIdField(clazz);
-		List<T> list = new ArrayList<T>(entities.size());
-		for (Entity entity : entities) {
-			T obj;
-			try {
-				obj = clazz.newInstance();
-				list.add(obj);
-				setKey(id, obj, entity.getKey());
-			} catch (SienaException e) {
-				throw e;
-			} catch (Exception e) {
-				throw new SienaException(e);
-			}
-		}
-		return list;
-	}
-	
-	protected static <T> com.google.appengine.api.datastore.Query 
-			addFiltersOrders(
-					Query<T> query, 
-					com.google.appengine.api.datastore.Query q) 
-	{
-		List<QueryFilter> filters = query.getFilters();
-		for (QueryFilter filter : filters) {
-			if(QueryFilterSimple.class.isAssignableFrom(filter.getClass())){
-				QueryFilterSimple qf = (QueryFilterSimple)filter;
-				Field f = qf.field;
-				String propertyName = ClassInfo.getColumnNames(f)[0];
-				Object value = qf.value;
-				FilterOperator op = operators.get(qf.operator);
-				
-				// IN and NOT_EQUAL doesn't allow to use cursors
-				if(op == FilterOperator.IN || op == FilterOperator.NOT_EQUAL){
-					QueryOptionGaeContext gaeCtx = (QueryOptionGaeContext)query.option(QueryOptionGaeContext.ID);
-					gaeCtx.useCursor = false;
-				}
-				
-				if (value != null && ClassInfo.isModel(value.getClass())) {
-					Key key = getKey(value);
-					q.addFilter(propertyName, op, key);
-				} else {
-					if (ClassInfo.isId(f)) {
-						Id id = f.getAnnotation(Id.class);
-						switch(id.value()) {
-						case NONE:
-							if(!Collection.class.isAssignableFrom(value.getClass())){
-								// long or string goes toString
-								Key key = KeyFactory.createKey(
-										q.getKind(),
-										value.toString());
-								q.addFilter(Entity.KEY_RESERVED_PROPERTY, op, key);
-							}else {
-								List<Key> keys = new ArrayList<Key>();
-								for(Object val: (Collection<?>)value) {
-									keys.add(KeyFactory.createKey(q.getKind(), val.toString()));
-								}
-								q.addFilter(Entity.KEY_RESERVED_PROPERTY, op, keys);
-							}
-							break;
-						case AUTO_INCREMENT:
-							if(!Collection.class.isAssignableFrom(value.getClass())){
-								if (value instanceof String)
-									value = Long.parseLong((String) value);
-								Key key = KeyFactory.createKey(
-										q.getKind(),
-										(Long)value);
-								q.addFilter(Entity.KEY_RESERVED_PROPERTY, op, key);
-							}else {
-								List<Key> keys = new ArrayList<Key>();
-								for(Object val: (Collection<?>)value) {
-									if (value instanceof String)
-										val = Long.parseLong((String) val);
-									keys.add(KeyFactory.createKey(q.getKind(), (Long)val));
-								}
-								q.addFilter(Entity.KEY_RESERVED_PROPERTY, op, keys);
-							}
-							break;
-						case UUID:
-							if(!Collection.class.isAssignableFrom(value.getClass())){
-								// long or string goes toString
-								Key key = KeyFactory.createKey(
-										q.getKind(),
-										value.toString());
-								q.addFilter(Entity.KEY_RESERVED_PROPERTY, op, key);
-							}else {
-								List<Key> keys = new ArrayList<Key>();
-								for(Object val: (Collection<?>)value) {
-									keys.add(KeyFactory.createKey(q.getKind(), val.toString()));
-								}
-								q.addFilter(Entity.KEY_RESERVED_PROPERTY, op, keys);
-							}
-							break;
-						default:
-							throw new SienaException("Id Generator "+id.value()+ " not supported");
-						}
 
-					} else if (Enum.class.isAssignableFrom(f.getType())) {
-						value = value.toString();
-						q.addFilter(propertyName, op, value);
-					} else {
-						q.addFilter(propertyName, op, value);
-					}
-				}
-			}else if(QueryFilterSearch.class.isAssignableFrom(filter.getClass())){
-				Class<T> clazz = query.getQueriedClass();
-				QueryFilterSearch qf = (QueryFilterSearch)filter;
-				if(qf.fields.length>1)
-					throw new SienaRestrictedApiException(DB, "addFiltersOrders", "Search not possible for several fields in GAE: only one field");
-				try {
-					Field field = clazz.getDeclaredField(qf.fields[0]);
-					if(field.isAnnotationPresent(Unindexed.class)){
-						throw new SienaException("Cannot search the @Unindexed field "+field.getName());
-					}
-					
-					// cuts match into words
-					String[] words = qf.match.split("\\s");
-					
-					// if several words, then only OR operator represented by IN GAE
-					Pattern pNormal = Pattern.compile("[^\\*](\\w+)[^\\*]");
-					if(words.length>1){
-						for(String word:words){
-							if(!pNormal.matcher(word).matches()){
-								throw new SienaException("Cannot do a multiwords search with the * operator");
-							}
-						}
-						List<String> wordList = new ArrayList<String>();
-						Collections.addAll(wordList, words);
-						addSearchFilterIn(q, field, wordList);
-					}else {
-						// searches for pattern such as "alpha*" or "*alpha" or "alpha"
-						Pattern pStart = Pattern.compile("(\\w+)\\*");
-
-						String word = words[0];
-						Matcher matcher = pStart.matcher(word);
-						if(matcher.matches()){
-							String realWord = matcher.group(1);
-							addSearchFilterBeginsWith(q, field, realWord);
-							continue;
-						}
-						
-						matcher = pNormal.matcher(word);
-						if(matcher.matches()){
-							addSearchFilterEquals(q, field, word);
-							continue;
-						}
-						
-						Pattern pEnd = Pattern.compile("\\*(\\w+)");
-						matcher = pEnd.matcher(word);
-						if(matcher.matches()){
-							throw new SienaException("Cannot do a \"*word\" search in GAE");
-						} 						
-					}					
-				}catch(Exception e){
-					throw new SienaException(e);
-				}
-				break;
-			}
-		}
-
-		List<QueryOrder> orders = query.getOrders();
-		for (QueryOrder order : orders) {
-			Field f = order.field;
-			if (ClassInfo.isId(f)) {
-				q.addSort(Entity.KEY_RESERVED_PROPERTY,
-						order.ascending ? SortDirection.ASCENDING
-								: SortDirection.DESCENDING);
-			} else {
-				q.addSort(ClassInfo.getColumnNames(f)[0],
-						order.ascending ? SortDirection.ASCENDING
-								: SortDirection.DESCENDING);
-			}
-		}
-
-		return q;
-	}
-	
-	private static void addSearchFilterBeginsWith(com.google.appengine.api.datastore.Query q, Field field, String match) 
-	{
-		String[] columns = ClassInfo.getColumnNames(field);
-		if(columns.length>1)
-			throw new SienaException("Search not possible for multi-column fields in GAE: only one field with one column");
-		q.addFilter(columns[0], FilterOperator.GREATER_THAN_OR_EQUAL, match);
-		q.addFilter(columns[0], FilterOperator.LESS_THAN, match + "\ufffd");
-	}
-	
-	private static void addSearchFilterEquals(com.google.appengine.api.datastore.Query q, Field field, String match) 
-	{
-		String[] columns = ClassInfo.getColumnNames(field);
-		if(columns.length>1)
-			throw new SienaException("Search not possible for multi-column fields in GAE: only one field with one column");
-		q.addFilter(columns[0], FilterOperator.EQUAL, match);
-	}
-
-	
-	private static void addSearchFilterIn(com.google.appengine.api.datastore.Query q, Field field, List<String> matches) 
-	{
-		String[] columns = ClassInfo.getColumnNames(field);
-		if(columns.length>1)
-			throw new SienaException("Search not possible for multi-column fields in GAE: only one field with one column");
-		q.addFilter(columns[0], FilterOperator.IN, matches);
-	}
 	
 	private <T> PreparedQuery prepare(Query<T> query) {
 		Class<?> clazz = query.getQueriedClass();
 		com.google.appengine.api.datastore.Query q = new com.google.appengine.api.datastore.Query(
 				ClassInfo.getClassInfo(clazz).tableName);
 
-		return ds.prepare(addFiltersOrders(query, q));
+		return ds.prepare(GaeQueryUtils.addFiltersOrders(query, q));
 	}
 
 	private <T> PreparedQuery prepareKeysOnly(Query<T> query) {
@@ -605,11 +148,117 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 		com.google.appengine.api.datastore.Query q = new com.google.appengine.api.datastore.Query(
 				ClassInfo.getClassInfo(clazz).tableName);
 
-		return ds.prepare(addFiltersOrders(query, q).setKeysOnly());
+		return ds.prepare(GaeQueryUtils.addFiltersOrders(query, q).setKeysOnly());
 	}
 
 	
+	protected <T> T mapJoins(Query<T> query, T model) {
+		try {
+			// join queries
+			Map<Field, ArrayList<Key>> fieldMap = GaeQueryUtils.buildJoinFieldKeysMap(query);
+			
+			// creates the list of joined entity keys to extract 
+			for(Field field: fieldMap.keySet()){
+				Key key = GaeMappingUtils.getKey(field.get(model));
+				List<Key> keys = fieldMap.get(field);
+				if(!keys.contains(key))
+					keys.add(key);
+			}
+			
+			Map<Field, Map<Key, Entity>> entityMap = 
+				new HashMap<Field, Map<Key, Entity>>();
+
+			try {
+				// retrieves all joined entities per field
+				for(Field field: fieldMap.keySet()){
+					Map<Key, Entity> entities = ds.get(fieldMap.get(field));
+					entityMap.put(field, entities);
+				}
+			}catch(Exception ex){
+				throw new SienaException(ex);
+			}
+			// associates linked models to their models
+			// linkedModels is just a map to contain entities already mapped
+			Map<Key, Object> linkedModels = new HashMap<Key, Object>();
+			Object linkedObj;
+			Entity entity; 
+			
+			for(Field field: fieldMap.keySet()){
+				Object objVal = field.get(model);
+				Key key = GaeMappingUtils.getKey(objVal);
+				linkedObj = linkedModels.get(key);
+				if(linkedObj==null){
+					entity = entityMap.get(field).get(key);
+					linkedObj = objVal;
+					GaeMappingUtils.fillModel(linkedObj, entity);
+					linkedModels.put(key, linkedObj);
+				}
+			
+				field.set(model, linkedObj);				
+			}
+
+			return model;
+		} catch(IllegalAccessException ex){
+			throw new SienaException(ex);
+		}		
+	}
+	
 	protected <T> List<T> mapJoins(Query<T> query, List<T> models) {
+		try {
+			// join queries
+			Map<Field, ArrayList<Key>> fieldMap = GaeQueryUtils.buildJoinFieldKeysMap(query);
+			
+			// creates the list of joined entity keys to extract 
+			for (final T model : models) {
+				for(Field field: fieldMap.keySet()){
+					Key key = GaeMappingUtils.getKey(field.get(model));
+					List<Key> keys = fieldMap.get(field);
+					if(!keys.contains(key))
+						keys.add(key);
+				}
+			}
+			
+			Map<Field, Map<Key, Entity>> entityMap = 
+				new HashMap<Field, Map<Key, Entity>>();
+
+			try {
+				// retrieves all joined entities per field
+				for(Field field: fieldMap.keySet()){
+					Map<Key, Entity> entities = ds.get(fieldMap.get(field));
+					// gets the future here because we need it so we wait for it
+					entityMap.put(field, entities);
+				}
+			}catch(Exception ex){
+				throw new SienaException(ex);
+			}
+			// associates linked models to their models
+			// linkedModels is just a map to contain entities already mapped
+			Map<Key, Object> linkedModels = new HashMap<Key, Object>();
+			Object linkedObj;
+			Entity entity; 
+			
+			for (final T model : models) {
+				for(Field field: fieldMap.keySet()){
+					Object objVal = field.get(model);
+					Key key = GaeMappingUtils.getKey(objVal);
+					linkedObj = linkedModels.get(key);
+					if(linkedObj==null){
+						entity = entityMap.get(field).get(key);
+						linkedObj = objVal;
+						GaeMappingUtils.fillModel(linkedObj, entity);
+						linkedModels.put(key, linkedObj);
+					}
+				
+					field.set(model, linkedObj);				
+				}
+			}
+			return models;
+		} catch(IllegalAccessException ex){
+			throw new SienaException(ex);
+		}		
+	}
+	
+	/*protected <T> List<T> mapJoins(Query<T> query, List<T> models) {
 		try {
 			List<QueryJoin> joins = query.getJoins();
 			
@@ -635,7 +284,7 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 			// creates the list of joined entity keys to extract 
 			for (final T model : models) {
 				for(Field field: fieldMap.keySet()){
-					Key key = getKey(field.get(model));
+					Key key = GaeMappingUtils.getKey(field.get(model));
 					List<Key> keys = fieldMap.get(field);
 					if(!keys.contains(key))
 						keys.add(key);
@@ -660,12 +309,12 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 			for (final T model : models) {
 				for(Field field: fieldMap.keySet()){
 					Object objVal = field.get(model);
-					Key key = getKey(objVal);
+					Key key = GaeMappingUtils.getKey(objVal);
 					linkedObj = linkedModels.get(key);
 					if(linkedObj==null){
 						entity = entityMap.get(field).get(key);
 						linkedObj = objVal;
-						fillModel(linkedObj, entity);
+						GaeMappingUtils.fillModel(linkedObj, entity);
 						linkedModels.put(key, linkedObj);
 					}
 				
@@ -676,14 +325,24 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 		} catch(IllegalAccessException ex){
 			throw new SienaException(ex);
 		}		
+	}*/
+	
+	protected <T> T map(Query<T> query, Entity entity) {
+		Class<?> clazz = query.getQueriedClass();
+		@SuppressWarnings("unchecked")
+		T result = (T)GaeMappingUtils.mapEntity(entity, clazz);
+		
+		// join management
+		if(!query.getJoins().isEmpty() || ClassInfo.getClassInfo(clazz).joinFields.size() != 0)
+			return mapJoins(query, result);
+		
+		return result;
 	}
 	
 	@SuppressWarnings("unchecked")
-	protected <T> List<T> map(Query<T> query, int offset,
-			List<Entity> entities) {
+	protected <T> List<T> map(Query<T> query, List<Entity> entities) {
 		Class<?> clazz = query.getQueriedClass();
-		List<T> result = (List<T>) mapEntities(entities, clazz);
-		//query.setNextOffset(offset + result.size());
+		List<T> result = (List<T>) GaeMappingUtils.mapEntities(entities, clazz);
 		
 		// join management
 		if(!query.getJoins().isEmpty() || ClassInfo.getClassInfo(clazz).joinFields.size() != 0)
@@ -692,19 +351,11 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 		return result;
 	}
 
-	@SuppressWarnings("unchecked")
-	protected <T> List<T> mapKeysOnly(Query<T> query, int offset,
-			List<Entity> entities) {
-		Class<?> clazz = query.getQueriedClass();
-		List<T> result = (List<T>) mapEntitiesKeysOnly(entities, clazz);
-		//query.setNextOffset(offset + result.size());
-		return result;
-	}
 
-	private <T> Iterable<T> doFetch(Query<T> query) {
-		QueryOptionPaginate pag = (QueryOptionPaginate)query.option(QueryOptionPaginate.ID);
+	/*private <T> Iterable<T> doFetch(Query<T> query) {
+		QueryOptionPage pag = (QueryOptionPage)query.option(QueryOptionPage.ID);
 		QueryOptionOffset offset = (QueryOptionOffset)query.option(QueryOptionOffset.ID);
-		QueryOptionReuse reuse = (QueryOptionReuse)query.option(QueryOptionReuse.ID);
+		QueryOptionState reuse = (QueryOptionState)query.option(QueryOptionState.ID);
 		QueryOptionFetchType fetchType = (QueryOptionFetchType)query.option(QueryOptionFetchType.ID);
 		QueryOptionGaeContext gaeCtx = (QueryOptionGaeContext)query.option(QueryOptionGaeContext.ID);
 		if(gaeCtx==null){
@@ -740,7 +391,7 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 					if(offset.isActive()){
 						offset.offset+=pag.pageSize;
 					}
-					return new SienaGaeIterable<T>(results, query.getQueriedClass());
+					return new GaeSienaIterable<T>(results, query.getQueriedClass());
 				}
 			case NORMAL:
 			default:
@@ -798,7 +449,7 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 							offset.offset+=pag.pageSize;
 						}
 						gaeCtx.query = pq;
-						return new SienaGaeIterable<T>(results, query.getQueriedClass());
+						return new GaeSienaIterable<T>(results, query.getQueriedClass());
 					}
 				case NORMAL:
 				default:
@@ -867,7 +518,7 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 							// uses offset
 							offset.offset+=pag.pageSize;
 						}
-						return new SienaGaeIterable<T>(results, query.getQueriedClass());
+						return new GaeSienaIterable<T>(results, query.getQueriedClass());
 					}
 				case NORMAL:
 				default:
@@ -896,33 +547,437 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 			}
 
 		}
+	}*/
+	
+	private <T> List<T> doFetchList(Query<T> query) {
+		QueryOptionPage pag = (QueryOptionPage)query.option(QueryOptionPage.ID);
+		QueryOptionOffset offset = (QueryOptionOffset)query.option(QueryOptionOffset.ID);
+		QueryOptionState state = (QueryOptionState)query.option(QueryOptionState.ID);
+		QueryOptionFetchType fetchType = (QueryOptionFetchType)query.option(QueryOptionFetchType.ID);
+		QueryOptionGaeContext gaeCtx = (QueryOptionGaeContext)query.option(QueryOptionGaeContext.ID);
+		if(gaeCtx==null){
+			gaeCtx = new QueryOptionGaeContext();
+			query.customize(gaeCtx);
+		}
+		
+		// if previousPage has detected there is no more data, simply returns an empty list
+		if(gaeCtx.noMoreDataBefore){
+			return new ArrayList<T>();
+		}
+		
+		// TODO manage pagination + offset
+		FetchOptions fetchOptions = FetchOptions.Builder.withDefaults();
+		if(pag.isActive()) {
+			fetchOptions.limit(pag.pageSize);
+		}
+		// set offset only when no in STATEFUL mode because it would disturb the cursor
+		if(offset.isActive()){
+			fetchOptions.offset(offset.offset);
+		}
+		
+		if(state.isStateless()) {
+			switch(fetchType.type){
+			case KEYS_ONLY:
+				{
+					// uses iterable as it is the only async request for prepared query for the time being
+					List<Entity> entities = prepareKeysOnly(query).asList(fetchOptions);
+					// if paginating and 0 results then no more data else resets noMoreDataAfter
+					if(pag.isPaginating()){
+						if(entities.size() == 0){
+							gaeCtx.noMoreDataAfter = true;
+						}
+						else {
+							gaeCtx.noMoreDataAfter = false;
+						}
+					}
+					return GaeMappingUtils.mapEntitiesKeysOnly(entities, query.getQueriedClass());
+				}
+			case NORMAL:
+			default:
+				{
+					// uses iterable as it is the only async request for prepared query for the time being
+					List<Entity> entities = prepare(query).asList(fetchOptions);
+					// if paginating and 0 results then no more data else resets noMoreDataAfter
+					if(pag.isPaginating()){
+						if(entities.size() == 0){
+							gaeCtx.noMoreDataAfter = true;
+						}
+						else {
+							gaeCtx.noMoreDataAfter = false;
+						}
+					}
+					return map(query, entities);
+				}
+			}
+			
+		}else {
+			// TODO manage cursor limitations for IN and != operators		
+			if(!gaeCtx.isActive()){
+				// cursor not yet created
+				switch(fetchType.type){
+				case KEYS_ONLY:
+					{
+						PreparedQuery pq = prepareKeysOnly(query);
+						if(!gaeCtx.useCursor){
+							// then uses offset (in case of IN or != operators)
+							if(offset.isActive()){
+								fetchOptions.offset(offset.offset);
+							}
+						}
+						
+						// we can't use real asynchronous function with cursors
+						// so the page is extracted at once and wrapped into a SienaFuture
+						QueryResultList<Entity> entities = pq.asQueryResultList(fetchOptions);
+
+						// activates the GaeCtx now that it is initialised
+						gaeCtx.activate();
+						// sets the current cursor (in stateful mode, cursor is always kept for further use)
+						if(pag.isPaginating()){
+							Cursor cursor = entities.getCursor();
+							if(cursor!=null){
+								gaeCtx.addCursor(cursor.toWebSafeString());
+							}
+							
+							// if paginating and 0 results then no more data else resets noMoreDataAfter
+							if(entities.size()==0){
+								gaeCtx.noMoreDataAfter = true;
+							} else {
+								gaeCtx.noMoreDataAfter = false;
+							}
+						}else{
+							Cursor cursor = entities.getCursor();
+							if(cursor!=null){
+								gaeCtx.addAndMoveCursor(entities.getCursor().toWebSafeString());
+							}
+							// keeps track of the offset anyway if not paginating
+							offset.offset+=entities.size();
+						}											
+						
+						return GaeMappingUtils.mapEntitiesKeysOnly(entities, query.getQueriedClass());
+					}
+				case NORMAL:
+				default:
+					{
+						PreparedQuery pq = prepare(query);
+						if(!gaeCtx.useCursor){
+							// then uses offset (in case of IN or != operators)
+							if(offset.isActive()){
+								fetchOptions.offset(offset.offset);
+							}
+						}
+						// we can't use real asynchronous function with cursors
+						// so the page is extracted at once and wrapped into a SienaFuture
+						QueryResultList<Entity> entities = pq.asQueryResultList(fetchOptions);
+						
+						// activates the GaeCtx now that it is initialised
+						gaeCtx.activate();
+						// sets the current cursor (in stateful mode, cursor is always kept for further use)
+						if(pag.isPaginating()){
+							Cursor cursor = entities.getCursor();
+							if(cursor!=null){
+								gaeCtx.addCursor(cursor.toWebSafeString());
+							}
+							// if paginating and 0 results then no more data else resets noMoreDataAfter
+							if(entities.size()==0){
+								gaeCtx.noMoreDataAfter = true;
+							} else {
+								gaeCtx.noMoreDataAfter = false;
+							}
+						}else{
+							Cursor cursor = entities.getCursor();
+							if(cursor!=null){
+								gaeCtx.addAndMoveCursor(entities.getCursor().toWebSafeString());
+							}
+							// keeps track of the offset anyway if not paginating
+							offset.offset+=entities.size();
+						}
+						
+						return map(query, entities);
+					}
+				}
+				
+			}else {
+				switch(fetchType.type){
+				case KEYS_ONLY:
+					{
+						// we prepare the query each time
+						PreparedQuery pq = prepareKeysOnly(query);
+						QueryResultList<Entity> entities;
+						if(!gaeCtx.useCursor){
+							// then uses offset (in case of IN or != operators)
+							if(offset.isActive()){
+								fetchOptions.offset(offset.offset);
+							}
+							// we can't use real asynchronous function with cursors
+							// so the page is extracted at once and wrapped into a SienaFuture
+							entities = pq.asQueryResultList(fetchOptions);
+						}else {
+							// we can't use real asynchronous function with cursors
+							// so the page is extracted at once and wrapped into a SienaFuture
+							String cursor = gaeCtx.currentCursor();
+							if(cursor!=null){
+								entities = pq.asQueryResultList(
+									fetchOptions.startCursor(Cursor.fromWebSafeString(cursor)));
+							}
+							else {
+								entities = pq.asQueryResultList(fetchOptions);
+							}
+						}
+						
+						// sets the current cursor (in stateful mode, cursor is always kept for further use)
+						if(pag.isPaginating()){
+							Cursor cursor = entities.getCursor();
+							if(cursor!=null){
+								gaeCtx.addCursor(cursor.toWebSafeString());
+							}
+							// if paginating and 0 results then no more data else resets noMoreDataAfter
+							if(entities.size()==0){
+								gaeCtx.noMoreDataAfter = true;
+							} else {
+								gaeCtx.noMoreDataAfter = false;
+							}
+						}else{
+							Cursor cursor = entities.getCursor();
+							if(cursor!=null){
+								gaeCtx.addAndMoveCursor(entities.getCursor().toWebSafeString());
+							}
+							// keeps track of the offset anyway if not paginating
+							offset.offset+=entities.size();
+						}
+						//}
+						
+						return GaeMappingUtils.mapEntitiesKeysOnly(entities, query.getQueriedClass());
+					}
+				case NORMAL:
+				default:
+					{
+						PreparedQuery pq = prepare(query);
+						QueryResultList<Entity> entities;
+						if(!gaeCtx.useCursor){
+							// then uses offset (in case of IN or != operators)
+							if(offset.isActive()){
+								fetchOptions.offset(offset.offset);
+							}
+							// we can't use real asynchronous function with cursors
+							// so the page is extracted at once and wrapped into a SienaFuture
+							entities = pq.asQueryResultList(fetchOptions);
+						}else {
+							// we can't use real asynchronous function with cursors
+							// so the page is extracted at once and wrapped into a SienaFuture
+							String cursor = gaeCtx.currentCursor();
+							if(cursor!=null){
+								entities = pq.asQueryResultList(
+									fetchOptions.startCursor(Cursor.fromWebSafeString(gaeCtx.currentCursor())));
+							}else {
+								entities = pq.asQueryResultList(fetchOptions);
+							}
+						}
+						
+						// sets the current cursor (in stateful mode, cursor is always kept for further use)
+						if(pag.isPaginating()){
+							Cursor cursor = entities.getCursor();
+							if(cursor!=null){
+								gaeCtx.addCursor(cursor.toWebSafeString());
+							}
+							// if paginating and 0 results then no more data else resets noMoreDataAfter
+							if(entities.size()==0){
+								gaeCtx.noMoreDataAfter = true;
+							} else {
+								gaeCtx.noMoreDataAfter = false;
+							}
+						}else{
+							Cursor cursor = entities.getCursor();
+							if(cursor!=null){
+								gaeCtx.addAndMoveCursor(entities.getCursor().toWebSafeString());
+							}
+							// keeps track of the offset anyway
+							offset.offset+=entities.size();
+						}
+						
+						return map(query, entities);
+					}
+				}
+			}
+		}
 	}
 	
-	@Override
+	
+	private <T> Iterable<T> doFetchIterable(Query<T> query) {
+		QueryOptionPage pag = (QueryOptionPage)query.option(QueryOptionPage.ID);
+		QueryOptionOffset offset = (QueryOptionOffset)query.option(QueryOptionOffset.ID);
+		QueryOptionState state = (QueryOptionState)query.option(QueryOptionState.ID);
+		QueryOptionFetchType fetchType = (QueryOptionFetchType)query.option(QueryOptionFetchType.ID);
+		QueryOptionGaeContext gaeCtx = (QueryOptionGaeContext)query.option(QueryOptionGaeContext.ID);
+		if(gaeCtx==null){
+			gaeCtx = new QueryOptionGaeContext();
+			query.customize(gaeCtx);
+		}
+		
+		// if previousPage has detected there is no more data, simply returns an empty list
+		if(gaeCtx.noMoreDataBefore){
+			return new ArrayList<T>();
+		}
+		
+		// TODO manage pagination + offset
+		FetchOptions fetchOptions = FetchOptions.Builder.withDefaults();
+		if(pag.isActive()) {
+			fetchOptions.limit(pag.pageSize);
+		}
+		if(offset.isActive()){
+			fetchOptions.offset(offset.offset);
+		}
+		
+		if(state.isStateless()) {
+			switch(fetchType.type){
+			case ITER:
+			default:
+				{
+					// uses iterable as it is the only async request for prepared query for the time being
+					Iterable<Entity> entities = prepare(query).asIterable(fetchOptions);
+					return new GaeSienaIterable<T>(this, entities, query);
+				}
+			}
+			
+		}else {
+			// TODO manage cursor limitations for IN and != operators		
+			if(!gaeCtx.isActive()){
+				// cursor not yet created
+				switch(fetchType.type){
+				case ITER:
+				default:
+					{
+						PreparedQuery pq = prepare(query);
+						
+						if(pag.isPaginating()){
+							// in case of pagination, we need to allow asynchronous calls such as:
+							// QueryAsync<MyClass> query = pm.createQuery(MyClass).paginate(5).stateful().order("name");
+							// SienaFuture<Iterable<MyClass>> future1 = query.iter();
+							// SienaFuture<Iterable<MyClass>> future2 = query.nextPage().iter();
+							// Iterable<MyClass> it = future1.get().iterator();
+							// while(it.hasNext()) { // do it }
+							// it = future2.get().iterator();
+							// while(it.hasNext()) { // do it }
+							
+							// so we can't use the asQueryResultIterable as the cursor is not moved to the end of the current page
+							// but moved at each call of iterable.iterator().next()
+							// thus we use the List in this case to be able to move directly to the next page with cursors
+							QueryResultList<Entity> entities = pq.asQueryResultList(fetchOptions);
+
+							// activates the GaeCtx now that it is initialised
+							gaeCtx.activate();
+							// sets the current cursor (in stateful mode, cursor is always kept for further use)
+							//if(gaeCtx.useCursor){
+							Cursor cursor = entities.getCursor();
+							if(cursor!=null){
+								gaeCtx.addCursor(cursor.toWebSafeString());
+							}
+							//}
+							return new GaeSienaIterable<T>(this, entities, query);
+						}else {
+							// if not paginating, we simply use the queryresultiterable and moves the current cursor
+							// while iterating
+							QueryResultIterable<Entity> entities = pq.asQueryResultIterable(fetchOptions);
+							// activates the GaeCtx now that it is initialised
+							gaeCtx.activate();
+							return new GaeSienaIterableWithCursor<T>(this, entities, query);
+						}
+						
+					}
+				}
+				
+			}else {
+				switch(fetchType.type){
+				case ITER:
+				default:
+					{
+						PreparedQuery pq = prepare(query);
+						if(pag.isPaginating()){
+							// in case of pagination, we need to allow asynchronous calls such as:
+							// QueryAsync<MyClass> query = pm.createQuery(MyClass).paginate(5).stateful().order("name");
+							// SienaFuture<Iterable<MyClass>> future1 = query.iter();
+							// SienaFuture<Iterable<MyClass>> future2 = query.nextPage().iter();
+							// Iterable<MyClass> it = future1.get().iterator();
+							// while(it.hasNext()) { // do it }
+							// it = future2.get().iterator();
+							// while(it.hasNext()) { // do it }
+							
+							// so we can't use the asQueryResultIterable as the cursor is not moved to the end of the current page
+							// but moved at each call of iterable.iterator().next()
+							// thus we use the List in this case to be able to move directly to the next page with cursors
+							QueryResultList<Entity> entities;
+							if(!gaeCtx.useCursor){
+								// then uses offset (in case of IN or != operators)
+								if(offset.isActive()){
+									fetchOptions.offset(offset.offset);
+								}
+								entities = pq.asQueryResultList(fetchOptions);
+							}else {
+								String cursor = gaeCtx.currentCursor();
+								if(cursor!=null){
+									entities = pq.asQueryResultList(
+										fetchOptions.startCursor(Cursor.fromWebSafeString(cursor)));
+								}else {
+									entities = pq.asQueryResultList(fetchOptions);
+								}
+								
+								// sets the current cursor (in stateful mode, cursor is always kept for further use)
+								//if(gaeCtx.useCursor){
+								gaeCtx.addCursor(entities.getCursor().toWebSafeString());
+								//}
+							}
+							return new GaeSienaIterable<T>(this, entities, query);
+						}else {
+							// if not paginating, we simply use the queryresultiterable and moves the current cursor
+							// while iterating
+							QueryResultIterable<Entity> entities;
+							if(!gaeCtx.useCursor){
+								// then uses offset (in case of IN or != operators)
+								if(offset.isActive()){
+									fetchOptions.offset(offset.offset);
+								}
+								entities = pq.asQueryResultIterable(fetchOptions);
+							}else {
+								String cursor = gaeCtx.currentCursor();
+								if(cursor!=null){
+									entities = pq.asQueryResultIterable(
+										fetchOptions.startCursor(Cursor.fromWebSafeString(gaeCtx.currentCursor())));
+								}else {
+									entities = pq.asQueryResultIterable(fetchOptions);	
+								}
+							}
+							return new GaeSienaIterableWithCursor<T>(this, entities, query);
+						}
+					}
+				}
+			}
+
+		}
+	}
+	
 	public <T> List<T> fetch(Query<T> query) {
-		return (List<T>)doFetch(query);
+		QueryOptionPage pag = (QueryOptionPage)query.option(QueryOptionPage.ID);
+		if(!pag.isPaginating()){
+			pag.passivate();
+		}
+		return (List<T>)doFetchList(query);
 	}
 
-	@Override
 	public <T> List<T> fetch(Query<T> query, int limit) {
-		((QueryOptionPaginate)query.option(QueryOptionPaginate.ID).activate()).pageSize=limit;
-		return (List<T>)doFetch(query);
+		((QueryOptionPage)query.option(QueryOptionPage.ID).activate()).pageSize=limit;
+		return (List<T>)doFetchList(query);
 	}
 
-	@Override
 	public <T> List<T> fetch(Query<T> query, int limit, Object offset) {
-		((QueryOptionPaginate)query.option(QueryOptionPaginate.ID).activate()).pageSize=limit;
+		((QueryOptionPage)query.option(QueryOptionPage.ID).activate()).pageSize=limit;
 		((QueryOptionOffset)query.option(QueryOptionOffset.ID).activate()).offset=(Integer)offset;
-		return (List<T>)doFetch(query);
+		return (List<T>)doFetchList(query);
 	}
 
-	@Override
 	public <T> int count(Query<T> query) {
 		return prepare(query)
 				.countEntities(FetchOptions.Builder.withDefaults());
 	}
 
-	@Override
 	public <T> int delete(Query<T> query) {
 		final ArrayList<Key> keys = new ArrayList<Key>();
 
@@ -936,229 +991,252 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 		return keys.size();
 	}
 
-	@Override
 	public <T> List<T> fetchKeys(Query<T> query) {
 		((QueryOptionFetchType)query.option(QueryOptionFetchType.ID)).type=QueryOptionFetchType.Type.KEYS_ONLY;
+		QueryOptionPage pag = (QueryOptionPage)query.option(QueryOptionPage.ID);
+		if(!pag.isPaginating()){
+			pag.passivate();
+		}
 
-		return (List<T>)doFetch(query);
+		return (List<T>)doFetchList(query);
 	}
 
-	@Override
 	public <T> List<T> fetchKeys(Query<T> query, int limit) {
 		((QueryOptionFetchType)query.option(QueryOptionFetchType.ID)).type=QueryOptionFetchType.Type.KEYS_ONLY;
-		((QueryOptionPaginate)query.option(QueryOptionPaginate.ID).activate()).pageSize=limit;
+		((QueryOptionPage)query.option(QueryOptionPage.ID).activate()).pageSize=limit;
 
-		return (List<T>)doFetch(query);
+		return (List<T>)doFetchList(query);
 	}
 
-	@Override
 	public <T> List<T> fetchKeys(Query<T> query, int limit, Object offset) {
 		((QueryOptionFetchType)query.option(QueryOptionFetchType.ID)).type=QueryOptionFetchType.Type.KEYS_ONLY;
-		((QueryOptionPaginate)query.option(QueryOptionPaginate.ID).activate()).pageSize=limit;
+		((QueryOptionPage)query.option(QueryOptionPage.ID).activate()).pageSize=limit;
 		((QueryOptionOffset)query.option(QueryOptionOffset.ID).activate()).offset=(Integer)offset;
 
-		return (List<T>)doFetch(query);
+		return (List<T>)doFetchList(query);
 	}
 
-	@Override
 	public <T> Iterable<T> iter(Query<T> query) {
 		((QueryOptionFetchType)query.option(QueryOptionFetchType.ID)).type=QueryOptionFetchType.Type.ITER;
+		QueryOptionPage pag = (QueryOptionPage)query.option(QueryOptionPage.ID);
+		if(!pag.isPaginating()){
+			pag.passivate();
+		}
 
-		return (Iterable<T>)doFetch(query);
+		return doFetchIterable(query);
 	}
 
-	@Override
 	public <T> Iterable<T> iter(Query<T> query, int limit) {
 		((QueryOptionFetchType)query.option(QueryOptionFetchType.ID)).type=QueryOptionFetchType.Type.ITER;
-		((QueryOptionPaginate)query.option(QueryOptionPaginate.ID).activate()).pageSize=limit;
+		((QueryOptionPage)query.option(QueryOptionPage.ID).activate()).pageSize=limit;
 
-		return (Iterable<T>)doFetch(query);
+		return doFetchIterable(query);
 	}
 
-	@Override
 	public <T> Iterable<T> iter(Query<T> query, int limit, Object offset) {
 		((QueryOptionFetchType)query.option(QueryOptionFetchType.ID)).type=QueryOptionFetchType.Type.ITER;
-		((QueryOptionPaginate)query.option(QueryOptionPaginate.ID).activate()).pageSize=limit;
+		((QueryOptionPage)query.option(QueryOptionPage.ID).activate()).pageSize=limit;
 		((QueryOptionOffset)query.option(QueryOptionOffset.ID).activate()).offset=(Integer)offset;
 
-		return (Iterable<T>)doFetch(query);
+		return doFetchIterable(query);
 	}
 
 
-	@Override
 	public <T> void release(Query<T> query) {
 		super.release(query);
-		QueryOptionGaeContext gaeCtx = (QueryOptionGaeContext)query.option(QueryOptionGaeContext.ID);
-
-		if(gaeCtx != null){
-			gaeCtx.cursor = null;
-			gaeCtx.passivate();
-		}
+		GaeQueryUtils.release(query);
 	}
 	
-	@Override
-	public void insert(Object... objects) {
+	public <T> void nextPage(Query<T> query) {
+		GaeQueryUtils.nextPage(query);
+	}
+
+	public <T> void previousPage(Query<T> query) {
+		GaeQueryUtils.previousPage(query);
+	}
+
+	public int insert(Object... objects) {
 		List<Entity> entities = new ArrayList<Entity>(objects.length);
 		for(int i=0; i<objects.length;i++){
 			Class<?> clazz = objects[i].getClass();
 			ClassInfo info = ClassInfo.getClassInfo(clazz);
 			Field idField = info.getIdField();
-			Entity entity = createEntityInstance(idField, info, objects[i]);
-			fillEntity(objects[i], entity);
+			Entity entity = GaeMappingUtils.createEntityInstance(idField, info, objects[i]);
+			GaeMappingUtils.fillEntity(objects[i], entity);
 			entities.add(entity);
 		}
 				
-		ds.put(entities);
+		List<Key> generatedKeys =  ds.put(entities);
+		
+		int i=0;
+		for(Object obj:objects){
+			Class<?> clazz = obj.getClass();
+			ClassInfo info = ClassInfo.getClassInfo(clazz);
+			Field idField = info.getIdField();
+			GaeMappingUtils.setKey(idField, obj, generatedKeys.get(i++));
+		}
+		
+		return generatedKeys.size();
 	}
 
-	@Override
-	public void insert(Iterable<?> objects) {
+	public int insert(Iterable<?> objects) {
 		List<Entity> entities = new ArrayList<Entity>();
 		for(Object obj:objects){
 			Class<?> clazz = obj.getClass();
 			ClassInfo info = ClassInfo.getClassInfo(clazz);
 			Field idField = info.getIdField();
-			Entity entity = createEntityInstance(idField, info, obj);
-			fillEntity(obj, entity);
+			Entity entity = GaeMappingUtils.createEntityInstance(idField, info, obj);
+			GaeMappingUtils.fillEntity(obj, entity);
 			entities.add(entity);
 		}
 				
-		ds.put(entities);
+		List<Key> generatedKeys = ds.put(entities);
+		
+		int i=0;
+		for(Object obj:objects){
+			Class<?> clazz = obj.getClass();
+			ClassInfo info = ClassInfo.getClassInfo(clazz);
+			Field idField = info.getIdField();
+			GaeMappingUtils.setKey(idField, obj, generatedKeys.get(i++));
+		}
+		return generatedKeys.size();
+
 	}
 
-	@Override
-	public void delete(Object... models) {
+	public int delete(Object... models) {
 		List<Key> keys = new ArrayList<Key>();
 		for(Object obj:models){
-			keys.add(getKey(obj));
+			keys.add(GaeMappingUtils.getKey(obj));
 		}
 		
 		ds.delete(keys);
+		
+		return keys.size();
 	}
 
 
-	@Override
-	public void delete(Iterable<?> models) {
+	public int delete(Iterable<?> models) {
 		List<Key> keys = new ArrayList<Key>();
 		for(Object obj:models){
-			keys.add(getKey(obj));
+			keys.add(GaeMappingUtils.getKey(obj));
 		}
 		
 		ds.delete(keys);
+		
+		return keys.size();
 	}
 
 
-	@Override
-	public <T> void deleteByKeys(Class<T> clazz, Object... keys) {
+	public <T> int deleteByKeys(Class<T> clazz, Object... keys) {
 		List<Key> gaeKeys = new ArrayList<Key>();
 		for(Object key:keys){
-			gaeKeys.add(makeKey(clazz, key));
+			gaeKeys.add(GaeMappingUtils.makeKey(clazz, key));
 		}
 		
 		ds.delete(gaeKeys);
+		
+		return gaeKeys.size();
 	}
 
-	@Override
-	public <T> void deleteByKeys(Class<T> clazz, Iterable<?> keys) {
+	public <T> int deleteByKeys(Class<T> clazz, Iterable<?> keys) {
 		List<Key> gaeKeys = new ArrayList<Key>();
 		for(Object key:keys){
-			gaeKeys.add(makeKey(clazz, key));
+			gaeKeys.add(GaeMappingUtils.makeKey(clazz, key));
 		}
 		
 		ds.delete(gaeKeys);
+
+		return gaeKeys.size();
+	}
+
+
+	public int get(Object... objects) {
+		List<Key> keys = new ArrayList<Key>();
+		for(Object obj:objects){
+			keys.add(GaeMappingUtils.getKey(obj));
+		}
+		
+		Map<Key, Entity> entityMap = ds.get(keys);
+		
+		for(Object obj:objects){
+			GaeMappingUtils.fillModel(obj, entityMap.get(GaeMappingUtils.getKey(obj)));
+		}
+		
+		return entityMap.size();
+	}
+
+	public <T> int get(Iterable<T> objects) {
+		List<Key> keys = new ArrayList<Key>();
+		for(Object obj:objects){
+			keys.add(GaeMappingUtils.getKey(obj));
+		}
+		
+		Map<Key, Entity> entityMap = ds.get(keys);
+		
+		for(Object obj:objects){
+			GaeMappingUtils.fillModel(obj, entityMap.get(GaeMappingUtils.getKey(obj)));
+		}
+		
+		return entityMap.size();
+	}
+
+	public <T> List<T> getByKeys(Class<T> clazz, Object... keys) {
+		List<Key> gaeKeys = new ArrayList<Key>();
+		for(Object key:keys){
+			gaeKeys.add(GaeMappingUtils.makeKey(clazz, key));
+		}
+		
+		Map<Key, Entity> entityMap = ds.get(gaeKeys);
+		List<T> models = new ArrayList<T>(entityMap.size());
+		
+		for(Object key:keys){
+			models.add(GaeMappingUtils.mapEntity(entityMap.get(GaeMappingUtils.makeKey(clazz, key)), clazz));
+		}
+		
+		return models;
+	}
+
+	public <T> List<T> getByKeys(Class<T> clazz, Iterable<?> keys) {
+		List<Key> gaeKeys = new ArrayList<Key>();
+		for(Object key:keys){
+			gaeKeys.add(GaeMappingUtils.makeKey(clazz, key));
+		}
+		
+		Map<Key, Entity> entityMap = ds.get(gaeKeys);
+		List<T> models = new ArrayList<T>(entityMap.size());
+		for(Object key:keys){
+			models.add(GaeMappingUtils.mapEntity(entityMap.get(GaeMappingUtils.makeKey(clazz, key)), clazz));
+		}
+		
+		return models;
+	}
+
+
+	@Override
+	public <T> int update(Object... models) {
+		throw new NotImplementedException("update not implemented for GAE yet");
 	}
 
 	@Override
-	public void update(Map<String, ?> fieldValues) {
-		// TODO Auto-generated method stub
-		
+	public <T> int update(Iterable<T> models) {
+		throw new NotImplementedException("update not implemented for GAE yet");
 	}
 
-	private static final Map<String, FilterOperator> operators = new HashMap<String, FilterOperator>() {
-		private static final long serialVersionUID = 1L;
-		{
-			put("=", FilterOperator.EQUAL);
-			put("!=", FilterOperator.NOT_EQUAL);
-			put("<", FilterOperator.LESS_THAN);
-			put(">", FilterOperator.GREATER_THAN);
-			put("<=", FilterOperator.LESS_THAN_OR_EQUAL);
-			put(">=", FilterOperator.GREATER_THAN_OR_EQUAL);
-			put(" IN", FilterOperator.IN);
-		}
-	};
+	@Override
+	public <T> int update(Query<T> query, Map<String, ?> fieldValues) {
+		throw new NotImplementedException("update not implemented for GAE yet");
+	}
+
 
 	private static String[] supportedOperators;
 
 	static {
-		supportedOperators = operators.keySet().toArray(new String[0]);
-	}
+		supportedOperators = GaeQueryUtils.operators.keySet().toArray(new String[0]);
+	}	
 
-	@Override
 	public String[] supportedOperators() {
 		return supportedOperators;
 	}
 
-	/**
-	 * @author mandubian
-	 * 
-	 *         A Siena Iterable<Model> encapsulating a GAE Iterable<Entity> with
-	 *         its Iterator<Model>...
-	 */
-	public static class SienaGaeIterable<Model> implements Iterable<Model> {
-		Iterable<Entity> gaeIterable;
-		Class<Model> clazz;
-
-		SienaGaeIterable(Iterable<Entity> gaeIterable, Class<Model> clazz) {
-			this.gaeIterable = gaeIterable;
-			this.clazz = clazz;
-		}
-
-		@Override
-		public Iterator<Model> iterator() {
-			return new SienaGaeIterator<Model>(gaeIterable.iterator(), clazz);
-		}
-
-		public class SienaGaeIterator<T> implements Iterator<T> {
-			Iterator<Entity> gaeIterator;
-			Class<T> clazz;
-			Field id;
-
-			SienaGaeIterator(Iterator<Entity> gaeIterator, Class<T> clazz) {
-				this.gaeIterator = gaeIterator;
-				this.clazz = clazz;
-				this.id = ClassInfo.getIdField(clazz);
-			}
-
-			@Override
-			public boolean hasNext() {
-				return gaeIterator.hasNext();
-			}
-
-			@Override
-			public T next() {
-				T obj;
-
-				try {
-					obj = clazz.newInstance();
-					Entity entity = gaeIterator.next();
-					fillModel(obj, entity);
-					setKey(id, obj, entity.getKey());
-
-					return obj;
-				} catch (IllegalAccessException e) {
-					throw new SienaException(e);
-				} catch (InstantiationException e) {
-					throw new SienaException(e);
-				} 
-			}
-
-			@Override
-			public void remove() {
-				gaeIterator.remove();
-			}
-
-		}
-
-	}
 
 }

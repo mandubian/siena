@@ -1,4 +1,4 @@
-package siena.core.test;
+package siena.base.test.model;
 
 import siena.Column;
 import siena.Filter;
@@ -7,7 +7,7 @@ import siena.Id;
 import siena.Model;
 import siena.Query;
 
-public class SampleModel extends Model {
+public class SampleModelMultipleKeys extends Model {
 	
 	public static String FOO = "FOO";
 	
@@ -25,11 +25,11 @@ public class SampleModel extends Model {
 	public String publicField;
 	
 	@Column({"p_id", "p_key"})
-	public SampleModel relationship;
+	public SampleModelMultipleKeys relationship;
 	
 	/* fields ignored by ClassInfo */
 	@Filter("relationship")
-	public Query<SampleModel> query;
+	public Query<SampleModelMultipleKeys> query;
 	public Class<?> clazz;
 	public transient String foobar;
 	

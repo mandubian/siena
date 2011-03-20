@@ -1,8 +1,5 @@
-package siena;
+package siena.core.options;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 public class QueryOption {
     /* the state of an option */
@@ -11,7 +8,7 @@ public class QueryOption {
     }
 
     /* an option has a type, a state and an optional value (pagesize for  PAGINATE for example) */
-    protected int type;
+    public int type;
     protected State state = State.PASSIVE;
     //private Object value = null;
     

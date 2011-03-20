@@ -104,6 +104,12 @@ public class PersistenceManagerFactory {
 		getInstance().put(pm, getPackage(clazz));
 	}
 
+	public static void install(PersistenceManager pm, Iterable<Class<?>> clazzes) {
+		for(Class<?> clazz: clazzes){
+			getInstance().put(pm, getPackage(clazz));
+		}
+	}
+	
 	private void put(PersistenceManager pm, String pack) {
 		configuration.put(pack, pm);
 	}

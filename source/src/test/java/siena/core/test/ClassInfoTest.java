@@ -5,11 +5,12 @@ import java.util.List;
 
 import junit.framework.TestCase;
 import siena.ClassInfo;
+import siena.base.test.model.SampleModelMultipleKeys;
 
 public class ClassInfoTest extends TestCase {
 	
 	public void testAcceptedFields() {
-		ClassInfo info = ClassInfo.getClassInfo(SampleModel.class);
+		ClassInfo info = ClassInfo.getClassInfo(SampleModelMultipleKeys.class);
 		
 		assertNotNull(info);
 		
@@ -51,7 +52,7 @@ public class ClassInfoTest extends TestCase {
 		assertEquals("id", fields.get(0).getName());
 		assertEquals("key", fields.get(1).getName());
 		
-		assertEquals("SampleModel", info.tableName);
+		assertEquals("SampleModelMultipleKeys", info.tableName);
 	}
 
 }

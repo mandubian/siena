@@ -15,20 +15,21 @@
  */
 package siena;
 
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.security.MessageDigest;
+import java.sql.ResultSet;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Collection;
 import java.util.Date;
 import java.util.Iterator;
+import java.util.List;
 import java.util.TimeZone;
-
-import com.google.appengine.api.datastore.Blob;
-import com.google.appengine.api.datastore.Text;
 
 import siena.embed.Embedded;
 import siena.embed.JsonSerializer;
+import siena.jdbc.JdbcPersistenceManager.JdbcClassInfo;
 
 /**
  * Util class for general proposals.
@@ -198,21 +199,98 @@ public class Util {
 		return value;
 	}
 	
-	public static void set(Object object, Field f, Object value)
-				throws IllegalArgumentException, IllegalAccessException {
-		if(!f.isAccessible())
+	public static void setField(Object object, Field f, Object value) {
+		boolean wasAccess = true;
+		if(!f.isAccessible()){
 			f.setAccessible(true);
-		f.set(object, value);
+			wasAccess = false;
+		}
+		try {
+			f.set(object, value);
+		} catch (Exception e) {
+			throw new SienaException(e);
+		} finally {
+			if(!wasAccess)
+				f.setAccessible(false);
+		}
 	}
 	
 	public static void setFromObject(Object object, Field f, Object value)
 			throws IllegalArgumentException, IllegalAccessException {
-		set(object, f, fromObject(f, value));
+		setField(object, f, fromObject(f, value));
 	}
 	
 	public static void setFromString(Object object, Field f, String value)
 			throws IllegalArgumentException, IllegalAccessException {
-		set(object, f, fromString(f.getType(), value));
+		setField(object, f, fromString(f.getType(), value));
 	}
 
+	public static Object readField(Object object, Field field) {
+		boolean wasAccess = true;
+		if(!field.isAccessible()){
+			field.setAccessible(true);
+			wasAccess = false;
+		}
+		try {
+			return field.get(object);
+		} catch (Exception e) {
+			throw new SienaException(e);
+		} finally {
+			if(!wasAccess){
+				field.setAccessible(false);
+			}
+		}
+	}
+	
+	public static Object translateDate(Field f, Date value) {
+		long t = value.getTime();
+
+		SimpleDate simpleDate = f.getAnnotation(SimpleDate.class);
+		if(simpleDate != null) {
+			return new java.sql.Date(t);
+		}
+
+		DateTime dateTime = f.getAnnotation(DateTime.class);
+		if(dateTime != null) {
+			return new java.sql.Timestamp(t); 
+		}
+
+		Time time = f.getAnnotation(Time.class);
+		if(time != null) {
+			return new java.sql.Time(t); 
+		}
+
+		return new java.sql.Timestamp(t);
+	}
+
+	
+	/**
+	 * Creates an instance of a model from its class.
+	 * It tries to find a default constructor and if not found, it uses class.newInstance()
+	 * 
+	 * @param clazz the class of the model
+	 * @return the instance of the model
+	 */
+	public static <T> T createModelInstance(Class<T> clazz){
+		try {
+			Constructor<T> c = clazz.getDeclaredConstructor();
+			c.setAccessible(true);
+			return c.newInstance();
+		}catch(NoSuchMethodException ex){
+			try {
+				return clazz.newInstance();
+			}catch (Exception e) {
+				throw new SienaException(e);
+			}
+		}catch(Exception e){
+			throw new SienaException(e);
+		}		
+	}
+	
+	public static void copyObject(Object objFrom, Object objTo) {
+		Class<?> clazz = objFrom.getClass();
+		for (Field field : JdbcClassInfo.getClassInfo(clazz).allFields) {
+			Util.setField(objTo, field, Util.readField(objFrom, field));
+		}
+	}
 }

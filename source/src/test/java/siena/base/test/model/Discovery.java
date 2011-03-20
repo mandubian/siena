@@ -48,4 +48,8 @@ public class Discovery {
 		) return true;
 		return false;
 	}
+	
+	public String toString() {
+		return "Discovery [ id:"+id+" - name:"+name+" - discoverer:"+discoverer+" ]";
+	}
 }
