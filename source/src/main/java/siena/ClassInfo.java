@@ -49,9 +49,11 @@ public class ClassInfo {
 			Class<?> type = field.getType();
 			if(type == Class.class || type == Query.class ||
 					(field.getModifiers() & Modifier.TRANSIENT) == Modifier.TRANSIENT ||
-					(field.getModifiers() & Modifier.STATIC) == Modifier.STATIC)
+					(field.getModifiers() & Modifier.STATIC) == Modifier.STATIC ||
+					field.isSynthetic()){
 				continue;
-			
+			}
+					
 			Id id = field.getAnnotation(Id.class);
 			if(id != null) {
 				// ONLY long ID can be auto_incremented
