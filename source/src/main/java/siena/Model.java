@@ -278,6 +278,14 @@ public abstract class Model {
 			return createQuery().paginate(limit);
 		}
 
+		public Query<T> limit(int limit) {
+			return createQuery().limit(limit);
+		}
+
+		public Query<T> offset(Object offset) {
+			return createQuery().offset(offset);
+		}
+
 		public Query<T> customize(QueryOption... options) {
 			return createQuery().customize(options);
 		}

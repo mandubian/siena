@@ -461,6 +461,18 @@ public class HBasePersistenceManager implements PersistenceManager {
 			return null;
 		}
 
+		@Override
+		public Query<T> limit(int limit) {
+			// TODO Auto-generated method stub
+			return null;
+		}
+
+		@Override
+		public Query<T> offset(Object offset) {
+			// TODO Auto-generated method stub
+			return null;
+		}
+
 
 
 	}
@@ -577,12 +589,6 @@ public class HBasePersistenceManager implements PersistenceManager {
 	}
 
 	@Override
-	public <T> int deleteByKeys(Class<T> clazz, Iterable<?> keys) {
-		// TODO Auto-generated method stub
-		return 0;
-	}
-
-	@Override
 	public int get(Object... models) {
 		// TODO Auto-generated method stub
 		return 0;
@@ -601,12 +607,6 @@ public class HBasePersistenceManager implements PersistenceManager {
 	}
 
 	@Override
-	public <T> List<T> getByKeys(Class<T> clazz, Iterable<?> keys) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
 	public <T> int update(Object... models) {
 		// TODO Auto-generated method stub
 		return 0;
@@ -614,12 +614,6 @@ public class HBasePersistenceManager implements PersistenceManager {
 
 	@Override
 	public <T> int update(Iterable<T> models) {
-		// TODO Auto-generated method stub
-		return 0;
-	}
-
-	@Override
-	public <T> int update(Query<T> query, Map<String, ?> fieldValues) {
 		// TODO Auto-generated method stub
 		return 0;
 	}
@@ -670,6 +664,30 @@ public class HBasePersistenceManager implements PersistenceManager {
 	public <T> int deleteByKeys(Class<T> clazz, Object... keys) {
 		// TODO Auto-generated method stub
 		return 0;
+	}
+
+	@Override
+	public <T> int deleteByKeys(Class<T> clazz, Iterable<?> keys) {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+
+	@Override
+	public <T> List<T> getByKeys(Class<T> clazz, Iterable<?> keys) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public <T> int update(Query<T> query, Map<String, ?> fieldValues) {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+
+	@Override
+	public <T> void paginate(Query<T> query) {
+		// TODO Auto-generated method stub
+		
 	}
 
 

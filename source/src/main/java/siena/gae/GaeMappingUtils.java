@@ -29,6 +29,8 @@ public class GaeMappingUtils {
 	public static Entity createEntityInstance(Field idField, ClassInfo info, Object obj){
 		Entity entity = null;
 		Id id = idField.getAnnotation(Id.class);
+		Class<?> type = idField.getType();
+
 		if(id != null){
 			switch(id.value()) {
 			case NONE:
@@ -44,7 +46,21 @@ public class GaeMappingUtils {
 				entity = new Entity(info.tableName, keyVal);
 				break;
 			case AUTO_INCREMENT:
-				entity = new Entity(info.tableName);
+				// manages String ID as not long!!!
+				if(Long.TYPE == type || Long.class.isAssignableFrom(type)){
+					entity = new Entity(info.tableName);
+				}else {
+					Object idStringVal = null;
+					try {
+						idStringVal = readField(obj, idField);
+					}catch(Exception ex){
+						throw new SienaException("Id Field " + idField.getName() + " access error", ex);
+					}
+					if(idStringVal == null)
+						throw new SienaException("Id Field " + idField.getName() + " value null");
+					String keyStringVal = Util.toString(idField, idStringVal);				
+					entity = new Entity(info.tableName, keyStringVal);
+				}
 				break;
 			case UUID:
 				entity = new Entity(info.tableName, UUID.randomUUID().toString());
@@ -60,17 +76,21 @@ public class GaeMappingUtils {
 	
 	public static void setKey(Field idField, Object obj, Key key) {
 		Id id = idField.getAnnotation(Id.class);
+		Class<?> type = idField.getType();
 		if(id != null){
 			switch(id.value()) {
 			case NONE:
 				idField.setAccessible(true);
 				Object val = null;
-				if (idField.getType().isAssignableFrom(String.class))
-					val = key.getName();
-				else if (idField.getType().isAssignableFrom(Long.class))
+				if (Long.TYPE==type || Long.class.isAssignableFrom(type)){
 					val = Long.parseLong((String) key.getName());
-				else
+				}
+				else if (String.class.isAssignableFrom(type)){
+					val = key.getName();
+				}
+				else{
 					throw new SienaRestrictedApiException("DB", "setKey", "Id Type "+idField.getType()+ " not supported");
+				}
 					
 				try {
 					idField.set(obj, val);
@@ -81,8 +101,28 @@ public class GaeMappingUtils {
 			case AUTO_INCREMENT:
 				// Long value means key.getId()
 				try {
-					idField.setAccessible(true);
-					idField.set(obj, key.getId());
+					if (Long.TYPE==type || Long.class.isAssignableFrom(idField.getType())){
+						idField.setAccessible(true);
+						idField.set(obj, key.getId());
+					}else {
+						idField.setAccessible(true);
+						Object val2 = null;
+						if (Long.TYPE==type || Long.class.isAssignableFrom(idField.getType())){
+							val = Long.parseLong((String) key.getName());
+						}
+						else if (String.class.isAssignableFrom(idField.getType())){
+							val = key.getName();
+						}
+						else{
+							throw new SienaRestrictedApiException("DB", "setKey", "Id Type "+idField.getType()+ " not supported");
+						}
+							
+						try {
+							idField.set(obj, val2);
+						}catch(Exception ex){
+							throw new SienaException("Field " + idField.getName() + " access error", ex);
+						}
+					}
 				}catch(Exception ex){
 					throw new SienaException("Field " + idField.getName() + " access error", ex);
 				}
@@ -108,6 +148,7 @@ public class GaeMappingUtils {
 		try {
 			Field idField = info.getIdField();
 			Object value = readField(obj, idField);
+			Class<?> type = idField.getType();
 			
 			if(idField.isAnnotationPresent(Id.class)){
 				Id id = idField.getAnnotation(Id.class);
@@ -115,18 +156,23 @@ public class GaeMappingUtils {
 				case NONE:
 					// long or string goes toString
 					return KeyFactory.createKey(
-							ClassInfo.getClassInfo(clazz).tableName,
-							value.toString());
+						ClassInfo.getClassInfo(clazz).tableName,
+						value.toString());
 				case AUTO_INCREMENT:
-					if (value instanceof String)
-						value = Long.parseLong((String) value);
-					return KeyFactory.createKey(
+					// as a string with auto_increment can't exist, it is not cast into long
+					if (Long.TYPE == type || Long.class.isAssignableFrom(type)){
+						return KeyFactory.createKey(
 							ClassInfo.getClassInfo(clazz).tableName,
 							(Long)value);
+					}
+					return KeyFactory.createKey(
+						ClassInfo.getClassInfo(clazz).tableName,
+						value.toString());
+					
 				case UUID:
 					return KeyFactory.createKey(
-							ClassInfo.getClassInfo(clazz).tableName,
-							value.toString());
+						ClassInfo.getClassInfo(clazz).tableName,
+						value.toString());
 				default:
 					throw new SienaException("Id Generator "+id.value()+ " not supported");
 				}
@@ -152,15 +198,19 @@ public class GaeMappingUtils {
 							ClassInfo.getClassInfo(clazz).tableName,
 							value.toString());
 				case AUTO_INCREMENT:
-					if (value instanceof String)
-						value = Long.parseLong((String) value);
-					return KeyFactory.createKey(
+					// as a string with auto_increment can't exist, it is not cast into long
+					if (Long.class.isAssignableFrom(idField.getType())){
+						return KeyFactory.createKey(
 							ClassInfo.getClassInfo(clazz).tableName,
 							(Long)value);
+					}
+					return KeyFactory.createKey(
+						ClassInfo.getClassInfo(clazz).tableName,
+						value.toString());
 				case UUID:
 					return KeyFactory.createKey(
-							ClassInfo.getClassInfo(clazz).tableName,
-							value.toString());
+						ClassInfo.getClassInfo(clazz).tableName,
+						value.toString());
 				default:
 					throw new SienaException("Id Generator "+id.value()+ " not supported");
 				}

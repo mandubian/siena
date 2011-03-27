@@ -263,6 +263,15 @@ public class ModelAsync {
 			return obj.getPersistenceManager();
 		}
 
+		@Override
+		public QueryAsync<T> limit(int limit) {
+			return createQuery().limit(limit);
+		}
+
+		@Override
+		public QueryAsync<T> offset(Object offset) {
+			return createQuery().offset(offset);
+		}
 
 
 	}

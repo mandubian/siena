@@ -76,7 +76,9 @@ public class DdlGenerator {
 					column.setPrimaryKey(true);
 					column.setRequired(true);
 					
-					if(id.value() == Generator.AUTO_INCREMENT)
+					// auto_increment managed ONLY for long
+					if(id.value() == Generator.AUTO_INCREMENT 
+							&& (Long.TYPE == type || Long.class.isAssignableFrom(type)))
 						column.setAutoIncrement(true);
 				}
 				

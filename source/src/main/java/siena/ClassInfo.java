@@ -54,7 +54,9 @@ public class ClassInfo {
 			
 			Id id = field.getAnnotation(Id.class);
 			if(id != null) {
-				if(id.value() == Generator.AUTO_INCREMENT) {
+				// ONLY long ID can be auto_incremented
+				if(id.value() == Generator.AUTO_INCREMENT 
+						&& ( Long.TYPE == type || Long.class.isAssignableFrom(type))) {
 					generatedKeys.add(field);
 				} else {
 					insertFields.add(field);

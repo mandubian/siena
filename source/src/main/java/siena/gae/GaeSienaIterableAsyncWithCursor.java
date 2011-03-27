@@ -5,7 +5,6 @@ import java.util.Iterator;
 
 import siena.ClassInfo;
 import siena.core.async.QueryAsync;
-import siena.core.options.QueryOptionOffset;
 import siena.core.options.QueryOptionPage;
 
 import com.google.appengine.api.datastore.Cursor;
@@ -70,8 +69,8 @@ public class GaeSienaIterableAsyncWithCursor<Model> implements Iterable<Model> {
 			}
 			
 			// keeps track of the offset anyway if not paginating
-			QueryOptionOffset offset = (QueryOptionOffset)query.option(QueryOptionOffset.ID);
-			offset.offset++;
+			//QueryOptionOffset offset = (QueryOptionOffset)query.option(QueryOptionOffset.ID);
+			gaeCtx.realOffset++;
 
 			T obj = pm.map(query, entity);
 			return obj;

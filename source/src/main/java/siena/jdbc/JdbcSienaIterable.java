@@ -9,8 +9,8 @@ import java.util.NoSuchElementException;
 import siena.ClassInfo;
 import siena.Query;
 import siena.SienaException;
-import siena.core.options.QueryOptionOffset;
 import siena.core.options.QueryOptionPage;
+import siena.core.options.QueryOptionState;
 
 /**
  * @author mandubian
@@ -33,19 +33,11 @@ public class JdbcSienaIterable<T> implements Iterable<T> {
      * The wrapped <code>Query</code>.
      */
     private Query<T> query;
-    
-    /**
-     * The wrapped <code>Pagination QueryOption</code>.
-     */
-    private QueryOptionPage pag;
-
-    
+        
 	JdbcSienaIterable(Statement st, ResultSet rs, Query<T> query) {
 		this.st = st;
 		this.rs = rs;
 		this.query = query;
-		this.pag = (QueryOptionPage)query.option(QueryOptionPage.ID);
-
 	}
 
 	public Iterator<T> iterator() {
@@ -56,15 +48,16 @@ public class JdbcSienaIterable<T> implements Iterable<T> {
 	public class SienaJdbcIterator<V> implements Iterator<V> {
 		private Query<V> query;
 		private int idx = 0;
-		private QueryOptionOffset offsetOpt;
+		private QueryOptionPage pag;
+		private QueryOptionJdbcContext jdbcCtx;
+		private QueryOptionState state;
 		private boolean hasNext = true;
 		SienaJdbcIterator(Query<V> query) {
 			this.query = query;
-			
+			this.pag = (QueryOptionPage)query.option(QueryOptionPage.ID);
+			this.jdbcCtx = (QueryOptionJdbcContext)query.option(QueryOptionJdbcContext.ID);
+			this.state = (QueryOptionState)query.option(QueryOptionState.ID);
 			// if paginating and 0 results then no more data else resets noMoreDataAfter
-			QueryOptionPage pag = (QueryOptionPage)query.option(QueryOptionPage.ID);
-			QueryOptionJdbcContext jdbcCtx = (QueryOptionJdbcContext)query.option(QueryOptionJdbcContext.ID);
-			offsetOpt = (QueryOptionOffset)(query.option(QueryOptionOffset.ID).activate());
 			try {
 				if(pag.isPaginating()){
 					if(rs.isLast()){
@@ -83,7 +76,6 @@ public class JdbcSienaIterable<T> implements Iterable<T> {
 			try {
 				hasNext = false;
 	            if(rs.next()){
-				//if(rs.next()){
 	            	if(pag.isPaginating()) {
 	            		if(idx<pag.pageSize){
 	            			hasNext = true;
@@ -109,10 +101,8 @@ public class JdbcSienaIterable<T> implements Iterable<T> {
 						idx++;
 						return JdbcMappingUtils.mapObject(clazz, rs, ClassInfo.getClassInfo(clazz).tableName, JdbcMappingUtils.getJoinFields(query));
 					}else {
-						// if not paginating, increment the offset while iterating
-						// if paginating, doesn't increment in order to stay on the same page
-						if(offsetOpt.isActive()){
-							offsetOpt.offset++;
+						if(state.isStateful()){
+							jdbcCtx.realOffset++;
 						}
 						
 						return JdbcMappingUtils.mapObject(clazz, rs, ClassInfo.getClassInfo(clazz).tableName, JdbcMappingUtils.getJoinFields(query));

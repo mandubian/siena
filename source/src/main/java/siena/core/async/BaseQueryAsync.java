@@ -95,7 +95,7 @@ public class BaseQueryAsync<T> extends BaseQueryData<T> implements QueryAsync<T>
 	}
 
 	public SienaFuture<List<T>> fetchKeys(int limit) {
-		return pm.fetch(this, limit);
+		return pm.fetchKeys(this, limit);
 	}
 
 	public SienaFuture<List<T>> fetchKeys(int limit, Object offset) {
@@ -119,8 +119,19 @@ public class BaseQueryAsync<T> extends BaseQueryData<T> implements QueryAsync<T>
 		return null;
 	}
 
+	public QueryAsync<T> limit(int limit) {
+		optionLimit(limit);
+		return this;
+	}
+
+	public QueryAsync<T> offset(Object offset) {
+		optionOffset((Integer)offset);
+		return this;
+	}
+
 	public QueryAsync<T> paginate(int pageSize) {
 		optionPaginate(pageSize);
+		pm.paginate(this);
 		return this;
 	}
 

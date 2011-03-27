@@ -12,6 +12,7 @@ import java.util.Iterator;
 import java.util.List;
 
 import junit.framework.TestCase;
+import siena.SienaException;
 import siena.base.test.model.Address;
 import siena.base.test.model.AutoInc;
 import siena.base.test.model.Contact;
@@ -2954,7 +2955,7 @@ public abstract class BaseAsyncTest extends TestCase {
 			assertEquals(discs[i], res.get(i));
 		}
 		
-		SienaFuture<Iterable<Discovery>> future2 = query.iter();
+		SienaFuture<Iterable<Discovery>> future2 = query.iter(50);
 		Iterator<Discovery> it = future2.get().iterator();
 		int i=50;
 		while(it.hasNext()){
@@ -3311,6 +3312,1747 @@ public abstract class BaseAsyncTest extends TestCase {
 		int i=0;
 		for(Discovery disc:discs2Get){
 			assertEquals(discs[i++], disc);
+		}		
+	}
+	
+	public void testLimitStateless(){
+		Discovery[] discs = new Discovery[150];
+		for(int i=0; i<150; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs).get();
+		
+		QueryAsync<Discovery> query = pm.createQuery(Discovery.class).stateless().order("id");
+		SienaFuture<List<Discovery>> future = query.limit(50).fetch();
+		List<Discovery> res = future.get();
+		assertEquals(50, res.size());
+		for(int i=0; i<50; i++){
+			assertEquals(discs[i], res.get(i));
+		}
+		
+		future = query.limit(50).fetch();
+		res = future.get();
+		assertEquals(50, res.size());
+		for(int i=0; i<50; i++){
+			assertEquals(discs[i], res.get(i));
+		}
+		
+		future = query.fetch(50);
+		res = future.get();
+		assertEquals(50, res.size());
+		for(int i=0; i<50; i++){
+			assertEquals(discs[i], res.get(i));
+		}
+		
+		future = query.paginate(50).fetch();
+		res = future.get();
+		assertEquals(50, res.size());
+		for(int i=0; i<50; i++){
+			assertEquals(discs[i], res.get(i));
+		}
+	}
+	
+	
+	
+	public void testLimitStateful(){
+		Discovery[] discs = new Discovery[150];
+		for(int i=0; i<150; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs).get();
+		
+		QueryAsync<Discovery> query = pm.createQuery(Discovery.class).stateful().order("id");
+		SienaFuture<List<Discovery>> future = query.limit(50).fetch();
+		List<Discovery> res = future.get();
+		assertEquals(50, res.size());
+		for(int i=0; i<50; i++){
+			assertEquals(discs[i], res.get(i));
+		}
+		
+		future = query.fetch(50);
+		res = future.get();
+		assertEquals(50, res.size());
+		for(int i=0; i<50; i++){
+			assertEquals(discs[i+50], res.get(i));
+		}
+		
+		future = query.paginate(50).fetch(25);
+		res = future.get();
+		assertEquals(50, res.size());
+		for(int i=0; i<50; i++){
+			assertEquals(discs[i+100], res.get(i));
+		}
+	}
+
+	public void testOffsetStateless(){
+		Discovery[] discs = new Discovery[150];
+		for(int i=0; i<150; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs).get();
+		
+		QueryAsync<Discovery> query = pm.createQuery(Discovery.class).order("id");
+		SienaFuture<List<Discovery>> future = query.offset(50).fetch();
+		List<Discovery> res = future.get();
+		assertEquals(100, res.size());
+		for(int i=0; i<100; i++){
+			assertEquals(discs[i+50], res.get(i));
+		}
+	}
+
+	public void testOffsetStateful(){
+		Discovery[] discs = new Discovery[150];
+		for(int i=0; i<150; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs).get();
+		
+		QueryAsync<Discovery> query = pm.createQuery(Discovery.class).stateful().order("id");
+		SienaFuture<List<Discovery>> future = query.offset(50).fetch();
+		List<Discovery> res = future.get();
+		assertEquals(100, res.size());
+		for(int i=0; i<100; i++){
+			assertEquals(discs[i+50], res.get(i));
+		}
+	}
+	
+	public void testOffsetLimitStateless(){
+		Discovery[] discs = new Discovery[150];
+		for(int i=0; i<150; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs).get();
+		
+		QueryAsync<Discovery> query = pm.createQuery(Discovery.class).order("id");
+		SienaFuture<List<Discovery>> future = query.offset(50).limit(50).fetch();
+		List<Discovery> res = future.get();
+		assertEquals(50, res.size());
+		for(int i=0; i<50; i++){
+			assertEquals(discs[i+50], res.get(i));
+		}
+	}
+	
+	public void testOffsetLimitStateful(){
+		Discovery[] discs = new Discovery[150];
+		for(int i=0; i<150; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs).get();
+		
+		QueryAsync<Discovery> query = pm.createQuery(Discovery.class).stateful().order("id");
+		SienaFuture<List<Discovery>> future = query.offset(50).limit(50).fetch();
+		List<Discovery> res = future.get();
+		assertEquals(50, res.size());
+		for(int i=0; i<50; i++){
+			assertEquals(discs[i+50], res.get(i));
+		}
+	}
+
+
+	public void testOffsetLimitStatelessPaginate(){
+		Discovery[] discs = new Discovery[150];
+		for(int i=0; i<150; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs).get();
+		
+		QueryAsync<Discovery> query = pm.createQuery(Discovery.class).order("id");
+		SienaFuture<List<Discovery>> future = query.paginate(50).fetch();
+		List<Discovery> res = future.get();
+		assertEquals(50, res.size());
+		for(int i=0; i<50; i++){
+			assertEquals(discs[i], res.get(i));
+		}
+		
+		future = query.nextPage().fetch();
+		res = future.get();
+		assertEquals(50, res.size());
+		for(int i=0; i<50; i++){
+			assertEquals(discs[i+50], res.get(i));
+		}
+
+		future = query.limit(50).fetch();
+		res = future.get();
+		assertEquals(50, res.size());
+		for(int i=0; i<50; i++){
+			assertEquals(discs[i], res.get(i));
+		}
+
+		future = query.offset(50).fetch();
+		res = future.get();
+		assertEquals(100, res.size());
+		for(int i=0; i<100; i++){
+			assertEquals(discs[i+50], res.get(i));
+		}
+		
+		future = query.offset(50).limit(50).fetch();
+		res = future.get();
+		assertEquals(50, res.size());
+		for(int i=0; i<50; i++){
+			assertEquals(discs[i+50], res.get(i));
+		}
+
+	}
+	
+	public void testOffsetLimitStatefulPaginate(){
+		Discovery[] discs = new Discovery[300];
+		for(int i=0; i<300; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs).get();
+		
+		QueryAsync<Discovery> query = pm.createQuery(Discovery.class).order("id").stateful();
+		SienaFuture<List<Discovery>> future = query.paginate(50).fetch();
+		List<Discovery> res = future.get();
+		assertEquals(50, res.size());
+		for(int i=0; i<50; i++){
+			assertEquals(discs[i], res.get(i));
+		}
+		
+		future = query.nextPage().fetch();
+		res = future.get();
+		assertEquals(50, res.size());
+		for(int i=0; i<50; i++){
+			assertEquals(discs[i+50], res.get(i));
+		}
+
+		future = query.limit(50).fetch();
+		res = future.get();
+		assertEquals(50, res.size());
+		for(int i=0; i<50; i++){
+			assertEquals(discs[i+50], res.get(i));
+		}
+
+		future = query.offset(50).fetch();
+		res = future.get();
+		assertEquals(50, res.size());
+		for(int i=0; i<50; i++){
+			assertEquals(discs[i+150], res.get(i));
+		}
+		
+		future = query.offset(50).limit(25).fetch();
+		res = future.get();
+		assertEquals(25, res.size());
+		for(int i=0; i<25; i++){
+			assertEquals(discs[i+250], res.get(i));
+		}
+		try {
+			future = query.previousPage().fetch();
+		}catch(SienaException ex){
+			return;
+		}
+		fail();
+	}
+	
+	public void testOffsetLimitStatelessPaginate2(){
+		Discovery[] discs = new Discovery[300];
+		for(int i=0; i<300; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs).get();
+		
+		QueryAsync<Discovery> query = pm.createQuery(Discovery.class).order("id");
+		SienaFuture<List<Discovery>> future = query.limit(50).offset(12).fetch();
+		List<Discovery> res = future.get();
+		assertEquals(50, res.size());
+		for(int i=0; i<50; i++){
+			assertEquals(discs[i+12], res.get(i));
+		}
+		
+		future = query.offset(13).limit(30).fetch();
+		res = future.get();
+		assertEquals(30, res.size());
+		for(int i=0; i<30; i++){
+			assertEquals(discs[i+13], res.get(i));
+		}
+		
+		future = query.offset(10).limit(30).fetch(15);
+		res = future.get();
+		assertEquals(15, res.size());
+		for(int i=0; i<15; i++){
+			assertEquals(discs[i+10], res.get(i));
+		}
+		
+		future = query.paginate(6).fetch();
+		res = future.get();
+		assertEquals(6, res.size());
+		for(int i=0; i<6; i++){
+			assertEquals(discs[i], res.get(i));
+		}
+		
+		future = query.nextPage().fetch();
+		res = future.get();
+		assertEquals(6, res.size());
+		for(int i=0; i<6; i++){
+			assertEquals(discs[i+6], res.get(i));
+		}
+		
+		future = query.nextPage().fetch();
+		res = future.get();
+		assertEquals(6, res.size());
+		for(int i=0; i<6; i++){
+			assertEquals(discs[i+12], res.get(i));
+		}
+		
+		future = query.previousPage().fetch();
+		res = future.get();
+		assertEquals(6, res.size());
+		for(int i=0; i<6; i++){
+			assertEquals(discs[i+6], res.get(i));
+		}
+		
+		future = query.offset(10).fetch(10);
+		res = future.get();
+		assertEquals(10, res.size());
+		for(int i=0; i<10; i++){
+			assertEquals(discs[i+10], res.get(i));
+		}
+		
+		try {
+			future = query.nextPage().fetch();
+		}catch(SienaException ex){
+			future = query.paginate(8).fetch();
+			res = future.get();
+			assertEquals(8, res.size());
+			for(int i=0; i<8; i++){
+				assertEquals(discs[i], res.get(i));
+			}
+			
+			future = query.nextPage().fetch();
+			res = future.get();
+			assertEquals(8, res.size());
+			for(int i=0; i<8; i++){
+				assertEquals(discs[i+8], res.get(i));
+			}
+			
+			return;
+		}
+		fail();
+		
+	}
+	
+	public void testOffsetLimitStatefulPaginate2(){
+		Discovery[] discs = new Discovery[300];
+		for(int i=0; i<300; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs).get();
+		
+		QueryAsync<Discovery> query = pm.createQuery(Discovery.class).order("id").stateful();
+		SienaFuture<List<Discovery>> future = query.limit(50).offset(12).fetch();
+		List<Discovery> res = future.get();
+		assertEquals(50, res.size());
+		for(int i=0; i<50; i++){
+			assertEquals(discs[i+12], res.get(i));
+		}
+		
+		future = query.offset(13).limit(30).fetch();
+		res = future.get();
+		assertEquals(30, res.size());
+		for(int i=0; i<30; i++){
+			assertEquals(discs[i+75], res.get(i));
+		}
+		
+		future = query.offset(10).limit(30).fetch(15);
+		res = future.get();
+		assertEquals(15, res.size());
+		for(int i=0; i<15; i++){
+			assertEquals(discs[i+115], res.get(i));
+		}
+		
+		future = query.paginate(6).fetch();
+		res = future.get();
+		assertEquals(6, res.size());
+		for(int i=0; i<6; i++){
+			assertEquals(discs[i+130], res.get(i));
+		}
+		
+		future = query.nextPage().fetch();
+		res = future.get();
+		assertEquals(6, res.size());
+		for(int i=0; i<6; i++){
+			assertEquals(discs[i+136], res.get(i));
+		}
+		
+		future = query.nextPage().fetch();
+		res = future.get();
+		assertEquals(6, res.size());
+		for(int i=0; i<6; i++){
+			assertEquals(discs[i+142], res.get(i));
+		}
+		
+		future = query.previousPage().fetch();
+		res = future.get();
+		assertEquals(6, res.size());
+		for(int i=0; i<6; i++){
+			assertEquals(discs[i+136], res.get(i));
+		}
+		
+		future = query.offset(10).fetch(10);
+		res = future.get();
+		assertEquals(10, res.size());
+		for(int i=0; i<10; i++){
+			assertEquals(discs[i+146], res.get(i));
+		}
+		
+		try {
+			future = query.nextPage().fetch();
+		}catch(SienaException ex){
+			future = query.paginate(8).fetch();
+			res = future.get();
+			assertEquals(8, res.size());
+			for(int i=0; i<8; i++){
+				assertEquals(discs[i+156], res.get(i));
+			}
+			
+			future = query.nextPage().fetch();
+			res = future.get();
+			assertEquals(8, res.size());
+			for(int i=0; i<8; i++){
+				assertEquals(discs[i+164], res.get(i));
+			}
+		}
+	}
+	
+	public void testFetchPaginateStatelessTwice() {
+		Discovery[] discs = new Discovery[15];
+		for(int i=0; i<15; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs).get();
+
+		QueryAsync<Discovery> query = pm.createQuery(Discovery.class).paginate(5).order("id");
+		SienaFuture<List<Discovery>> future = query.fetch();
+		List<Discovery> res = future.get();
+		assertEquals(5, res.size());
+		for(int i=0; i<5; i++){
+			assertEquals(discs[i], res.get(i));
+		}		
+		
+		future = query.nextPage().fetch();
+		res = future.get();
+		assertEquals(5, res.size());
+		for(int i=0; i<5; i++){
+			assertEquals(discs[i+5], res.get(i));
+		}
+		
+		future = query.paginate(8).fetch();
+		res = future.get();
+		assertEquals(8, res.size());
+		for(int i=0; i<8; i++){
+			assertEquals(discs[i], res.get(i));
+		}
+		
+		future = query.nextPage().fetch();
+		res = future.get();
+		assertEquals(7, res.size());
+		for(int i=0; i<7; i++){
+			assertEquals(discs[i+8], res.get(i));
+		}
+	}
+	
+	public void testFetchPaginateStatefulTwice() {
+		Discovery[] discs = new Discovery[15];
+		for(int i=0; i<15; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs).get();
+
+		QueryAsync<Discovery> query = pm.createQuery(Discovery.class).stateful().paginate(5).order("id");
+		SienaFuture<List<Discovery>> future = query.fetch();
+		List<Discovery> res = future.get();
+		assertEquals(5, res.size());
+		for(int i=0; i<5; i++){
+			assertEquals(discs[i], res.get(i));
+		}		
+		
+		future = query.nextPage().fetch();
+		res = future.get();
+		assertEquals(5, res.size());
+		for(int i=0; i<5; i++){
+			assertEquals(discs[i+5], res.get(i));
+		}
+		
+		future = query.paginate(8).fetch();
+		res = future.get();
+		assertEquals(8, res.size());
+		for(int i=0; i<8; i++){
+			assertEquals(discs[i+5], res.get(i));
+		}
+		
+		future = query.nextPage().fetch();
+		res = future.get();
+		assertEquals(2, res.size());
+		for(int i=0; i<2; i++){
+			assertEquals(discs[i+13], res.get(i));
+		}
+	}
+	
+	
+	public void testLimitStatelessKeys(){
+		Discovery[] discs = new Discovery[150];
+		for(int i=0; i<150; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs).get();
+		
+		QueryAsync<Discovery> query = pm.createQuery(Discovery.class).stateless().order("id");
+		SienaFuture<List<Discovery>> future = query.limit(50).fetchKeys();
+		List<Discovery> res = future.get();
+		assertEquals(50, res.size());
+		for(int i=0; i<50; i++){
+			assertEquals(discs[i].id, res.get(i).id);
+			assertTrue(res.get(i).isOnlyIdFilled());
+		}
+		
+		future = query.limit(50).fetchKeys();
+		res = future.get();
+		assertEquals(50, res.size());
+		for(int i=0; i<50; i++){
+			assertEquals(discs[i].id, res.get(i).id);
+			assertTrue(res.get(i).isOnlyIdFilled());
+		}
+		
+		future = query.fetchKeys(50);
+		res = future.get();
+		assertEquals(50, res.size());
+		for(int i=0; i<50; i++){
+			assertEquals(discs[i].id, res.get(i).id);
+			assertTrue(res.get(i).isOnlyIdFilled());
+		}
+		
+		future = query.paginate(50).fetchKeys();
+		res = future.get();
+		assertEquals(50, res.size());
+		for(int i=0; i<50; i++){
+			assertEquals(discs[i].id, res.get(i).id);
+			assertTrue(res.get(i).isOnlyIdFilled());
+		}
+	}
+	
+	public void testLimitStatefulKeys(){
+		Discovery[] discs = new Discovery[150];
+		for(int i=0; i<150; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs).get();
+		
+		QueryAsync<Discovery> query = pm.createQuery(Discovery.class).stateful().order("id");
+		SienaFuture<List<Discovery>> future = query.limit(50).fetchKeys();
+		List<Discovery> res = future.get();
+		assertEquals(50, res.size());
+		for(int i=0; i<50; i++){
+			assertEquals(discs[i].id, res.get(i).id);
+			assertTrue(res.get(i).isOnlyIdFilled());
+		}
+		
+		future = query.fetchKeys(50);
+		res = future.get();
+		assertEquals(50, res.size());
+		for(int i=0; i<50; i++){
+			assertEquals(discs[i+50].id, res.get(i).id);
+			assertTrue(res.get(i).isOnlyIdFilled());
+		}
+		
+		future = query.paginate(50).fetchKeys(25);
+		res = future.get();
+		assertEquals(50, res.size());
+		for(int i=0; i<50; i++){
+			assertEquals(discs[i+100].id, res.get(i).id);
+			assertTrue(res.get(i).isOnlyIdFilled());
+		}
+	}
+	
+	public void testOffsetStatelessKeys(){
+		Discovery[] discs = new Discovery[150];
+		for(int i=0; i<150; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs).get();
+		
+		QueryAsync<Discovery> query = pm.createQuery(Discovery.class).order("id");
+		SienaFuture<List<Discovery>> future = query.offset(50).fetchKeys();
+		List<Discovery> res = future.get();
+		assertEquals(100, res.size());
+		for(int i=0; i<100; i++){
+			assertEquals(discs[i+50].id, res.get(i).id);
+			assertTrue(res.get(i).isOnlyIdFilled());
+		}
+	}
+
+	public void testOffsetStatefulKeys(){
+		Discovery[] discs = new Discovery[150];
+		for(int i=0; i<150; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs).get();
+		
+		QueryAsync<Discovery> query = pm.createQuery(Discovery.class).stateful().order("id");
+		SienaFuture<List<Discovery>> future = query.offset(50).fetchKeys();
+		List<Discovery> res = future.get();
+		assertEquals(100, res.size());
+		for(int i=0; i<100; i++){
+			assertEquals(discs[i+50].id, res.get(i).id);
+			assertTrue(res.get(i).isOnlyIdFilled());
+		}
+	}
+	
+	public void testOffsetLimitStatelessKeys(){
+		Discovery[] discs = new Discovery[150];
+		for(int i=0; i<150; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs).get();
+		
+		QueryAsync<Discovery> query = pm.createQuery(Discovery.class).order("id");
+		SienaFuture<List<Discovery>> future = query.offset(50).limit(50).fetchKeys();
+		List<Discovery> res = future.get();
+		assertEquals(50, res.size());
+		for(int i=0; i<50; i++){
+			assertEquals(discs[i+50].id, res.get(i).id);
+			assertTrue(res.get(i).isOnlyIdFilled());
+		}
+	}
+
+	public void testOffsetLimitStatefulKeys(){
+		Discovery[] discs = new Discovery[150];
+		for(int i=0; i<150; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs).get();
+		
+		QueryAsync<Discovery> query = pm.createQuery(Discovery.class).stateful().order("id");
+		SienaFuture<List<Discovery>> future = query.offset(50).limit(50).fetchKeys();
+		List<Discovery> res = future.get();
+		assertEquals(50, res.size());
+		for(int i=0; i<50; i++){
+			assertEquals(discs[i+50].id, res.get(i).id);
+			assertTrue(res.get(i).isOnlyIdFilled());
+		}
+	}
+
+	
+	public void testOffsetLimitStatelessPaginateKeys(){
+		Discovery[] discs = new Discovery[150];
+		for(int i=0; i<150; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs).get();
+		
+		QueryAsync<Discovery> query = pm.createQuery(Discovery.class).order("id");
+		SienaFuture<List<Discovery>> future = query.paginate(50).fetchKeys();
+		List<Discovery> res = future.get();
+		assertEquals(50, res.size());
+		for(int i=0; i<50; i++){
+			assertEquals(discs[i].id, res.get(i).id);
+			assertTrue(res.get(i).isOnlyIdFilled());
+		}
+		
+		future = query.nextPage().fetchKeys();
+		res = future.get();
+		assertEquals(50, res.size());
+		for(int i=0; i<50; i++){
+			assertEquals(discs[i+50].id, res.get(i).id);
+			assertTrue(res.get(i).isOnlyIdFilled());
+		}
+
+		future = query.limit(50).fetchKeys();
+		res = future.get();
+		assertEquals(50, res.size());
+		for(int i=0; i<50; i++){
+			assertEquals(discs[i].id, res.get(i).id);
+			assertTrue(res.get(i).isOnlyIdFilled());
+		}
+
+		future = query.offset(50).fetchKeys();
+		res = future.get();
+		assertEquals(100, res.size());
+		for(int i=0; i<100; i++){
+			assertEquals(discs[i+50].id, res.get(i).id);
+			assertTrue(res.get(i).isOnlyIdFilled());
+		}
+		
+		future = query.offset(50).limit(50).fetchKeys();
+		res = future.get();
+		assertEquals(50, res.size());
+		for(int i=0; i<50; i++){
+			assertEquals(discs[i+50].id, res.get(i).id);
+			assertTrue(res.get(i).isOnlyIdFilled());
+		}
+
+	}
+	
+	public void testOffsetLimitStatefulPaginateKeys(){
+		Discovery[] discs = new Discovery[300];
+		for(int i=0; i<300; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs).get();
+		
+		QueryAsync<Discovery> query = pm.createQuery(Discovery.class).order("id").stateful();
+		SienaFuture<List<Discovery>> future = query.paginate(50).fetchKeys();
+		List<Discovery> res = future.get();
+		assertEquals(50, res.size());
+		for(int i=0; i<50; i++){
+			assertEquals(discs[i].id, res.get(i).id);
+			assertTrue(res.get(i).isOnlyIdFilled());
+		}
+		
+		future = query.nextPage().fetchKeys();
+		res = future.get();
+		assertEquals(50, res.size());
+		for(int i=0; i<50; i++){
+			assertEquals(discs[i+50].id, res.get(i).id);
+			assertTrue(res.get(i).isOnlyIdFilled());
+		}
+
+		future = query.limit(50).fetchKeys();
+		res = future.get();
+		assertEquals(50, res.size());
+		for(int i=0; i<50; i++){
+			assertEquals(discs[i+50].id, res.get(i).id);
+			assertTrue(res.get(i).isOnlyIdFilled());
+		}
+
+		future = query.offset(50).fetchKeys();
+		res = future.get();
+		assertEquals(50, res.size());
+		for(int i=0; i<50; i++){
+			assertEquals(discs[i+150].id, res.get(i).id);
+			assertTrue(res.get(i).isOnlyIdFilled());
+		}
+		
+		future = query.offset(50).limit(25).fetchKeys();
+		res = future.get();
+		assertEquals(25, res.size());
+		for(int i=0; i<25; i++){
+			assertEquals(discs[i+250].id, res.get(i).id);
+			assertTrue(res.get(i).isOnlyIdFilled());
+		}
+		try {
+			future = query.previousPage().fetch();
+		}catch(SienaException ex){
+			return;
+		}
+		fail();
+	}
+	
+	public void testOffsetLimitStatelessPaginate2Keys(){
+		Discovery[] discs = new Discovery[300];
+		for(int i=0; i<300; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs).get();
+		
+		QueryAsync<Discovery> query = pm.createQuery(Discovery.class).order("id");
+		SienaFuture<List<Discovery>> future = query.limit(50).offset(12).fetchKeys();
+		List<Discovery> res = future.get();
+		assertEquals(50, res.size());
+		for(int i=0; i<50; i++){
+			assertEquals(discs[i+12].id, res.get(i).id);
+			assertTrue(res.get(i).isOnlyIdFilled());
+		}
+		
+		future = query.offset(13).limit(30).fetchKeys();
+		res = future.get();
+		assertEquals(30, res.size());
+		for(int i=0; i<30; i++){
+			assertEquals(discs[i+13].id, res.get(i).id);
+			assertTrue(res.get(i).isOnlyIdFilled());
+		}
+		
+		future = query.offset(10).limit(30).fetchKeys(15);
+		res = future.get();
+		assertEquals(15, res.size());
+		for(int i=0; i<15; i++){
+			assertEquals(discs[i+10].id, res.get(i).id);
+			assertTrue(res.get(i).isOnlyIdFilled());
+		}
+		
+		future = query.paginate(6).fetchKeys();
+		res = future.get();
+		assertEquals(6, res.size());
+		for(int i=0; i<6; i++){
+			assertEquals(discs[i].id, res.get(i).id);
+			assertTrue(res.get(i).isOnlyIdFilled());
+		}
+		
+		future = query.nextPage().fetchKeys();
+		res = future.get();
+		assertEquals(6, res.size());
+		for(int i=0; i<6; i++){
+			assertEquals(discs[i+6].id, res.get(i).id);
+			assertTrue(res.get(i).isOnlyIdFilled());
+		}
+		
+		future = query.nextPage().fetchKeys();
+		res = future.get();
+		assertEquals(6, res.size());
+		for(int i=0; i<6; i++){
+			assertEquals(discs[i+12].id, res.get(i).id);
+			assertTrue(res.get(i).isOnlyIdFilled());
+		}
+		
+		future = query.previousPage().fetchKeys();
+		res = future.get();
+		assertEquals(6, res.size());
+		for(int i=0; i<6; i++){
+			assertEquals(discs[i+6].id, res.get(i).id);
+			assertTrue(res.get(i).isOnlyIdFilled());
+		}
+		
+		future = query.offset(10).fetchKeys(10);
+		res = future.get();
+		assertEquals(10, res.size());
+		for(int i=0; i<10; i++){
+			assertEquals(discs[i+10].id, res.get(i).id);
+			assertTrue(res.get(i).isOnlyIdFilled());
+		}
+		
+		try {
+			future = query.nextPage().fetchKeys();
+		}catch(SienaException ex){
+			future = query.paginate(8).fetch();
+			res = future.get();
+			assertEquals(8, res.size());
+			for(int i=0; i<8; i++){
+				assertEquals(discs[i].id, res.get(i).id);
+			}
+			
+			future = query.nextPage().fetchKeys();
+			res = future.get();
+			assertEquals(8, res.size());
+			for(int i=0; i<8; i++){
+				assertEquals(discs[i+8].id, res.get(i).id);
+			}
+		}
+		
+	}
+	
+	public void testOffsetLimitStatefulPaginate2Keys(){
+		Discovery[] discs = new Discovery[300];
+		for(int i=0; i<300; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs).get();
+		
+		QueryAsync<Discovery> query = pm.createQuery(Discovery.class).order("id").stateful();
+		SienaFuture<List<Discovery>> future = query.limit(50).offset(12).fetchKeys();
+		List<Discovery> res = future.get();
+		assertEquals(50, res.size());
+		for(int i=0; i<50; i++){
+			assertEquals(discs[i+12].id, res.get(i).id);
+			assertTrue(res.get(i).isOnlyIdFilled());
+		}
+		
+		future = query.offset(13).limit(30).fetchKeys();
+		res = future.get();
+		assertEquals(30, res.size());
+		for(int i=0; i<30; i++){
+			assertEquals(discs[i+75].id, res.get(i).id);
+			assertTrue(res.get(i).isOnlyIdFilled());
+		}
+		
+		future = query.offset(10).limit(30).fetchKeys(15);
+		res = future.get();
+		assertEquals(15, res.size());
+		for(int i=0; i<15; i++){
+			assertEquals(discs[i+115].id, res.get(i).id);
+			assertTrue(res.get(i).isOnlyIdFilled());
+		}
+		
+		future = query.paginate(6).fetchKeys();
+		res = future.get();
+		assertEquals(6, res.size());
+		for(int i=0; i<6; i++){
+			assertEquals(discs[i+130].id, res.get(i).id);
+			assertTrue(res.get(i).isOnlyIdFilled());
+		}
+		
+		future = query.nextPage().fetchKeys();
+		res = future.get();
+		assertEquals(6, res.size());
+		for(int i=0; i<6; i++){
+			assertEquals(discs[i+136].id, res.get(i).id);
+			assertTrue(res.get(i).isOnlyIdFilled());
+		}
+		
+		future = query.nextPage().fetchKeys();
+		res = future.get();
+		assertEquals(6, res.size());
+		for(int i=0; i<6; i++){
+			assertEquals(discs[i+142].id, res.get(i).id);
+			assertTrue(res.get(i).isOnlyIdFilled());
+		}
+		
+		future = query.previousPage().fetchKeys();
+		res = future.get();
+		assertEquals(6, res.size());
+		for(int i=0; i<6; i++){
+			assertEquals(discs[i+136].id, res.get(i).id);
+			assertTrue(res.get(i).isOnlyIdFilled());
+		}
+		
+		future = query.offset(10).fetchKeys(10);
+		res = future.get();
+		assertEquals(10, res.size());
+		for(int i=0; i<10; i++){
+			assertEquals(discs[i+146].id, res.get(i).id);
+			assertTrue(res.get(i).isOnlyIdFilled());
+		}
+		
+		try {
+			future = query.nextPage().fetchKeys();
+		}catch(SienaException ex){
+			future = query.paginate(8).fetchKeys();
+			res = future.get();
+			assertEquals(8, res.size());
+			for(int i=0; i<8; i++){
+				assertEquals(discs[i+156].id, res.get(i).id);
+				assertTrue(res.get(i).isOnlyIdFilled());
+			}
+			
+			future = query.nextPage().fetchKeys();
+			res = future.get();
+			assertEquals(8, res.size());
+			for(int i=0; i<8; i++){
+				assertEquals(discs[i+164].id, res.get(i).id);
+				assertTrue(res.get(i).isOnlyIdFilled());
+			}
+		}
+	}
+	
+	public void testFetchPaginateStatelessTwiceKeys() {
+		Discovery[] discs = new Discovery[15];
+		for(int i=0; i<15; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs).get();
+
+		QueryAsync<Discovery> query = pm.createQuery(Discovery.class).paginate(5).order("id");
+		SienaFuture<List<Discovery>> future = query.fetchKeys();
+		List<Discovery> res = future.get();
+		assertEquals(5, res.size());
+		for(int i=0; i<5; i++){
+			assertEquals(discs[i].id, res.get(i).id);
+			assertTrue(res.get(i).isOnlyIdFilled());
+		}		
+		
+		future = query.nextPage().fetchKeys();
+		res = future.get();
+		assertEquals(5, res.size());
+		for(int i=0; i<5; i++){
+			assertEquals(discs[i+5].id, res.get(i).id);
+			assertTrue(res.get(i).isOnlyIdFilled());
+		}
+		
+		future = query.paginate(8).fetchKeys();
+		res = future.get();
+		assertEquals(8, res.size());
+		for(int i=0; i<8; i++){
+			assertEquals(discs[i].id, res.get(i).id);
+			assertTrue(res.get(i).isOnlyIdFilled());
+		}
+		
+		future = query.nextPage().fetchKeys();
+		res = future.get();
+		assertEquals(7, res.size());
+		for(int i=0; i<7; i++){
+			assertEquals(discs[i+8].id, res.get(i).id);
+			assertTrue(res.get(i).isOnlyIdFilled());
+		}
+	}
+	
+	public void testFetchPaginateStatefulTwiceKeys() {
+		Discovery[] discs = new Discovery[15];
+		for(int i=0; i<15; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs).get();
+
+		QueryAsync<Discovery> query = pm.createQuery(Discovery.class).stateful().paginate(5).order("id");
+		SienaFuture<List<Discovery>> future = query.fetchKeys();
+		List<Discovery> res = future.get();
+		assertEquals(5, res.size());
+		for(int i=0; i<5; i++){
+			assertEquals(discs[i].id, res.get(i).id);
+			assertTrue(res.get(i).isOnlyIdFilled());
+		}		
+		
+		future = query.nextPage().fetchKeys();
+		res = future.get();
+		assertEquals(5, res.size());
+		for(int i=0; i<5; i++){
+			assertEquals(discs[i+5].id, res.get(i).id);
+			assertTrue(res.get(i).isOnlyIdFilled());
+		}
+		
+		future = query.paginate(8).fetchKeys();
+		res = future.get();
+		assertEquals(8, res.size());
+		for(int i=0; i<8; i++){
+			assertEquals(discs[i+5].id, res.get(i).id);
+			assertTrue(res.get(i).isOnlyIdFilled());
+		}
+		
+		future = query.nextPage().fetchKeys();
+		res = future.get();
+		assertEquals(2, res.size());
+		for(int i=0; i<2; i++){
+			assertEquals(discs[i+13].id, res.get(i).id);
+			assertTrue(res.get(i).isOnlyIdFilled());
+		}
+	}
+	
+	public void testLimitStatelessIter(){
+		Discovery[] discs = new Discovery[150];
+		for(int i=0; i<150; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs).get();
+		
+		QueryAsync<Discovery> query = pm.createQuery(Discovery.class).stateless().order("id");
+		SienaFuture<Iterable<Discovery>> future = query.limit(50).iter();
+		Iterable<Discovery> iter = future.get();
+		Iterator<Discovery> it = iter.iterator();
+		int i=0;
+		while(it.hasNext()){
+			Discovery disc = it.next();
+			assertEquals(discs[i++], disc);
+		}	
+		assertEquals(50, i);	
+		
+		future = query.limit(50).iter();
+		iter = future.get();
+		it = iter.iterator();
+		i=0;
+		while(it.hasNext()){
+			Discovery disc = it.next();
+			assertEquals(discs[i++], disc);
+		}	
+		assertEquals(50, i);	
+		
+		future = query.iter(50);
+		iter = future.get();
+		it = iter.iterator();
+		i=0;
+		while(it.hasNext()){
+			Discovery disc = it.next();
+			assertEquals(discs[i++], disc);
+		}	
+		assertEquals(50, i);	
+
+		future = query.paginate(50).iter();
+		iter = future.get();
+		it = iter.iterator();
+		i=0;
+		while(it.hasNext()){
+			Discovery disc = it.next();
+			assertEquals(discs[i++], disc);
+		}	
+		assertEquals(50, i);
+	}
+	
+	public void testLimitStatefulIter(){
+		Discovery[] discs = new Discovery[150];
+		for(int i=0; i<150; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs).get();
+		
+		QueryAsync<Discovery> query = pm.createQuery(Discovery.class).stateful().order("id");
+		SienaFuture<Iterable<Discovery>> future = query.limit(50).iter();
+		Iterable<Discovery> iter = future.get();
+		Iterator<Discovery> it = iter.iterator();
+		int i=0;
+		while(it.hasNext()){
+			Discovery disc = it.next();
+			assertEquals(discs[i++], disc);
+		}	
+		assertEquals(50, i);
+		
+		future = query.iter(50);
+		iter = future.get();
+		it = iter.iterator();
+		i=50;
+		while(it.hasNext()){
+			Discovery disc = it.next();
+			assertEquals(discs[i++], disc);
+		}	
+		assertEquals(100, i);
+		
+		future = query.paginate(50).iter(25);
+		iter = future.get();
+		it = iter.iterator();
+		i=100;
+		while(it.hasNext()){
+			Discovery disc = it.next();
+			assertEquals(discs[i++], disc);
+		}	
+		assertEquals(150, i);
+	}
+	
+	public void testOffsetStatelessIter(){
+		Discovery[] discs = new Discovery[150];
+		for(int i=0; i<150; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs).get();
+		
+		QueryAsync<Discovery> query = pm.createQuery(Discovery.class).order("id");
+		SienaFuture<Iterable<Discovery>> future = query.offset(50).iter();
+		Iterable<Discovery> iter = future.get();
+		Iterator<Discovery> it = iter.iterator();
+		int i=50;
+		while(it.hasNext()){
+			Discovery disc = it.next();
+			assertEquals(discs[i++], disc);
+		}	
+		assertEquals(150, i);
+	}
+	
+	public void testOffsetStatefulIter(){
+		Discovery[] discs = new Discovery[150];
+		for(int i=0; i<150; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs).get();
+		
+		QueryAsync<Discovery> query = pm.createQuery(Discovery.class).stateful().order("id");
+		SienaFuture<Iterable<Discovery>> future = query.offset(50).iter();
+		Iterable<Discovery> iter = future.get();
+		Iterator<Discovery> it = iter.iterator();
+		int i=50;
+		while(it.hasNext()){
+			Discovery disc = it.next();
+			assertEquals(discs[i++], disc);
+		}	
+		assertEquals(150, i);
+	}
+	
+	public void testOffsetLimitStatelessIter(){
+		Discovery[] discs = new Discovery[150];
+		for(int i=0; i<150; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs).get();
+		
+		QueryAsync<Discovery> query = pm.createQuery(Discovery.class).order("id");
+		SienaFuture<Iterable<Discovery>> future = query.offset(50).limit(50).iter();
+		Iterable<Discovery> iter = future.get();
+		Iterator<Discovery> it = iter.iterator();
+		int i=50;
+		while(it.hasNext()){
+			Discovery disc = it.next();
+			assertEquals(discs[i++], disc);
+		}	
+		assertEquals(100, i);
+	}
+	
+	public void testOffsetLimitStatefulIter(){
+		Discovery[] discs = new Discovery[150];
+		for(int i=0; i<150; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs).get();
+		
+		QueryAsync<Discovery> query = pm.createQuery(Discovery.class).stateful().order("id");
+		SienaFuture<Iterable<Discovery>> future = query.offset(50).limit(50).iter();
+		Iterable<Discovery> iter = future.get();
+		Iterator<Discovery> it = iter.iterator();
+		int i=50;
+		while(it.hasNext()){
+			Discovery disc = it.next();
+			assertEquals(discs[i++], disc);
+		}	
+		assertEquals(100, i);
+	}
+	
+	public void testOffsetLimitStatelessPaginateIter(){
+		Discovery[] discs = new Discovery[150];
+		for(int i=0; i<150; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs).get();
+		
+		QueryAsync<Discovery> query = pm.createQuery(Discovery.class).order("id");
+		SienaFuture<Iterable<Discovery>> future = query.paginate(50).iter();
+		Iterable<Discovery> iter = future.get();
+		Iterator<Discovery> it = iter.iterator();
+		int i=0;
+		while(it.hasNext()){
+			Discovery disc = it.next();
+			assertEquals(discs[i++], disc);
+		}	
+		assertEquals(50, i);
+		
+		future = query.nextPage().iter();
+		iter = future.get();
+		it = iter.iterator();
+		while(it.hasNext()){
+			Discovery disc = it.next();
+			assertEquals(discs[i++], disc);
+		}	
+		assertEquals(100, i);
+
+		future = query.limit(50).iter();
+		iter = future.get();
+		it = iter.iterator();
+		i=0;
+		while(it.hasNext()){
+			Discovery disc = it.next();
+			assertEquals(discs[i++], disc);
+		}	
+		assertEquals(50, i);
+
+		future = query.offset(50).iter();
+		iter = future.get();
+		it = iter.iterator();
+		i=50;
+		while(it.hasNext()){
+			Discovery disc = it.next();
+			assertEquals(discs[i++], disc);
+		}	
+		assertEquals(150, i);
+		
+		future = query.offset(50).limit(50).iter();
+		iter = future.get();
+		it = iter.iterator();
+		i=50;
+		while(it.hasNext()){
+			Discovery disc = it.next();
+			assertEquals(discs[i++], disc);
+		}	
+		assertEquals(100, i);
+
+	}
+	
+	public void testOffsetLimitStatefulPaginateIter(){
+		Discovery[] discs = new Discovery[300];
+		for(int i=0; i<300; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs).get();
+		
+		QueryAsync<Discovery> query = pm.createQuery(Discovery.class).stateful().order("id");
+		SienaFuture<Iterable<Discovery>> future = query.paginate(50).iter();
+		Iterable<Discovery> iter = future.get();
+		Iterator<Discovery> it = iter.iterator();
+		int i=0;
+		while(it.hasNext()){
+			Discovery disc = it.next();
+			assertEquals(discs[i++], disc);
+		}	
+		assertEquals(50, i);
+		
+		future = query.nextPage().iter();
+		iter = future.get();
+		it = iter.iterator();
+		while(it.hasNext()){
+			Discovery disc = it.next();
+			assertEquals(discs[i++], disc);
+		}	
+		assertEquals(100, i);
+
+		future = query.limit(50).iter();
+		iter = future.get();
+		it = iter.iterator();
+		i=50;
+		while(it.hasNext()){
+			Discovery disc = it.next();
+			assertEquals(discs[i++], disc);
+		}	
+		assertEquals(100, i);
+
+		future = query.offset(50).iter();
+		iter = future.get();
+		it = iter.iterator();
+		i=150;
+		while(it.hasNext()){
+			Discovery disc = it.next();
+			assertEquals(discs[i++], disc);
+		}	
+		assertEquals(200, i);
+		
+		future = query.offset(50).limit(25).iter();
+		iter = future.get();
+		it = iter.iterator();
+		i=250;
+		while(it.hasNext()){
+			Discovery disc = it.next();
+			assertEquals(discs[i++], disc);
+		}	
+		assertEquals(275, i);
+
+		try {
+			future = query.previousPage().iter();
+		}catch(SienaException ex){
+			return;
+		}
+		fail();
+	}
+	
+	public void testOffsetLimitStatelessPaginate2Iter(){
+		Discovery[] discs = new Discovery[300];
+		for(int i=0; i<300; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs).get();
+		
+		QueryAsync<Discovery> query = pm.createQuery(Discovery.class).order("id");
+		SienaFuture<Iterable<Discovery>> future = query.limit(50).offset(12).iter();
+		Iterable<Discovery> iter = future.get();
+		Iterator<Discovery> it = iter.iterator();
+		int i=12;
+		while(it.hasNext()){
+			Discovery disc = it.next();
+			assertEquals(discs[i++], disc);
+		}	
+		assertEquals(62, i);
+		
+		future = query.offset(13).limit(30).iter();
+		iter = future.get();
+		it = iter.iterator();
+		i=13;
+		while(it.hasNext()){
+			Discovery disc = it.next();
+			assertEquals(discs[i++], disc);
+		}	
+		assertEquals(43, i);
+		
+		future = query.offset(10).limit(30).iter(15);
+		iter = future.get();
+		it = iter.iterator();
+		i=10;
+		while(it.hasNext()){
+			Discovery disc = it.next();
+			assertEquals(discs[i++], disc);
+		}	
+		assertEquals(25, i);
+
+		future = query.paginate(6).iter();
+		iter = future.get();
+		it = iter.iterator();
+		i=0;
+		while(it.hasNext()){
+			Discovery disc = it.next();
+			assertEquals(discs[i++], disc);
+		}	
+		assertEquals(6, i);
+		
+		future = query.nextPage().iter();
+		iter = future.get();
+		it = iter.iterator();
+		i=6;
+		while(it.hasNext()){
+			Discovery disc = it.next();
+			assertEquals(discs[i++], disc);
+		}	
+		assertEquals(12, i);
+		
+		future = query.nextPage().iter();
+		iter = future.get();
+		it = iter.iterator();
+		i=12;
+		while(it.hasNext()){
+			Discovery disc = it.next();
+			assertEquals(discs[i++], disc);
+		}	
+		assertEquals(18, i);
+		
+		future = query.previousPage().iter();
+		iter = future.get();
+		it = iter.iterator();
+		i=6;
+		while(it.hasNext()){
+			Discovery disc = it.next();
+			assertEquals(discs[i++], disc);
+		}	
+		assertEquals(12, i);
+		
+		future = query.offset(10).iter(10);
+		iter = future.get();
+		it = iter.iterator();
+		i=10;
+		while(it.hasNext()){
+			Discovery disc = it.next();
+			assertEquals(discs[i++], disc);
+		}	
+		assertEquals(20, i);
+		
+		try {
+			future = query.nextPage().iter();
+		}catch(SienaException ex){
+			future = query.paginate(8).iter();
+			iter = future.get();
+			it = iter.iterator();
+			i=0;
+			while(it.hasNext()){
+				Discovery disc = it.next();
+				assertEquals(discs[i++], disc);
+			}	
+			assertEquals(8, i);
+			
+			future = query.nextPage().iter();
+			iter = future.get();
+			it = iter.iterator();
+			i=8;
+			while(it.hasNext()){
+				Discovery disc = it.next();
+				assertEquals(discs[i++], disc);
+			}	
+			assertEquals(16, i);
+			
+			return;
+		}
+		fail();
+		
+	}
+	
+	public void testOffsetLimitStatefulPaginate2Iter(){
+		Discovery[] discs = new Discovery[300];
+		for(int i=0; i<300; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs).get();
+		
+		QueryAsync<Discovery> query = pm.createQuery(Discovery.class).stateful().order("id");
+		SienaFuture<Iterable<Discovery>> future = query.limit(50).offset(12).iter();
+		Iterable<Discovery> iter = future.get();
+		Iterator<Discovery> it = iter.iterator();
+		int i=12;
+		while(it.hasNext()){
+			Discovery disc = it.next();
+			assertEquals(discs[i++], disc);
+		}	
+		assertEquals(62, i);
+		
+		future = query.offset(13).limit(30).iter();
+		iter = future.get();
+		it = iter.iterator();
+		i=75;
+		while(it.hasNext()){
+			Discovery disc = it.next();
+			assertEquals(discs[i++], disc);
+		}	
+		assertEquals(105, i);
+		
+		future = query.offset(10).limit(30).iter(15);
+		iter = future.get();
+		it = iter.iterator();
+		i=115;
+		while(it.hasNext()){
+			Discovery disc = it.next();
+			assertEquals(discs[i++], disc);
+		}	
+		assertEquals(130, i);
+
+		future = query.paginate(6).iter();
+		iter = future.get();
+		it = iter.iterator();
+		i=130;
+		while(it.hasNext()){
+			Discovery disc = it.next();
+			assertEquals(discs[i++], disc);
+		}	
+		assertEquals(136, i);
+		
+		future = query.nextPage().iter();
+		iter = future.get();
+		it = iter.iterator();
+		i=136;
+		while(it.hasNext()){
+			Discovery disc = it.next();
+			assertEquals(discs[i++], disc);
+		}	
+		assertEquals(142, i);
+		
+		future = query.nextPage().iter();
+		iter = future.get();
+		it = iter.iterator();
+		i=142;
+		while(it.hasNext()){
+			Discovery disc = it.next();
+			assertEquals(discs[i++], disc);
+		}	
+		assertEquals(148, i);
+		
+		future = query.previousPage().iter();
+		iter = future.get();
+		it = iter.iterator();
+		i=136;
+		while(it.hasNext()){
+			Discovery disc = it.next();
+			assertEquals(discs[i++], disc);
+		}	
+		assertEquals(142, i);
+		
+		future = query.offset(10).iter(10);
+		iter = future.get();
+		it = iter.iterator();
+		i=146;
+		while(it.hasNext()){
+			Discovery disc = it.next();
+			assertEquals(discs[i++], disc);
+		}	
+		assertEquals(156, i);
+		
+		try {
+			future = query.nextPage().iter();
+		}catch(SienaException ex){
+			future = query.paginate(8).iter();
+			iter = future.get();
+			it = iter.iterator();
+			i=156;
+			while(it.hasNext()){
+				Discovery disc = it.next();
+				assertEquals(discs[i++], disc);
+			}	
+			assertEquals(164, i);
+			
+			future = query.nextPage().iter();
+			iter = future.get();
+			it = iter.iterator();
+			i=164;
+			while(it.hasNext()){
+				Discovery disc = it.next();
+				assertEquals(discs[i++], disc);
+			}	
+			assertEquals(172, i);
+			
+			return;
+		}
+		fail();
+		
+	}
+	
+	public void testFetchPaginateStatelessTwiceIter() {
+		Discovery[] discs = new Discovery[15];
+		for(int i=0; i<15; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs).get();
+
+		QueryAsync<Discovery> query = pm.createQuery(Discovery.class).paginate(5).order("id");
+		SienaFuture<Iterable<Discovery>> future = query.iter();
+		Iterable<Discovery> iter = future.get();
+		Iterator<Discovery> it = iter.iterator();
+		int i=0;
+		while(it.hasNext()){
+			Discovery disc = it.next();
+			assertEquals(discs[i++], disc);
+		}	
+		assertEquals(5, i);
+		
+		future = query.nextPage().iter();
+		iter = future.get();
+		it = iter.iterator();
+		i=5;
+		while(it.hasNext()){
+			Discovery disc = it.next();
+			assertEquals(discs[i++], disc);
+		}	
+		assertEquals(10, i);
+		
+		future = query.paginate(8).iter();
+		iter = future.get();
+		it = iter.iterator();
+		i=0;
+		while(it.hasNext()){
+			Discovery disc = it.next();
+			assertEquals(discs[i++], disc);
+		}	
+		assertEquals(8, i);
+		
+		future = query.nextPage().iter();
+		iter = future.get();
+		it = iter.iterator();
+		i=8;
+		while(it.hasNext()){
+			Discovery disc = it.next();
+			assertEquals(discs[i++], disc);
+		}	
+		assertEquals(15, i);
+	}
+	
+	public void testFetchPaginateStatefulTwiceIter() {
+		Discovery[] discs = new Discovery[15];
+		for(int i=0; i<15; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs).get();
+
+		QueryAsync<Discovery> query = pm.createQuery(Discovery.class).stateful().paginate(5).order("id");
+		SienaFuture<Iterable<Discovery>> future = query.iter();
+		Iterable<Discovery> iter = future.get();
+		Iterator<Discovery> it = iter.iterator();
+		int i=0;
+		while(it.hasNext()){
+			Discovery disc = it.next();
+			assertEquals(discs[i++], disc);
+		}	
+		assertEquals(5, i);
+		
+		future = query.nextPage().iter();
+		iter = future.get();
+		it = iter.iterator();
+		i=5;
+		while(it.hasNext()){
+			Discovery disc = it.next();
+			assertEquals(discs[i++], disc);
+		}	
+		assertEquals(10, i);
+		
+		future = query.paginate(8).iter();
+		iter = future.get();
+		it = iter.iterator();
+		i=5;
+		while(it.hasNext()){
+			Discovery disc = it.next();
+			assertEquals(discs[i++], disc);
+		}	
+		assertEquals(13, i);
+		
+		future = query.nextPage().iter();
+		iter = future.get();
+		it = iter.iterator();
+		i=13;
+		while(it.hasNext()){
+			Discovery disc = it.next();
+			assertEquals(discs[i++], disc);
+		}	
+		assertEquals(15, i);
+	}
+	
+	public void testLimitStatelessRealAsync(){
+		Discovery[] discs = new Discovery[150];
+		for(int i=0; i<150; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs).get();
+		
+		QueryAsync<Discovery> query = pm.createQuery(Discovery.class).stateless().order("id");
+		SienaFuture<List<Discovery>> future1 = query.limit(50).fetch();
+		SienaFuture<List<Discovery>> future2 = query.offset(50).fetch();
+		SienaFuture<List<Discovery>> future21 = query.limit(70).offset(30).fetch();
+		SienaFuture<List<Discovery>> future3 = query.fetch(50);
+		SienaFuture<List<Discovery>> future4 = query.paginate(50).fetch();
+		SienaFuture<List<Discovery>> future5 = query.nextPage().fetch();
+		SienaFuture<List<Discovery>> future6 = query.nextPage().fetch();
+		SienaFuture<List<Discovery>> future7 = query.previousPage().fetch();
+
+		List<Discovery> res = future1.get();
+		assertEquals(50, res.size());
+		for(int i=0; i<50; i++){
+			assertEquals(discs[i], res.get(i));
+		}
+		
+		res = future2.get();
+		assertEquals(100, res.size());
+		for(int i=0; i<100; i++){
+			assertEquals(discs[i+50], res.get(i));
+		}
+				
+		res = future21.get();
+		assertEquals(70, res.size());
+		for(int i=0; i<70; i++){
+			assertEquals(discs[i+30], res.get(i));
+		}
+		
+		res = future3.get();
+		assertEquals(50, res.size());
+		for(int i=0; i<50; i++){
+			assertEquals(discs[i], res.get(i));
+		}
+		
+		res = future4.get();
+		assertEquals(50, res.size());
+		for(int i=0; i<50; i++){
+			assertEquals(discs[i], res.get(i));
+		}
+		
+		res = future5.get();
+		assertEquals(50, res.size());
+		for(int i=0; i<50; i++){
+			assertEquals(discs[i+50], res.get(i));
+		}
+		
+		res = future6.get();
+		assertEquals(50, res.size());
+		for(int i=0; i<50; i++){
+			assertEquals(discs[i+100], res.get(i));
+		}
+		
+		res = future7.get();
+		assertEquals(50, res.size());
+		for(int i=0; i<50; i++){
+			assertEquals(discs[i+50], res.get(i));
+		}		
+	}
+	
+	public void testLimitStatefulRealAsync(){
+		Discovery[] discs = new Discovery[320];
+		for(int i=0; i<320; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs).get();
+		
+		QueryAsync<Discovery> query = pm.createQuery(Discovery.class).stateful().order("id");
+		SienaFuture<List<Discovery>> future1 = query.limit(50).fetch();
+		SienaFuture<List<Discovery>> future2 = query.offset(5).fetch(5);
+		SienaFuture<List<Discovery>> future21 = query.limit(70).offset(30).fetch();
+		SienaFuture<List<Discovery>> future3 = query.fetch(50);
+		SienaFuture<List<Discovery>> future4 = query.paginate(50).fetch();
+		SienaFuture<List<Discovery>> future5 = query.nextPage().fetch();
+		SienaFuture<List<Discovery>> future6 = query.nextPage().fetch();
+		SienaFuture<List<Discovery>> future7 = query.previousPage().fetch();
+
+		List<Discovery> res = future1.get();
+		assertEquals(50, res.size());
+		for(int i=0; i<50; i++){
+			assertEquals(discs[i], res.get(i));
+		}
+		
+		res = future2.get();
+		assertEquals(5, res.size());
+		for(int i=0; i<5; i++){
+			assertEquals(discs[i+55], res.get(i));
+		}
+		// 60		
+		res = future21.get();
+		assertEquals(70, res.size());
+		for(int i=0; i<70; i++){
+			assertEquals(discs[i+90], res.get(i));
+		}
+		// 160
+		res = future3.get();
+		assertEquals(50, res.size());
+		for(int i=0; i<50; i++){
+			assertEquals(discs[i+160], res.get(i));
+		}
+		
+		res = future4.get();
+		assertEquals(50, res.size());
+		for(int i=0; i<50; i++){
+			assertEquals(discs[i+210], res.get(i));
+		}
+		
+		res = future5.get();
+		assertEquals(50, res.size());
+		for(int i=0; i<50; i++){
+			assertEquals(discs[i+260], res.get(i));
+		}
+		
+		res = future6.get();
+		assertEquals(10, res.size());
+		for(int i=0; i<10; i++){
+			assertEquals(discs[i+310], res.get(i));
+		}
+		
+		res = future7.get();
+		assertEquals(50, res.size());
+		for(int i=0; i<50; i++){
+			assertEquals(discs[i+260], res.get(i));
 		}		
 	}
 }

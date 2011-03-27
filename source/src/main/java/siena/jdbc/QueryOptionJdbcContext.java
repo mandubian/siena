@@ -12,7 +12,9 @@ public class QueryOptionJdbcContext extends QueryOption{
     public int offsetParamIdx;
     public boolean noMoreDataBefore = false;
     public boolean noMoreDataAfter = false;
-    
+    public int realOffset = 0;
+    public int realPageSize = 0;
+
 	public QueryOptionJdbcContext() {
 		super(ID);
 	}
@@ -31,6 +33,8 @@ public class QueryOptionJdbcContext extends QueryOption{
 		this.offsetParamIdx = option.offsetParamIdx;
 		this.noMoreDataAfter = option.noMoreDataAfter;
 		this.noMoreDataBefore = option.noMoreDataBefore;
+		this.realOffset = option.realOffset;
+		this.realPageSize = option.realPageSize;
 	}
 	
 	@Override
@@ -41,6 +45,9 @@ public class QueryOptionJdbcContext extends QueryOption{
 	public String toString() {
 		return "type:JDBC_CONTEXT - state:"+this.state
 				+ " - limitParamIdx:"+limitParamIdx+" - offsetParamIdx:"+offsetParamIdx
-				+ " - noMoreDataAfter:"+noMoreDataAfter+" - noMoreDataBefore:"+noMoreDataBefore;
+				+ " - noMoreDataAfter:"+noMoreDataAfter
+				+" - noMoreDataBefore:"+noMoreDataBefore
+				+" - realOffset:"+realOffset
+				+" - realPageSize:"+realPageSize;
 	}
 }

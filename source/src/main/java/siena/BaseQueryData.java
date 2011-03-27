@@ -190,19 +190,66 @@ public class BaseQueryData<T> implements QueryData<T> {
 		QueryOptionState stateOpt = (QueryOptionState)(options.get(QueryOptionState.ID)).activate();
 		// can't change pagination after it has been initialized because it breaks all the cursor mechanism
 		
-		if(opt.isActive() && opt.isPaginating()){
+		/*if(opt.isActive() && opt.isPaginating()){
 			throw new SienaException("Can't change pagination after it has been initialized...");
-		}
+		}*/
 		
 		opt.activate();
 		opt.pageSize=pageSize;
 		opt.pageType = QueryOptionPage.PageType.PAGINATING;
+		
+		// resets offset to be sure nothing changes the pagination mechanism
+		offOpt.offsetType = QueryOptionOffset.OffsetType.PAGINATING;
+		offOpt.offset = 0;
 		
 		if(stateOpt.isStateful()){
 			offOpt.passivate();
 		}else {
 			offOpt.activate();
 		}
+	}
+	
+	protected void optionLimit(int limit) {
+		// sets the pagination
+		QueryOptionPage pagOpt = (QueryOptionPage)(options.get(QueryOptionPage.ID));
+		//QueryOptionOffset offOpt = (QueryOptionOffset)options.get(QueryOptionOffset.ID);
+		//QueryOptionState stateOpt = (QueryOptionState)(options.get(QueryOptionState.ID));
+		
+		pagOpt.activate();
+		pagOpt.pageSize = limit;
+		pagOpt.pageType = QueryOptionPage.PageType.MANUAL;
+		
+		// in stateless mode, we must reset the offset as we don't want it to be stateful
+		//if(stateOpt.isStateless() && !offOpt.isManual()){
+		//	offOpt.offset = 0;
+		//}
+	}
+	
+	protected void optionOffset(int offset) {
+		QueryOptionPage pagOpt = (QueryOptionPage)(options.get(QueryOptionPage.ID));
+		QueryOptionOffset offOpt = (QueryOptionOffset)options.get(QueryOptionOffset.ID);
+		QueryOptionState stateOpt = (QueryOptionState)(options.get(QueryOptionState.ID));
+		
+		offOpt.activate();
+		offOpt.offsetType = QueryOptionOffset.OffsetType.MANUAL;
+		offOpt.offset = offset;
+		
+		// deactivates the pagination in any case
+		pagOpt.pageType = QueryOptionPage.PageType.MANUAL;
+		
+		//if(offset!=0){
+			// if stateful mode, adds the offset to current offset
+			//if(stateOpt.isStateful()){
+			//	offOpt.offset += offset;
+			//}
+			// if stateless mode, simply replaces the offset
+			//	else {
+			//	offOpt.offset = offset;
+				//if(!pagOpt.isManual()){
+				//	pagOpt.pageSize = 0;
+				//}
+			//}
+		//}
 	}
 	
 	protected void optionStateful() {

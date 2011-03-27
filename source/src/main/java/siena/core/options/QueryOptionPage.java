@@ -5,10 +5,11 @@ public class QueryOptionPage extends QueryOption{
 	public static final int ID 	= 0x01;
 	
 	public int pageSize = 0;
-	public PageType pageType = PageType.LIMIT;
+	public PageType pageType = PageType.TEMPORARY;
 	
 	public enum PageType {
-		LIMIT,
+		TEMPORARY,
+		MANUAL,
 		PAGINATING
 	}
 	
@@ -38,6 +39,10 @@ public class QueryOptionPage extends QueryOption{
 		return pageType == PageType.PAGINATING;
 	}
 	
+	public boolean isManual() {
+		return pageType == PageType.MANUAL;
+	}
+		
 	@Override
 	public QueryOption clone() {
 		return new QueryOptionPage(this);

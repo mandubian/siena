@@ -162,6 +162,19 @@ public class BaseQuery<T> extends BaseQueryData<T> implements Query<T> {
 
 	public Query<T> paginate(int pageSize) {
 		optionPaginate(pageSize);
+		pm.paginate(this);
+		return this;
+	}
+	
+	@Override
+	public Query<T> limit(int limit) {
+		optionLimit(limit);
+		return this;
+	}
+
+	@Override
+	public Query<T> offset(Object offset) {
+		optionOffset((Integer)offset);
 		return this;
 	}
 

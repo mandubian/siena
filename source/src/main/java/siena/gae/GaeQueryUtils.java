@@ -90,11 +90,18 @@ public class GaeQueryUtils {
 							break;
 						case AUTO_INCREMENT:
 							if(value != null && !Collection.class.isAssignableFrom(value.getClass())){
-								if (value instanceof String)
-									value = Long.parseLong((String) value);
-								Key key = KeyFactory.createKey(
-										q.getKind(),
-										(Long)value);
+								Key key; 
+								Class<?> type = f.getType();
+
+								if(Long.TYPE == type || Long.class.isAssignableFrom(type)){
+									key = KeyFactory.createKey(
+											q.getKind(),
+											(Long)value);
+								} else {
+									key = KeyFactory.createKey(
+											q.getKind(),
+											value.toString());									
+								}
 								q.addFilter(Entity.KEY_RESERVED_PROPERTY, op, key);
 							}else {
 								List<Key> keys = new ArrayList<Key>();
@@ -256,6 +263,20 @@ public class GaeQueryUtils {
 		return fieldMap;
 	}
 	
+	public static <T> void paginate(QueryData<T> query) {
+		QueryOptionGaeContext gaeCtx = (QueryOptionGaeContext)query.option(QueryOptionGaeContext.ID);
+		QueryOptionState state = (QueryOptionState)query.option(QueryOptionState.ID);
+		if(gaeCtx==null){
+			gaeCtx = new QueryOptionGaeContext();
+			query.options().put(gaeCtx.type, gaeCtx);
+		}
+		
+		// resets the realoffset to 0 if stateless
+		if(state.isStateless()){
+			gaeCtx.realOffset = 0;
+		}
+	}
+	
 	public static <T> void nextPage(QueryData<T> query) {
 		QueryOptionPage pag = (QueryOptionPage)query.option(QueryOptionPage.ID);
 		QueryOptionState state = (QueryOptionState)query.option(QueryOptionState.ID);
@@ -277,26 +298,27 @@ public class GaeQueryUtils {
 		}
 		
 		if(pag.isPaginating()){
+			gaeCtx.realPageSize = pag.pageSize;
 			if(state.isStateless()) {
-				QueryOptionOffset offset = (QueryOptionOffset)query.option(QueryOptionOffset.ID);
-				if(offset.isActive()){
-					offset.offset+=pag.pageSize;
-				}
+				//QueryOptionOffset offset = (QueryOptionOffset)query.option(QueryOptionOffset.ID);
+				//if(offset.isActive()){
+				gaeCtx.realOffset+=pag.pageSize;
+				//}
 			}			
 			else {
 				if(!gaeCtx.isActive()){
 					QueryOptionOffset offset = (QueryOptionOffset)query.option(QueryOptionOffset.ID);
 					if(!gaeCtx.useCursor){
 						// then uses offset (in case of IN or != operators)
-						if(offset.isActive()){
-							offset.offset+=pag.pageSize;
-						}
+						//if(offset.isActive()){
+						gaeCtx.realOffset+=pag.pageSize;
+						//}
 					}
 					// if the cursor is used, just passivates the offset
 					else {
 						offset.passivate();
 						// keeps track of the offset anyway
-						offset.offset+=pag.pageSize;
+						gaeCtx.realOffset+=pag.pageSize;
 					}
 				}else {
 					QueryOptionOffset offset = (QueryOptionOffset)query.option(QueryOptionOffset.ID);
@@ -304,15 +326,15 @@ public class GaeQueryUtils {
 					// cursor added by a previousPage call which tries to go backward the first page
 					if(!gaeCtx.useCursor && !gaeCtx.hasNextCursor()){
 						// then uses offset (in case of IN or != operators)
-						if(offset.isActive()){
-							offset.offset+=pag.pageSize;
-						}
+						//if(offset.isActive()){
+						gaeCtx.realOffset+=pag.pageSize;
+						//}
 					}else{
 						// forces cursor to be sure it is used
 						gaeCtx.useCursor = true;
 						String cursor = gaeCtx.nextCursor();
 						// if the cursor is null, it means we are back to the first page so we reactivate the offset
-						offset.offset+=pag.pageSize;
+						gaeCtx.realOffset+=pag.pageSize;
 						if(cursor==null){
 							offset.activate();
 						}else {
@@ -321,6 +343,9 @@ public class GaeQueryUtils {
 					}
 				}
 			}
+		}else {
+			// throws exception because it's impossible to reuse nextPage when paginating has been interrupted, the cases are too many
+			throw new SienaException("Can't use nextPage after pagination has been interrupted...");
 		}
 	}
 
@@ -344,38 +369,39 @@ public class GaeQueryUtils {
 		}
 		
 		if(pag.isPaginating()){
+			gaeCtx.realPageSize = pag.pageSize;
 			if(state.isStateless()) {
-				QueryOptionOffset offset = (QueryOptionOffset)query.option(QueryOptionOffset.ID);
-				if(offset.isActive()){
-					if(offset.offset>=pag.pageSize) {
-						offset.offset-=pag.pageSize;
+				//QueryOptionOffset offset = (QueryOptionOffset)query.option(QueryOptionOffset.ID);
+				//if(offset.isActive()){
+					if(gaeCtx.realOffset>=pag.pageSize) {
+						gaeCtx.realOffset-=pag.pageSize;
 					}
 					else {
-						offset.offset = 0;
+						gaeCtx.realOffset = 0;
 						gaeCtx.noMoreDataBefore = true;
 					}
-				}
+				//}
 			}			
 			else {
 				if(!gaeCtx.isActive()){
 					if(!gaeCtx.useCursor){
 						// then uses offset (in case of IN or != operators)
-						QueryOptionOffset offset = (QueryOptionOffset)query.option(QueryOptionOffset.ID);
-						if(offset.isActive()){
-							if(offset.offset>=pag.pageSize) {
-								offset.offset-=pag.pageSize;
+						//QueryOptionOffset offset = (QueryOptionOffset)query.option(QueryOptionOffset.ID);
+						//if(offset.isActive()){
+							if(gaeCtx.realOffset>=pag.pageSize) {
+								gaeCtx.realOffset-=pag.pageSize;
 							}
 							else {
-								offset.offset = 0;
+								gaeCtx.realOffset = 0;
 								gaeCtx.noMoreDataBefore = true;
 							}
-						}
+						//}
 					}
 					// if the cursor is active, verifies this is not the first page 
 					// with the offset (active or passive) and sets noMoreData in this case
 					else {
-						QueryOptionOffset offset = (QueryOptionOffset)query.option(QueryOptionOffset.ID);
-						if(offset.offset==0) {
+						//QueryOptionOffset offset = (QueryOptionOffset)query.option(QueryOptionOffset.ID);
+						if(gaeCtx.realOffset==0) {
 							gaeCtx.noMoreDataBefore = true;
 						}
 					}
@@ -384,9 +410,9 @@ public class GaeQueryUtils {
 					QueryOptionOffset offset = (QueryOptionOffset)query.option(QueryOptionOffset.ID);
 					if(!gaeCtx.useCursor){
 						// then uses offset (in case of IN or != operators)
-						if(offset.isActive()){
-							if(offset.offset>=pag.pageSize) {
-								offset.offset-=pag.pageSize;
+						//if(offset.isActive()){
+							if(gaeCtx.realOffset>=pag.pageSize) {
+								gaeCtx.realOffset-=pag.pageSize;
 							}
 							// passivates offset and computes the page before because we are at the first page
 							else{
@@ -394,7 +420,7 @@ public class GaeQueryUtils {
 								gaeCtx.noMoreDataBefore = true;								
 								previousPage(query);
 							}
-						}
+						//}
 					}else{
 						String cursor = gaeCtx.previousCursor();
 						// if the cursor is null, it means we are back to the first page 
@@ -407,13 +433,24 @@ public class GaeQueryUtils {
 						}else {
 							offset.passivate();
 							gaeCtx.useCursor = true;
-							previousPage(query);
+							if(gaeCtx.realOffset>=pag.pageSize) {
+								gaeCtx.realOffset-=pag.pageSize;
+							}
+							// passivates offset and computes the page before because we are at the first page
+							else{
+								gaeCtx.noMoreDataBefore = true;								
+								previousPage(query);
+							}
+							//previousPage(query);
 						}
 						
 					}
 				}
 			}
-		}	
+		} else {
+			// throws exception because it's impossible to reuse nextPage when paginating has been interrupted, the cases are too many
+			throw new SienaException("Can't use nextPage after pagination has been interrupted...");
+		}
 	}
 	
 	public static <T> void release(QueryData<T> query) {

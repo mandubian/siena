@@ -16,11 +16,12 @@ public class QueryOptionGaeContext extends QueryOption{
     public int cursorIdx = -1;
     public boolean useCursor = true;
     // this is the current offset synchronized with the cursor by the PM
-    //public int offset = 0;
     // a flag that can be used when there is no more data to fetch (when previous page is the first one for ex)
     public boolean noMoreDataBefore = false;
     public boolean noMoreDataAfter = false;
-    //public PreparedQuery query;
+    public int realOffset = 0;
+    public int realPageSize = 0;
+   //public PreparedQuery query;
 	public QueryOptionGaeContext() {
 		super(ID);
 	}
@@ -37,6 +38,8 @@ public class QueryOptionGaeContext extends QueryOption{
 		this.useCursor = option.useCursor;
 		this.noMoreDataBefore = option.noMoreDataBefore;
 		this.noMoreDataAfter = option.noMoreDataAfter;
+		this.realOffset = option.realOffset;
+		this.realPageSize = option.realPageSize;
 		//this.query = option.query;
 	}
 	
@@ -125,7 +128,10 @@ public class QueryOptionGaeContext extends QueryOption{
 	}
 
 	public String toString() {
-		return "type:GAE_CONTEXT - state:"+this.state+ " - useCursor:"
-			+useCursor+ " - cursors:"+cursors+" - cursorIdx:"+cursorIdx;
+		return "type:GAE_CONTEXT - state:"+this.state
+		 	+ " - realOffset:"+realOffset
+		 	+ " - realPageSize:"+realPageSize
+			+ " - useCursor:"+useCursor
+			+ " - cursorIdx:"+cursorIdx+ " - cursors:"+cursors;
 	}
 }

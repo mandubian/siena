@@ -15,6 +15,7 @@ import org.apache.commons.lang.NotImplementedException;
 
 import siena.ClassInfo;
 import siena.PersistenceManager;
+import siena.Query;
 import siena.SienaException;
 import siena.core.async.AbstractPersistenceManagerAsync;
 import siena.core.async.QueryAsync;
@@ -321,33 +322,80 @@ public class GaePersistenceManagerAsync extends AbstractPersistenceManagerAsync 
 	}
 
 	
-	private <T> SienaFuture<List<T>> doFetchList(QueryAsync<T> query) {
-		QueryOptionPage pag = (QueryOptionPage)query.option(QueryOptionPage.ID);
-		QueryOptionOffset offset = (QueryOptionOffset)query.option(QueryOptionOffset.ID);
-		QueryOptionState state = (QueryOptionState)query.option(QueryOptionState.ID);
-		QueryOptionFetchType fetchType = (QueryOptionFetchType)query.option(QueryOptionFetchType.ID);
+	private <T> SienaFuture<List<T>> doFetchList(QueryAsync<T> query, int limit, int offset) {
 		QueryOptionGaeContext gaeCtx = (QueryOptionGaeContext)query.option(QueryOptionGaeContext.ID);
 		if(gaeCtx==null){
 			gaeCtx = new QueryOptionGaeContext();
 			query.customize(gaeCtx);
 		}
 		
+		QueryOptionState state = (QueryOptionState)query.option(QueryOptionState.ID);
+		QueryOptionFetchType fetchType = (QueryOptionFetchType)query.option(QueryOptionFetchType.ID);
+		FetchOptions fetchOptions = FetchOptions.Builder.withDefaults();
+
+		QueryOptionPage pag = (QueryOptionPage)query.option(QueryOptionPage.ID);
+		if(!pag.isPaginating()){
+			// no pagination but pageOption active
+			if(pag.isActive()){
+				// if local limit is set, it overrides the pageOption.pageSize
+				if(limit!=Integer.MAX_VALUE){
+					gaeCtx.realPageSize = limit;
+					fetchOptions.limit(gaeCtx.realPageSize);
+					// pageOption is passivated to be sure it is not reused
+					pag.passivate();
+				}
+				// using pageOption.pageSize
+				else {
+					gaeCtx.realPageSize = pag.pageSize;
+					fetchOptions.limit(gaeCtx.realPageSize);
+					// passivates the pageOption in stateless mode not to keep anything between 2 requests
+					if(state.isStateless()){
+						pag.passivate();
+					}						
+				}
+			}
+			else {
+				if(limit != Integer.MAX_VALUE){
+					gaeCtx.realPageSize = limit;
+					fetchOptions.limit(gaeCtx.realPageSize);
+				}
+			}
+		}else {
+			// paginating so use the pagesize and don't passivate pageOption
+			// local limit is not taken into account
+			gaeCtx.realPageSize = pag.pageSize;
+			fetchOptions.limit(gaeCtx.realPageSize);
+		}
+
+		QueryOptionOffset off = (QueryOptionOffset)query.option(QueryOptionOffset.ID);
+		// if local offset has been set, uses it
+		if(offset!=0){
+			off.activate();
+			off.offset = offset;
+		}
+						
 		// if previousPage has detected there is no more data, simply returns an empty list
 		if(gaeCtx.noMoreDataBefore){
 			return new SienaFutureMock<List<T>>(new ArrayList<T>());
 		}
 		
-		// TODO manage pagination + offset
-		FetchOptions fetchOptions = FetchOptions.Builder.withDefaults();
-		if(pag.isActive()) {
-			fetchOptions.limit(pag.pageSize);
-		}
-		// set offset only when no in STATEFUL mode because it would disturb the cursor
-		if(offset.isActive()){
-			fetchOptions.offset(offset.offset);
-		}
-		
 		if(state.isStateless()) {
+			if(pag.isPaginating()){
+				if(off.isActive()){
+					fetchOptions.offset(off.offset+gaeCtx.realOffset);
+					off.passivate();
+				}else {
+					fetchOptions.offset(gaeCtx.realOffset);
+				}
+			}else {
+				// if stateless and not paginating, resets the realoffset to 0
+				gaeCtx.realOffset = 0;
+				if(off.isActive()){
+					fetchOptions.offset(off.offset);
+					off.passivate();
+				}
+			}
+			
 			switch(fetchType.type){
 			case KEYS_ONLY:
 				{
@@ -365,7 +413,15 @@ public class GaePersistenceManagerAsync extends AbstractPersistenceManagerAsync 
 			}
 			
 		}else {
-			// TODO manage cursor limitations for IN and != operators		
+			if(off.isActive()){
+				// by default, we add the offset but it can be added with the realoffset 
+				// in case of cursor desactivated
+				fetchOptions.offset(off.offset);
+				gaeCtx.realOffset+=off.offset;
+				off.passivate();
+			}
+			
+			// manages cursor limitations for IN and != operators by using offset	
 			if(!gaeCtx.isActive()){
 				// cursor not yet created
 				switch(fetchType.type){
@@ -374,9 +430,10 @@ public class GaePersistenceManagerAsync extends AbstractPersistenceManagerAsync 
 						PreparedQuery pq = prepareKeysOnly(query);
 						if(!gaeCtx.useCursor){
 							// then uses offset (in case of IN or != operators)
-							if(offset.isActive()){
-								fetchOptions.offset(offset.offset);
-							}
+							//if(offset.isActive()){
+							//	fetchOptions.offset(offset.offset);
+							//}
+							fetchOptions.offset(gaeCtx.realOffset);							
 						}
 						
 						// we can't use real asynchronous function with cursors
@@ -397,7 +454,7 @@ public class GaePersistenceManagerAsync extends AbstractPersistenceManagerAsync 
 								gaeCtx.addAndMoveCursor(entities.getCursor().toWebSafeString());
 							}
 							// keeps track of the offset anyway if not paginating
-							offset.offset+=entities.size();
+							gaeCtx.realOffset+=entities.size();
 						}											
 						
 						return new GaeSienaFutureListMapper<T>(
@@ -409,9 +466,10 @@ public class GaePersistenceManagerAsync extends AbstractPersistenceManagerAsync 
 						PreparedQuery pq = prepare(query);
 						if(!gaeCtx.useCursor){
 							// then uses offset (in case of IN or != operators)
-							if(offset.isActive()){
-								fetchOptions.offset(offset.offset);
-							}
+							//if(offset.isActive()){
+							//	fetchOptions.offset(offset.offset);
+							//}
+							fetchOptions.offset(gaeCtx.realOffset);							
 						}
 						// we can't use real asynchronous function with cursors
 						// so the page is extracted at once and wrapped into a SienaFuture
@@ -432,7 +490,7 @@ public class GaePersistenceManagerAsync extends AbstractPersistenceManagerAsync 
 								gaeCtx.addAndMoveCursor(entities.getCursor().toWebSafeString());
 							}
 							// keeps track of the offset anyway if not paginating
-							offset.offset+=entities.size();
+							gaeCtx.realOffset+=entities.size();
 						}
 						//}
 						
@@ -449,9 +507,10 @@ public class GaePersistenceManagerAsync extends AbstractPersistenceManagerAsync 
 						QueryResultList<Entity> entities;
 						if(!gaeCtx.useCursor){
 							// then uses offset (in case of IN or != operators)
-							if(offset.isActive()){
-								fetchOptions.offset(offset.offset);
-							}
+							//if(offset.isActive()){
+							//	fetchOptions.offset(offset.offset);
+							//}
+							fetchOptions.offset(gaeCtx.realOffset);
 							// we can't use real asynchronous function with cursors
 							// so the page is extracted at once and wrapped into a SienaFuture
 							entities = pq.asQueryResultList(fetchOptions);
@@ -481,7 +540,7 @@ public class GaePersistenceManagerAsync extends AbstractPersistenceManagerAsync 
 								gaeCtx.addAndMoveCursor(entities.getCursor().toWebSafeString());
 							}
 							// keeps track of the offset anyway if not paginating
-							offset.offset+=entities.size();
+							gaeCtx.realOffset+=entities.size();
 						}
 						//}
 						
@@ -495,9 +554,10 @@ public class GaePersistenceManagerAsync extends AbstractPersistenceManagerAsync 
 						QueryResultList<Entity> entities;
 						if(!gaeCtx.useCursor){
 							// then uses offset (in case of IN or != operators)
-							if(offset.isActive()){
-								fetchOptions.offset(offset.offset);
-							}
+							//if(offset.isActive()){
+							//	fetchOptions.offset(offset.offset);
+							//}
+							fetchOptions.offset(gaeCtx.realOffset);
 							// we can't use real asynchronous function with cursors
 							// so the page is extracted at once and wrapped into a SienaFuture
 							entities = pq.asQueryResultList(fetchOptions);
@@ -526,7 +586,7 @@ public class GaePersistenceManagerAsync extends AbstractPersistenceManagerAsync 
 								gaeCtx.addAndMoveCursor(entities.getCursor().toWebSafeString());
 							}
 							// keeps track of the offset anyway
-							offset.offset+=entities.size();
+							gaeCtx.realOffset+=entities.size();
 						}
 						//}
 						
@@ -539,15 +599,58 @@ public class GaePersistenceManagerAsync extends AbstractPersistenceManagerAsync 
 	}
 	
 	
-	private <T> SienaFuture<Iterable<T>> doFetchIterable(QueryAsync<T> query) {
-		QueryOptionPage pag = (QueryOptionPage)query.option(QueryOptionPage.ID);
-		QueryOptionOffset offset = (QueryOptionOffset)query.option(QueryOptionOffset.ID);
+	private <T> SienaFuture<Iterable<T>> doFetchIterable(QueryAsync<T> query, int limit, int offset) 
+	{
+		QueryOptionGaeContext gaeCtx = (QueryOptionGaeContext)query.option(QueryOptionGaeContext.ID);
 		QueryOptionState state = (QueryOptionState)query.option(QueryOptionState.ID);
 		QueryOptionFetchType fetchType = (QueryOptionFetchType)query.option(QueryOptionFetchType.ID);
-		QueryOptionGaeContext gaeCtx = (QueryOptionGaeContext)query.option(QueryOptionGaeContext.ID);
+				
 		if(gaeCtx==null){
 			gaeCtx = new QueryOptionGaeContext();
 			query.customize(gaeCtx);
+		}
+
+		FetchOptions fetchOptions = FetchOptions.Builder.withDefaults();
+
+		QueryOptionPage pag = (QueryOptionPage)query.option(QueryOptionPage.ID);
+		if(!pag.isPaginating()){
+			// no pagination but pageOption active
+			if(pag.isActive()){
+				// if local limit is set, it overrides the pageOption.pageSize
+				if(limit!=Integer.MAX_VALUE){
+					gaeCtx.realPageSize = limit;
+					fetchOptions.limit(gaeCtx.realPageSize);
+					// pageOption is passivated to be sure it is not reused
+					pag.passivate();
+				}
+				// using pageOption.pageSize
+				else {
+					gaeCtx.realPageSize = pag.pageSize;
+					fetchOptions.limit(gaeCtx.realPageSize);
+					// passivates the pageOption in stateless mode not to keep anything between 2 requests
+					if(state.isStateless()){
+						pag.passivate();
+					}						
+				}
+			}
+			else {
+				if(limit != Integer.MAX_VALUE){
+					gaeCtx.realPageSize = limit;
+					fetchOptions.limit(gaeCtx.realPageSize);
+				}
+			}
+		}else {
+			// paginating so use the pagesize and don't passivate pageOption
+			// local limit is not taken into account
+			gaeCtx.realPageSize = pag.pageSize;
+			fetchOptions.limit(gaeCtx.realPageSize);
+		}
+
+		QueryOptionOffset off = (QueryOptionOffset)query.option(QueryOptionOffset.ID);
+		// if local offset has been set, uses it
+		if(offset!=0){
+			off.activate();
+			off.offset = offset;
 		}
 		
 		// if previousPage has detected there is no more data, simply returns an empty list
@@ -555,16 +658,24 @@ public class GaePersistenceManagerAsync extends AbstractPersistenceManagerAsync 
 			return new SienaFutureMock<Iterable<T>>(new ArrayList<T>());
 		}
 		
-		// TODO manage pagination + offset
-		FetchOptions fetchOptions = FetchOptions.Builder.withDefaults();
-		if(pag.isActive()) {
-			fetchOptions.limit(pag.pageSize);
-		}
-		if(offset.isActive()){
-			fetchOptions.offset(offset.offset);
-		}
-		
 		if(state.isStateless()) {
+			if(pag.isPaginating()){			
+				if(off.isActive()){
+					fetchOptions.offset(off.offset+gaeCtx.realOffset);
+					off.passivate();
+				}else {
+					fetchOptions.offset(gaeCtx.realOffset);
+				}
+			}else {
+								
+				// if stateless and not paginating, resets the realoffset to 0
+				gaeCtx.realOffset = 0;
+				if(off.isActive()){
+					fetchOptions.offset(off.offset);
+					off.passivate();
+				}
+			}
+			
 			switch(fetchType.type){
 			case ITER:
 			default:
@@ -576,7 +687,14 @@ public class GaePersistenceManagerAsync extends AbstractPersistenceManagerAsync 
 			}
 			
 		}else {
-			// TODO manage cursor limitations for IN and != operators		
+			if(off.isActive()){
+				// by default, we add the offset but it can be added with the realoffset 
+				// in case of cursor desactivated
+				fetchOptions.offset(off.offset);
+				gaeCtx.realOffset+=off.offset;
+				off.passivate();
+			}
+			// manages cursor limitations for IN and != operators		
 			if(!gaeCtx.isActive()){
 				// cursor not yet created
 				switch(fetchType.type){
@@ -645,9 +763,10 @@ public class GaePersistenceManagerAsync extends AbstractPersistenceManagerAsync 
 							QueryResultList<Entity> entities;
 							if(!gaeCtx.useCursor){
 								// then uses offset (in case of IN or != operators)
-								if(offset.isActive()){
-									fetchOptions.offset(offset.offset);
-								}
+								//if(offset.isActive()){
+								//	fetchOptions.offset(offset.offset);
+								//}
+								fetchOptions.offset(gaeCtx.realOffset);
 								entities = pq.asQueryResultList(fetchOptions);
 							}else {
 								String cursor = gaeCtx.currentCursor();
@@ -670,9 +789,10 @@ public class GaePersistenceManagerAsync extends AbstractPersistenceManagerAsync 
 							QueryResultIterable<Entity> entities;
 							if(!gaeCtx.useCursor){
 								// then uses offset (in case of IN or != operators)
-								if(offset.isActive()){
-									fetchOptions.offset(offset.offset);
-								}
+								//if(offset.isActive()){
+								//	fetchOptions.offset(offset.offset);
+								//}
+								fetchOptions.offset(gaeCtx.realOffset);								
 								entities = pq.asQueryResultIterable(fetchOptions);
 							}else {
 								String cursor = gaeCtx.currentCursor();
@@ -721,66 +841,64 @@ public class GaePersistenceManagerAsync extends AbstractPersistenceManagerAsync 
 
 	
 	public <T> SienaFuture<List<T>> fetch(QueryAsync<T> query) {
-		return doFetchList(query);
+		((QueryOptionFetchType)query.option(QueryOptionFetchType.ID)).type=QueryOptionFetchType.Type.NORMAL;
+		return doFetchList(query, Integer.MAX_VALUE, 0);
 	}
 
 	public <T> SienaFuture<List<T>> fetch(QueryAsync<T> query, int limit) {
-		((QueryOptionPage)query.option(QueryOptionPage.ID).activate()).pageSize=limit;
-		return doFetchList(query);
+		((QueryOptionFetchType)query.option(QueryOptionFetchType.ID)).type=QueryOptionFetchType.Type.NORMAL;
+		return doFetchList(query, limit, 0);
 	}
 
 	public <T> SienaFuture<List<T>> fetch(QueryAsync<T> query, int limit, Object offset) {
-		((QueryOptionPage)query.option(QueryOptionPage.ID).activate()).pageSize=limit;
-		((QueryOptionOffset)query.option(QueryOptionOffset.ID).activate()).offset=(Integer)offset;
-		return doFetchList(query);
+		((QueryOptionFetchType)query.option(QueryOptionFetchType.ID)).type=QueryOptionFetchType.Type.NORMAL;
+		return doFetchList(query, limit, (Integer)offset);
 	}
 	
 	public <T> SienaFuture<List<T>> fetchKeys(QueryAsync<T> query) {
 		((QueryOptionFetchType)query.option(QueryOptionFetchType.ID)).type=QueryOptionFetchType.Type.KEYS_ONLY;
 
-		return doFetchList(query);
+		return doFetchList(query, Integer.MAX_VALUE, 0);
 	}
 
 	public <T> SienaFuture<List<T>> fetchKeys(QueryAsync<T> query, int limit) {
 		((QueryOptionFetchType)query.option(QueryOptionFetchType.ID)).type=QueryOptionFetchType.Type.KEYS_ONLY;
-		((QueryOptionPage)query.option(QueryOptionPage.ID).activate()).pageSize=limit;
 
-		return doFetchList(query);
+		return doFetchList(query, limit, 0);
 	}
 
 	public <T> SienaFuture<List<T>>  fetchKeys(QueryAsync<T> query, int limit, Object offset) {
 		((QueryOptionFetchType)query.option(QueryOptionFetchType.ID)).type=QueryOptionFetchType.Type.KEYS_ONLY;
-		((QueryOptionPage)query.option(QueryOptionPage.ID).activate()).pageSize=limit;
-		((QueryOptionOffset)query.option(QueryOptionOffset.ID).activate()).offset=(Integer)offset;
 
-		return doFetchList(query);
+		return doFetchList(query, limit, (Integer)offset);
 	}
 
 	public <T> SienaFuture<Iterable<T>> iter(QueryAsync<T> query) {
 		((QueryOptionFetchType)query.option(QueryOptionFetchType.ID)).type=QueryOptionFetchType.Type.ITER;
 
-		return doFetchIterable(query);
+		return doFetchIterable(query, Integer.MAX_VALUE, 0);
 	}
 
 	public <T> SienaFuture<Iterable<T>> iter(QueryAsync<T> query, int limit) {
 		((QueryOptionFetchType)query.option(QueryOptionFetchType.ID)).type=QueryOptionFetchType.Type.ITER;
-		((QueryOptionPage)query.option(QueryOptionPage.ID).activate()).pageSize=limit;
 
-		return doFetchIterable(query);
+		return doFetchIterable(query, limit, 0);
 	}
 
 	public <T> SienaFuture<Iterable<T>> iter(QueryAsync<T> query, int limit, Object offset) {
 		((QueryOptionFetchType)query.option(QueryOptionFetchType.ID)).type=QueryOptionFetchType.Type.ITER;
-		((QueryOptionPage)query.option(QueryOptionPage.ID).activate()).pageSize=limit;
-		((QueryOptionOffset)query.option(QueryOptionOffset.ID).activate()).offset=(Integer)offset;
 
-		return doFetchIterable(query);
+		return doFetchIterable(query, limit, (Integer)offset);
 	}
 
 
 	public <T> void release(QueryAsync<T> query) {
 		super.release(query);
 		GaeQueryUtils.release(query);
+	}
+	
+	public <T> void paginate(QueryAsync<T> query) {
+		GaeQueryUtils.paginate(query);
 	}
 	
 	public <T> void nextPage(QueryAsync<T> query) {

@@ -67,6 +67,22 @@ public interface QueryAsync<T> extends QueryData<T>{
 	QueryAsync<T> paginate(int size);
 	
 	/**
+	 * sets the limit number of entities to fetch
+	 * 
+	 * @param limit the limit size
+	 * @return the query
+	 */
+	QueryAsync<T> limit(int limit);
+
+	/**
+	 * sets the offset from which to fetch the data from the current place
+	 * 
+	 * @param offset the offset
+	 * @return the query
+	 */
+	QueryAsync<T> offset(Object offset);
+
+	/**
 	 * when automatic pagination has been initialized, goes to next page
 	 * 
 	 * @return the query

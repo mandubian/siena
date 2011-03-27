@@ -33,7 +33,7 @@ public @interface Id {
 	/**
 	 * Use this field to set the Generation strategy, by default is NONE. 
 	 */
-	Generator value() default Generator.NONE;
+	Generator value() default Generator.AUTO_INCREMENT;
 
 } // E:O:F:Id.
  

@@ -59,6 +59,23 @@ public interface Query<T> extends QueryData<T>{
 	
 	
 	/**
+	 * sets the limit number of entities to fetch
+	 * 
+	 * @param limit the limit size
+	 * @return the query
+	 */
+	Query<T> limit(int limit);
+
+	/**
+	 * sets the offset from which to fetch the data from the current place
+	 * 
+	 * @param offset the offset
+	 * @return the query
+	 */
+	Query<T> offset(Object offset);
+
+	
+	/**
 	 * initializes the automatic pagination mechanism
 	 * 
 	 * @param size the page size

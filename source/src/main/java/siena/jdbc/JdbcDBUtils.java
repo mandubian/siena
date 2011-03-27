@@ -273,34 +273,31 @@ public class JdbcDBUtils {
 	}
 
 	public static <T> void appendSqlLimitOffset(Query<T> query, StringBuilder sql, List<Object> parameters) {
-		QueryOptionPage pag = (QueryOptionPage)query.option(QueryOptionPage.ID);
-		QueryOptionOffset offset = (QueryOptionOffset)query.option(QueryOptionOffset.ID);
+		//QueryOptionPage pag = (QueryOptionPage)query.option(QueryOptionPage.ID);
+		//QueryOptionOffset offset = (QueryOptionOffset)query.option(QueryOptionOffset.ID);
+		QueryOptionJdbcContext jdbcCtx = (QueryOptionJdbcContext)query.option(QueryOptionJdbcContext.ID);
 
-		if(pag.isActive()) {
+		sql.append(" LIMIT ?");
+		parameters.add(jdbcCtx.realPageSize);
+		
+		sql.append(" OFFSET ?");
+		parameters.add(jdbcCtx.realOffset);
+		
+		/*if(pag.isActive()) {
 			sql.append(" LIMIT ?");
-			parameters.add(pag.pageSize);
+			parameters.add(jdbcCtx.realPageSize);
 			
-			if(offset.isActive()) {
-				sql.append(" OFFSET ?");
-				parameters.add(offset.offset);
-			}else {
-				sql.append(" OFFSET ?");
-				parameters.add(0);
-			}
+			sql.append(" OFFSET ?");
+			parameters.add(jdbcCtx.realOffset);					
 		}
-		// offset without paging is non sens in JDBC
+		// offset without paging is non sense in JDBC
 		// so puts the MAX_VALUE as page size
 		else {
 			sql.append(" LIMIT ?");
 			parameters.add(Integer.MAX_VALUE);
 			
-			if(offset.isActive()) {			
-				sql.append(" OFFSET ?");
-				parameters.add(offset.offset);
-			}else {
-				sql.append(" OFFSET ?");
-				parameters.add(0);
-			}
-		}
+			sql.append(" OFFSET ?");
+			parameters.add(jdbcCtx.realOffset);
+		}*/
 	}
 }

@@ -1,10 +1,19 @@
 package siena.core.options;
 
+import siena.core.options.QueryOptionPage.PageType;
+
 
 public class QueryOptionOffset extends QueryOption{
 	public static final int ID 	= 0x02;
 	
 	public int offset = 0;
+	
+	public OffsetType offsetType = OffsetType.MANUAL;
+	
+	public enum OffsetType {
+		MANUAL,
+		PAGINATING
+	}
 	
 	public QueryOptionOffset(int offset) {
 		super(ID);
@@ -26,7 +35,15 @@ public class QueryOptionOffset extends QueryOption{
 		return new QueryOptionOffset(this);
 	}
 
+	public boolean isManual() {
+		return offsetType == OffsetType.MANUAL;
+	}
+	
+	public boolean isPaginating() {
+		return offsetType == OffsetType.PAGINATING;
+	}
+
 	public String toString() {
-		return "type:OFFSET - state:"+this.state+" - offset:"+this.offset;
+		return "type:OFFSET - state:"+this.state+" - offset:"+this.offset+" - offsetType:"+this.offsetType;
 	}
 }

@@ -40,6 +40,7 @@ import siena.Id;
 import siena.Query;
 import siena.SienaException;
 import siena.Util;
+import siena.base.test.model.SampleModel.Type;
 import siena.core.async.PersistenceManagerAsync;
 import siena.core.options.QueryOptionFetchType;
 import siena.core.options.QueryOptionOffset;
@@ -230,38 +231,72 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 
 	
 	private <T> List<T> doFetch(Query<T> query, int limit, int offset) {
-		// activates page and offset options as there are always used in SQL requests
-		QueryOptionPage pag = (QueryOptionPage)(query.option(QueryOptionPage.ID).activate());
-		if(!pag.isPaginating()){
-			pag.pageSize = limit;
-		}
-
-		QueryOptionOffset offsetOpt = (QueryOptionOffset)(query.option(QueryOptionOffset.ID).activate());
-		QueryOptionState state = (QueryOptionState)query.option(QueryOptionState.ID);
 		QueryOptionJdbcContext jdbcCtx = (QueryOptionJdbcContext)query.option(QueryOptionJdbcContext.ID);
 		if(jdbcCtx==null){
 			jdbcCtx = new QueryOptionJdbcContext();
 			query.customize(jdbcCtx);
 		}
 		
+		// activates page and offset options as there are always used in SQL requests
+		QueryOptionPage pag = (QueryOptionPage)query.option(QueryOptionPage.ID);
+		if(!pag.isPaginating()){
+			if(pag.isActive()){
+				if(limit!=Integer.MAX_VALUE){
+					jdbcCtx.realPageSize = limit;
+				}
+				else {
+					jdbcCtx.realPageSize = pag.pageSize;
+				}
+			}
+			else {
+				jdbcCtx.realPageSize = limit;
+			}
+		}else {
+			jdbcCtx.realPageSize = pag.pageSize;
+		}
+
+		QueryOptionOffset offsetOpt = (QueryOptionOffset)(query.option(QueryOptionOffset.ID));
+		// if local offset has been set, uses it
+		if(offset!=0){
+			offsetOpt.activate();
+			offsetOpt.offset = offset;
+		}
+		QueryOptionState state = (QueryOptionState)query.option(QueryOptionState.ID);
+		
 		// if previousPage has detected there is no more data, simply returns an empty list
 		if(jdbcCtx.noMoreDataBefore){
 			return new ArrayList<T>();
 		}
-		
-		
-		if(offset!=0){
-			// if stateful mode, adds the offset to current offset
-			if(state.isStateful()){
-				offsetOpt.offset += offset;
-			}
-			// if stateless mode, simply replaces the offset
-			else {
-				offsetOpt.offset = offset;
-			}
-		}
-		
+				
 		if(state.isStateless() || (state.isStateful() && !jdbcCtx.isActive())) {
+			if(state.isStateless()){
+				if(pag.isPaginating()){
+					if(offsetOpt.isActive()){
+						jdbcCtx.realOffset+=offsetOpt.offset;
+						offsetOpt.passivate();
+					}else {
+						// keeps realOffset
+					}
+				}else {
+					// if page is active, immediately passivates it not to keep is active
+					if(pag.isActive()) {
+						pag.passivate();
+					}
+					if(offsetOpt.isActive()){
+						jdbcCtx.realOffset=offsetOpt.offset;
+						offsetOpt.passivate();
+					}else{
+						jdbcCtx.realOffset = 0;
+					}
+				}
+			} else {
+				if(offsetOpt.isActive()){
+					jdbcCtx.realOffset+=offsetOpt.offset;
+					offsetOpt.passivate();
+				}else {
+					// keeps realOffset
+				}
+			}
 			Class<T> clazz = query.getQueriedClass();
 			List<Object> parameters = new ArrayList<Object>();
 			StringBuilder sql = JdbcDBUtils.buildSqlSelect(query);
@@ -275,11 +310,11 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 				statement = createStatement(sql.toString(), parameters);
 				if(pag.isPaginating()) {
 					// this is just a hint to the DB so wonder if it should be used
-					statement.setFetchSize(pag.pageSize);
+					statement.setFetchSize(jdbcCtx.realPageSize);
 				}
 				rs = statement.executeQuery();
 				List<T> result = JdbcMappingUtils.mapList(clazz, rs, ClassInfo.getClassInfo(clazz).tableName, 
-						JdbcMappingUtils.getJoinFields(query), pag.pageSize);
+						JdbcMappingUtils.getJoinFields(query), jdbcCtx.realPageSize);
 				
 				if(pag.isPaginating()){
 					if(result.size() == 0){
@@ -289,9 +324,8 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 						jdbcCtx.noMoreDataAfter = false;
 					}
 				}else {
-					// if not paginating, increments the offset by the number of results retrieved
-					if(offsetOpt.isActive()){
-						offsetOpt.offset = offsetOpt.offset+result.size();
+					if(state.isStateful()){
+						jdbcCtx.realOffset += result.size();
 					}
 				}
 				
@@ -319,19 +353,26 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 			// payload has been initialized so goes on
 			Class<T> clazz = query.getQueriedClass();
 			
+			if(offsetOpt.isActive()){
+				jdbcCtx.realOffset+=offsetOpt.offset;
+				offsetOpt.passivate();
+			}else {
+				// keeps realOffset
+			}
+			
 			try {
 				// when paginating, should update limit and offset
-				if(pag.isActive()){
+				//if(pag.isActive()){
 					// update limit and offset
-					jdbcCtx.statement.setObject(jdbcCtx.limitParamIdx, pag.pageSize);
-				}
-				if(offsetOpt.isActive()){
-					jdbcCtx.statement.setObject(jdbcCtx.offsetParamIdx, offsetOpt.offset);
-				}
+				jdbcCtx.statement.setObject(jdbcCtx.limitParamIdx, jdbcCtx.realPageSize);
+				//}
+				//if(offsetOpt.isActive()){
+				jdbcCtx.statement.setObject(jdbcCtx.offsetParamIdx, jdbcCtx.realOffset);
+				//}
 				
 				ResultSet rs = jdbcCtx.statement.executeQuery();
 				List<T> result = JdbcMappingUtils.mapList(clazz, rs, ClassInfo.getClassInfo(clazz).tableName, 
-					JdbcMappingUtils.getJoinFields(query), pag.pageSize);
+					JdbcMappingUtils.getJoinFields(query), jdbcCtx.realPageSize);
 				// increases offset
 				
 				if(pag.isPaginating()){
@@ -342,10 +383,7 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 						jdbcCtx.noMoreDataAfter = false;
 					}
 				}else {
-					// if not paginating, increments the offset by the number of results retrieved
-					if(offsetOpt.isActive()){
-						offsetOpt.offset = offsetOpt.offset+result.size();
-					}
+					jdbcCtx.realOffset += result.size();
 				}
 				return result;
 			}catch(SQLException ex){
@@ -359,7 +397,6 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 	@Override
 	public <T> List<T> fetch(Query<T> query) {
 		List<T> result = doFetch(query, Integer.MAX_VALUE, 0);
-		//query.setNextOffset(result.size());
 		return result;
 	}
 
@@ -368,7 +405,6 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 		//((QueryOptionPage)query.option(QueryOptionPage.ID).activate()).pageSize=limit;
 		List<T> result = doFetch(query, limit, 0);
 		//List<T> result = fetch(query, " LIMIT "+limit);
-		//query.setNextOffset(result.size());
 		return result;
 	}
 
@@ -422,37 +458,74 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 	}
 	
 	private <T> List<T> doFetchKeys(Query<T> query, int limit, int offset) {
-		// activates page and offset options as there are always used in SQL requests
-		QueryOptionPage pag = (QueryOptionPage)(query.option(QueryOptionPage.ID).activate());
-		if(!pag.isPaginating()){
-			pag.pageSize = limit;
-		}
-
-		QueryOptionOffset offsetOpt = (QueryOptionOffset)(query.option(QueryOptionOffset.ID).activate());
-		QueryOptionState state = (QueryOptionState)query.option(QueryOptionState.ID);
 		QueryOptionJdbcContext jdbcCtx = (QueryOptionJdbcContext)query.option(QueryOptionJdbcContext.ID);
 		if(jdbcCtx==null){
 			jdbcCtx = new QueryOptionJdbcContext();
 			query.customize(jdbcCtx);
 		}
 		
+		// activates page and offset options as there are always used in SQL requests
+		QueryOptionPage pag = (QueryOptionPage)query.option(QueryOptionPage.ID);
+		if(!pag.isPaginating()){
+			if(pag.isActive()){
+				if(limit!=Integer.MAX_VALUE){
+					jdbcCtx.realPageSize = limit;
+				}
+				else {
+					jdbcCtx.realPageSize = pag.pageSize;
+				}
+			}
+			else {
+				jdbcCtx.realPageSize = limit;
+			}
+		}else {
+			jdbcCtx.realPageSize = pag.pageSize;
+		}
+
+		QueryOptionOffset offsetOpt = (QueryOptionOffset)(query.option(QueryOptionOffset.ID));
+		// if local offset has been set, uses it
+		if(offset!=0){
+			offsetOpt.activate();
+			offsetOpt.offset = offset;
+		}
+		QueryOptionState state = (QueryOptionState)query.option(QueryOptionState.ID);
+		
+		
 		// if previousPage has detected there is no more data, simply returns an empty list
 		if(jdbcCtx.noMoreDataBefore){
 			return new ArrayList<T>();
 		}
 				
-		if(offset!=0){
-			// if stateful mode, adds the offset to current offset
-			if(state.isStateful()){
-				offsetOpt.offset += offset;
-			}
-			// if stateless mode, simply replaces the offset
-			else {
-				offsetOpt.offset = offset;
-			}
-		}
-		
 		if(state.isStateless() || (state.isStateful() && !jdbcCtx.isActive())) {
+			if(state.isStateless()){
+				if(pag.isPaginating()){
+					if(offsetOpt.isActive()){
+						jdbcCtx.realOffset+=offsetOpt.offset;
+						offsetOpt.passivate();
+					}else {
+						// keeps realOffset
+					}
+				}else {
+					// if page is active, immediately passivates it not to keep is active
+					if(pag.isActive()) {
+						pag.passivate();
+					}
+					if(offsetOpt.isActive()){
+						jdbcCtx.realOffset=offsetOpt.offset;
+						offsetOpt.passivate();
+					}else{
+						jdbcCtx.realOffset = 0;
+					}
+				}
+			} else {
+				if(offsetOpt.isActive()){
+					jdbcCtx.realOffset+=offsetOpt.offset;
+					offsetOpt.passivate();
+				}else {
+					// keeps realOffset
+				}
+			}
+			
 			Class<T> clazz = query.getQueriedClass();
 			List<Object> parameters = new ArrayList<Object>();
 			StringBuilder sql = JdbcDBUtils.buildSqlSelect(query);
@@ -466,11 +539,11 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 				statement = createStatement(sql.toString(), parameters);
 				if(pag.isActive()) {
 					// this is just a hint to the DB so wonder if it should be used
-					statement.setFetchSize(pag.pageSize);
+					statement.setFetchSize(jdbcCtx.realPageSize);
 				}
 				rs = statement.executeQuery();
 				List<T> result = JdbcMappingUtils.mapListKeys(clazz, rs, ClassInfo.getClassInfo(clazz).tableName, 
-						JdbcMappingUtils.getJoinFields(query), pag.pageSize);
+						JdbcMappingUtils.getJoinFields(query), jdbcCtx.realPageSize);
 				
 				if(pag.isPaginating()){
 					if(result.size() == 0){
@@ -480,9 +553,8 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 						jdbcCtx.noMoreDataAfter = false;
 					}
 				}else {
-					// if not paginating, increments the offset by the number of results retrieved
-					if(offsetOpt.isActive()){
-						offsetOpt.offset = offsetOpt.offset+result.size();
+					if(state.isStateful()){
+						jdbcCtx.realOffset += result.size();
 					}
 				}
 				
@@ -508,19 +580,26 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 			// payload has been initialized so goes on
 			Class<T> clazz = query.getQueriedClass();
 
+			if(offsetOpt.isActive()){
+				jdbcCtx.realOffset+=offsetOpt.offset;
+				offsetOpt.passivate();
+			}else {
+				// keeps realOffset
+			}
+			
 			try {
 				// when paginating, should update limit and offset
-				if(pag.isActive()){
+				//if(pag.isActive()){
 					// update limit and offset
-					jdbcCtx.statement.setObject(jdbcCtx.limitParamIdx, pag.pageSize);
-				}
-				if(offsetOpt.isActive()){
-					jdbcCtx.statement.setObject(jdbcCtx.offsetParamIdx, offsetOpt.offset);
-				}
+					jdbcCtx.statement.setObject(jdbcCtx.limitParamIdx, jdbcCtx.realPageSize);
+				//}
+				//if(offsetOpt.isActive()){
+				jdbcCtx.statement.setObject(jdbcCtx.offsetParamIdx, jdbcCtx.realOffset);
+				//}
 				
 				ResultSet rs = jdbcCtx.statement.executeQuery();
 				List<T> result = JdbcMappingUtils.mapListKeys(clazz, rs, ClassInfo.getClassInfo(clazz).tableName, 
-					JdbcMappingUtils.getJoinFields(query), pag.pageSize);
+					JdbcMappingUtils.getJoinFields(query), jdbcCtx.realPageSize);
 				
 				if(pag.isPaginating()){
 					if(result.size() == 0){
@@ -530,10 +609,7 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 						jdbcCtx.noMoreDataAfter = false;
 					}
 				}else {
-					// if not paginating, increments the offset by the number of results retrieved
-					if(offsetOpt.isActive()){
-						offsetOpt.offset = offsetOpt.offset+result.size();
-					}
+					jdbcCtx.realOffset += result.size();
 				}
 				return result;
 			}catch(SQLException ex){
@@ -568,42 +644,77 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 	}
 	
 	
-	private <T> Iterable<T> doIter(Query<T> query, int limit, int offset) {
-		// activates page and offset options as there are always used in SQL requests
-		QueryOptionPage pag = (QueryOptionPage)(query.option(QueryOptionPage.ID).activate());
-		if(!pag.isPaginating()){
-			pag.pageSize = limit;
-		}
-
-		QueryOptionOffset offsetOpt = (QueryOptionOffset)(query.option(QueryOptionOffset.ID).activate());
-		QueryOptionState state = (QueryOptionState)query.option(QueryOptionState.ID);
+	private <T> Iterable<T> doIter(Query<T> query, int limit, int offset) {		
 		QueryOptionJdbcContext jdbcCtx = (QueryOptionJdbcContext)query.option(QueryOptionJdbcContext.ID);
 		if(jdbcCtx==null){
 			jdbcCtx = new QueryOptionJdbcContext();
 			query.customize(jdbcCtx);
 		}
+		
+		// activates page and offset options as there are always used in SQL requests
+		QueryOptionPage pag = (QueryOptionPage)query.option(QueryOptionPage.ID);
+		if(!pag.isPaginating()){
+			if(pag.isActive()){
+				if(limit!=Integer.MAX_VALUE){
+					jdbcCtx.realPageSize = limit;
+				}
+				else {
+					jdbcCtx.realPageSize = pag.pageSize;
+				}
+			}
+			else {
+				jdbcCtx.realPageSize = limit;
+			}
+		}else {
+			jdbcCtx.realPageSize = pag.pageSize;
+		}
+
+		QueryOptionOffset offsetOpt = (QueryOptionOffset)(query.option(QueryOptionOffset.ID));
+		// if local offset has been set, uses it
+		if(offset!=0){
+			offsetOpt.activate();
+			offsetOpt.offset = offset;
+		}
+		QueryOptionState state = (QueryOptionState)query.option(QueryOptionState.ID);
 
 		// if previousPage has detected there is no more data, simply returns an empty list
 		if(jdbcCtx.noMoreDataBefore){
 			return new ArrayList<T>();
 		}
 		
-		if(offset!=0){
-			// if stateful mode, adds the offset to current offset
-			if(state.isStateful()){
-				offsetOpt.offset += offset;
-			}
-			// if stateless mode, simply replaces the offset
-			else {
-				offsetOpt.offset = offset;
-			}
-		}
-		
 		// forces the reusable option since iteration requires it!!!
-		query.stateful();
-		
+		//query.stateful();		
 		
 		if(state.isStateless() || (state.isStateful() && !jdbcCtx.isActive())) {
+			if(state.isStateless()){
+				if(pag.isPaginating()){
+					if(offsetOpt.isActive()){
+						jdbcCtx.realOffset+=offsetOpt.offset;
+						offsetOpt.passivate();
+					}else {
+						// keeps realOffset
+					}
+				}else {
+					// if page is active, immediately passivates it not to keep is active
+					if(pag.isActive()) {
+						pag.passivate();
+					}
+					if(offsetOpt.isActive()){
+						jdbcCtx.realOffset=offsetOpt.offset;
+						offsetOpt.passivate();
+					}else{
+						jdbcCtx.realOffset = 0;
+					}
+				}
+			} else {
+				if(offsetOpt.isActive()){
+					jdbcCtx.realOffset+=offsetOpt.offset;
+					offsetOpt.passivate();
+				}else {
+					// keeps realOffset
+				}
+			}
+			
 			List<Object> parameters = new ArrayList<Object>();
 			StringBuilder sql = JdbcDBUtils.buildSqlSelect(query);
 			JdbcDBUtils.appendSqlWhere(query, sql, parameters);
@@ -616,13 +727,14 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 				statement = createStatement(sql.toString(), parameters);
 				if(pag.isActive()) {
 					// this is just a hint to the DB so wonder if it should be used
-					statement.setFetchSize(pag.pageSize);
+					statement.setFetchSize(jdbcCtx.realPageSize);
 				}
 				rs = statement.executeQuery();
 				
 				if(state.isStateless()){
-					JdbcDBUtils.closeResultSet(rs);
-					JdbcDBUtils.closeStatement(statement);
+					//in iteration, doesn't close the resultset to reuse it
+					//JdbcDBUtils.closeResultSet(rs);
+					//JdbcDBUtils.closeStatement(statement);
 				}else {
 					Integer offsetParamIdx = parameters.size();
 					Integer limitParamIdx = offsetParamIdx - 1;
@@ -641,17 +753,22 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 				throw new SienaException(e);
 			} 
 		}else {
+			if(offsetOpt.isActive()){
+				jdbcCtx.realOffset+=offsetOpt.offset;
+				offsetOpt.passivate();
+			}else {
+				// keeps realOffset
+			}
 			// payload has been initialized so goes on
-
 			try {
 				// when paginating, should update limit and offset
-				if(pag.isActive()){
+				//if(pag.isActive()){
 					// update limit and offset
-					jdbcCtx.statement.setObject(jdbcCtx.limitParamIdx, pag.pageSize);
-				}
-				if(offsetOpt.isActive()){
-					jdbcCtx.statement.setObject(jdbcCtx.offsetParamIdx, offsetOpt.offset);
-				}
+				jdbcCtx.statement.setObject(jdbcCtx.limitParamIdx, jdbcCtx.realPageSize);
+				//}
+				//if(offsetOpt.isActive()){
+				jdbcCtx.statement.setObject(jdbcCtx.offsetParamIdx, jdbcCtx.realOffset);
+				//}
 				
 				ResultSet rs = jdbcCtx.statement.executeQuery();
 
@@ -694,6 +811,21 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 		}
 	}
 
+	@Override
+	public <T> void paginate(Query<T> query) {
+		QueryOptionJdbcContext jdbcCtx = (QueryOptionJdbcContext)query.option(QueryOptionJdbcContext.ID);
+		QueryOptionState state = (QueryOptionState)query.option(QueryOptionState.ID);
+		if(jdbcCtx==null){
+			jdbcCtx = new QueryOptionJdbcContext();
+			query.customize(jdbcCtx);
+		}
+		
+		// resets the realoffset to 0 if stateless
+		if(state.isStateless()){
+			jdbcCtx.realOffset = 0;
+		}
+	}
+
 	public <T> void previousPage(Query<T> query) {
 		QueryOptionJdbcContext jdbcCtx = (QueryOptionJdbcContext)query.option(QueryOptionJdbcContext.ID);
 		if(jdbcCtx==null){
@@ -712,18 +844,22 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 		}
 		
 		QueryOptionPage pag = (QueryOptionPage)query.option(QueryOptionPage.ID);
-		
+	
 		if(pag.isPaginating()){
-			QueryOptionOffset offset = (QueryOptionOffset)query.option(QueryOptionOffset.ID);
-			if(offset.isActive()){
-				if(offset.offset>=pag.pageSize) {
-					offset.offset-=pag.pageSize;
-				}
-				else {
-					offset.offset = 0;
-					jdbcCtx.noMoreDataBefore = true;
-				}
+			//QueryOptionOffset offset = (QueryOptionOffset)query.option(QueryOptionOffset.ID);
+			//if(offset.isActive()){
+			jdbcCtx.realPageSize = pag.pageSize;
+			if(jdbcCtx.realOffset>=pag.pageSize) {
+				jdbcCtx.realOffset-=pag.pageSize;
 			}
+			else {
+				jdbcCtx.realOffset = 0;
+				jdbcCtx.noMoreDataBefore = true;
+			}
+			//}
+		}else {
+			// throws exception because it's impossible to reuse nextPage when paginating has been interrupted, the cases are too many
+			throw new SienaException("Can't use nextPage after pagination has been interrupted...");
 		}
 	}
 
@@ -746,12 +882,16 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 		}
 		
 		QueryOptionPage pag = (QueryOptionPage)query.option(QueryOptionPage.ID);
-		
+				
 		if(pag.isPaginating()){
-			QueryOptionOffset offset = (QueryOptionOffset)query.option(QueryOptionOffset.ID);
-			if(offset.isActive()){
-				offset.offset+=pag.pageSize;
-			}
+			//QueryOptionOffset offset = (QueryOptionOffset)query.option(QueryOptionOffset.ID);
+			//if(offset.isActive()){
+				jdbcCtx.realPageSize = pag.pageSize;
+				jdbcCtx.realOffset+=pag.pageSize;
+			//}
+		}else {
+			// throws exception because it's impossible to reuse nextPage when paginating has been interrupted, the cases are too many
+			throw new SienaException("Can't use nextPage after pagination has been interrupted...");
 		}
 	}
 

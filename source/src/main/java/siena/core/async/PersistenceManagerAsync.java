@@ -21,6 +21,7 @@ import java.util.Properties;
 
 import siena.BaseQueryData;
 import siena.PersistenceManager;
+import siena.Query;
 import siena.SienaException;
 import siena.core.batch.BatchAsync;
 
@@ -239,6 +240,7 @@ public interface PersistenceManagerAsync {
 	<T> SienaFuture<Iterable<T>> iter(QueryAsync<T> query, int limit, Object offset);
 
 	<T> void release(QueryAsync<T> query);
+	<T> void paginate(QueryAsync<T> query);
 	<T> void nextPage(QueryAsync<T> query);
 	<T> void previousPage(QueryAsync<T> query);
 	<T> SienaFuture<Integer> update(QueryAsync<T> query, Map<String, ?> fieldValues);

@@ -388,12 +388,6 @@ public class SdbPersistenceManager extends AbstractPersistenceManager {
 	}
 
 	@Override
-	public <T> int deleteByKeys(Class<T> clazz, Iterable<?> keys) {
-		// TODO Auto-generated method stub
-		return 0;
-	}
-
-	@Override
 	public int get(Object... models) {
 		// TODO Auto-generated method stub
 		return 0;
@@ -412,12 +406,6 @@ public class SdbPersistenceManager extends AbstractPersistenceManager {
 	}
 
 	@Override
-	public <T> List<T> getByKeys(Class<T> clazz, Iterable<?> keys) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
 	public <T> int update(Object... models) {
 		// TODO Auto-generated method stub
 		return 0;
@@ -425,12 +413,6 @@ public class SdbPersistenceManager extends AbstractPersistenceManager {
 
 	@Override
 	public <T> int update(Iterable<T> models) {
-		// TODO Auto-generated method stub
-		return 0;
-	}
-
-	@Override
-	public <T> int update(Query<T> query, Map<String, ?> fieldValues) {
 		// TODO Auto-generated method stub
 		return 0;
 	}
@@ -451,6 +433,30 @@ public class SdbPersistenceManager extends AbstractPersistenceManager {
 	public <T> PersistenceManagerAsync async() {
 		// TODO Auto-generated method stub
 		return null;
+	}
+
+	@Override
+	public <T> int deleteByKeys(Class<T> clazz, Iterable<?> keys) {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+
+	@Override
+	public <T> List<T> getByKeys(Class<T> clazz, Iterable<?> keys) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public <T> int update(Query<T> query, Map<String, ?> fieldValues) {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+
+	@Override
+	public <T> void paginate(Query<T> query) {
+		// TODO Auto-generated method stub
+		
 	}
 
 

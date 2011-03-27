@@ -1312,6 +1312,222 @@ public class GaeTest extends BaseTest {
 		super.testBatchGetByKeysList();
 	}
 
+	@Override
+	public void testLimitStateless() {
+		// TODO Auto-generated method stub
+		super.testLimitStateless();
+	}
+
+	@Override
+	public void testLimitStateful() {
+		// TODO Auto-generated method stub
+		super.testLimitStateful();
+	}
+
+	@Override
+	public void testOffsetStateless() {
+		// TODO Auto-generated method stub
+		super.testOffsetStateless();
+	}
+
+	@Override
+	public void testOffsetStateful() {
+		// TODO Auto-generated method stub
+		super.testOffsetStateful();
+	}
+
+	@Override
+	public void testOffsetLimitStateless() {
+		// TODO Auto-generated method stub
+		super.testOffsetLimitStateless();
+	}
+
+	@Override
+	public void testOffsetLimitStateful() {
+		// TODO Auto-generated method stub
+		super.testOffsetLimitStateful();
+	}
+
+	@Override
+	public void testOffsetLimitStatelessPaginate() {
+		// TODO Auto-generated method stub
+		super.testOffsetLimitStatelessPaginate();
+	}
+
+	@Override
+	public void testOffsetLimitStatefulPaginate() {
+		// TODO Auto-generated method stub
+		super.testOffsetLimitStatefulPaginate();
+	}
+
+	@Override
+	public void testOffsetLimitStatelessPaginate2() {
+		// TODO Auto-generated method stub
+		super.testOffsetLimitStatelessPaginate2();
+	}
+
+	@Override
+	public void testOffsetLimitStatefulPaginate2() {
+		// TODO Auto-generated method stub
+		super.testOffsetLimitStatefulPaginate2();
+	}
+
+	@Override
+	public void testFetchPaginateStatelessTwice() {
+		// TODO Auto-generated method stub
+		super.testFetchPaginateStatelessTwice();
+	}
+
+	@Override
+	public void testFetchPaginateStatefulTwice() {
+		// TODO Auto-generated method stub
+		super.testFetchPaginateStatefulTwice();
+	}
+
+	@Override
+	public void testLimitStatelessKeys() {
+		// TODO Auto-generated method stub
+		super.testLimitStatelessKeys();
+	}
+
+	@Override
+	public void testLimitStatefulKeys() {
+		// TODO Auto-generated method stub
+		super.testLimitStatefulKeys();
+	}
+
+	@Override
+	public void testOffsetStatelessKeys() {
+		// TODO Auto-generated method stub
+		super.testOffsetStatelessKeys();
+	}
+
+	@Override
+	public void testOffsetStatefulKeys() {
+		// TODO Auto-generated method stub
+		super.testOffsetStatefulKeys();
+	}
+
+	@Override
+	public void testOffsetLimitStatelessKeys() {
+		// TODO Auto-generated method stub
+		super.testOffsetLimitStatelessKeys();
+	}
+
+	@Override
+	public void testOffsetLimitStatefulKeys() {
+		// TODO Auto-generated method stub
+		super.testOffsetLimitStatefulKeys();
+	}
+
+	@Override
+	public void testOffsetLimitStatelessPaginateKeys() {
+		// TODO Auto-generated method stub
+		super.testOffsetLimitStatelessPaginateKeys();
+	}
+
+	@Override
+	public void testOffsetLimitStatefulPaginateKeys() {
+		// TODO Auto-generated method stub
+		super.testOffsetLimitStatefulPaginateKeys();
+	}
+
+	@Override
+	public void testOffsetLimitStatelessPaginate2Keys() {
+		// TODO Auto-generated method stub
+		super.testOffsetLimitStatelessPaginate2Keys();
+	}
+
+	@Override
+	public void testOffsetLimitStatefulPaginate2Keys() {
+		// TODO Auto-generated method stub
+		super.testOffsetLimitStatefulPaginate2Keys();
+	}
+
+	@Override
+	public void testFetchPaginateStatelessTwiceKeys() {
+		// TODO Auto-generated method stub
+		super.testFetchPaginateStatelessTwiceKeys();
+	}
+
+	@Override
+	public void testFetchPaginateStatefulTwiceKeys() {
+		// TODO Auto-generated method stub
+		super.testFetchPaginateStatefulTwiceKeys();
+	}
+
+	@Override
+	public void testLimitStatelessIter() {
+		// TODO Auto-generated method stub
+		super.testLimitStatelessIter();
+	}
+
+	@Override
+	public void testLimitStatefulIter() {
+		// TODO Auto-generated method stub
+		super.testLimitStatefulIter();
+	}
+
+	@Override
+	public void testOffsetStatelessIter() {
+		// TODO Auto-generated method stub
+		super.testOffsetStatelessIter();
+	}
+
+	@Override
+	public void testOffsetStatefulIter() {
+		// TODO Auto-generated method stub
+		super.testOffsetStatefulIter();
+	}
+
+	@Override
+	public void testOffsetLimitStatelessIter() {
+		// TODO Auto-generated method stub
+		super.testOffsetLimitStatelessIter();
+	}
+
+	@Override
+	public void testOffsetLimitStatefulIter() {
+		// TODO Auto-generated method stub
+		super.testOffsetLimitStatefulIter();
+	}
+
+	@Override
+	public void testOffsetLimitStatelessPaginateIter() {
+		// TODO Auto-generated method stub
+		super.testOffsetLimitStatelessPaginateIter();
+	}
+
+	@Override
+	public void testOffsetLimitStatefulPaginateIter() {
+		// TODO Auto-generated method stub
+		super.testOffsetLimitStatefulPaginateIter();
+	}
+
+	@Override
+	public void testOffsetLimitStatelessPaginate2Iter() {
+		// TODO Auto-generated method stub
+		super.testOffsetLimitStatelessPaginate2Iter();
+	}
+
+	@Override
+	public void testOffsetLimitStatefulPaginate2Iter() {
+		// TODO Auto-generated method stub
+		super.testOffsetLimitStatefulPaginate2Iter();
+	}
+
+	@Override
+	public void testFetchPaginateStatelessTwiceIter() {
+		// TODO Auto-generated method stub
+		super.testFetchPaginateStatelessTwiceIter();
+	}
+
+	@Override
+	public void testFetchPaginateStatefulTwiceIter() {
+		// TODO Auto-generated method stub
+		super.testFetchPaginateStatefulTwiceIter();
+	}
+
 
 	
 }
