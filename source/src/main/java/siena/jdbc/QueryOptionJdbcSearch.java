@@ -1,7 +1,9 @@
 package siena.jdbc;
 
 import siena.core.options.QueryOption;
+import siena.embed.EmbeddedMap;
 
+@EmbeddedMap
 public class QueryOptionJdbcSearch extends QueryOption{
     public static final int ID 	= 0x1002;
 	

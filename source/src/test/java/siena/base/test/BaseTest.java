@@ -12,6 +12,7 @@ import java.util.Iterator;
 import java.util.List;
 
 import junit.framework.TestCase;
+import siena.Json;
 import siena.PersistenceManager;
 import siena.Query;
 import siena.SienaException;
@@ -27,8 +28,13 @@ import siena.base.test.model.DiscoveryPrivate;
 import siena.base.test.model.MultipleKeys;
 import siena.base.test.model.PersonLongAutoID;
 import siena.base.test.model.PersonLongManualID;
+import siena.base.test.model.PersonStringAutoIncID;
 import siena.base.test.model.PersonStringID;
 import siena.base.test.model.PersonUUID;
+import siena.core.options.QueryOption;
+import siena.core.options.QueryOption.QueryOptionJson;
+import siena.core.options.QueryOptionPage;
+import siena.embed.JsonSerializer;
 
 public abstract class BaseTest extends TestCase {
 	
@@ -66,6 +72,7 @@ public abstract class BaseTest extends TestCase {
 		classes.add(PersonLongAutoID.class);
 		classes.add(PersonLongManualID.class);
 		classes.add(PersonStringID.class);
+		classes.add(PersonStringAutoIncID.class);
 		if(supportsAutoincrement())
 			classes.add(AutoInc.class);
 		if(supportsMultipleKeys())
@@ -4674,4 +4681,34 @@ public abstract class BaseTest extends TestCase {
 		}	
 		assertEquals(15, i);
 	}
+	
+	public void testFetchStringAutoInc() {
+		PersonStringAutoIncID person = new PersonStringAutoIncID("TEST1", "TEST2", "TEST3", "TEST4", 123);
+		
+		pm.insert(person);
+		
+		List<PersonStringAutoIncID> l = pm.getByKeys(PersonStringAutoIncID.class, "TEST1");
+		assertEquals(person, l.get(0));
+	}
+	
+	/*public void testDump() {
+		Query<PersonLongAutoID> query = pm.createQuery(PersonLongAutoID.class);
+		
+		QueryOption opt = query.option(QueryOptionPage.ID);
+		QueryOptionJson dump = opt.dump();
+		assertEquals(dump.type, QueryOptionPage.class.getName());
+		assertEquals(dump.value, "{\"pageType\": \"TEMPORARY\", \"state\": \"PASSIVE\", \"pageSize\": 0, \"type\": 1}");
+
+		assertNotNull(str);
+	}
+	
+	public void testRestore() {
+		QueryOption optRestored = QueryOption.restore(
+				"{\"type\":\"siena.options.QueryOptionPage\", \"value\": {\"pageType\": \"TEMPORARY\", \"state\": \"PASSIVE\", \"pageSize\": 0, \"type\": 1} }");
+		Query<PersonLongAutoID> query = pm.createQuery(PersonLongAutoID.class);
+		
+		QueryOption opt = query.option(QueryOptionPage.ID);
+		
+		assertEquals(opt, optRestored);
+	}*/
 }

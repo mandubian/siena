@@ -620,14 +620,14 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 	}
 	
 	public <T> List<T> fetchKeys(Query<T> query) {
-		((QueryOptionFetchType)query.option(QueryOptionFetchType.ID)).type=QueryOptionFetchType.Type.KEYS_ONLY;
+		((QueryOptionFetchType)query.option(QueryOptionFetchType.ID)).fetchType=QueryOptionFetchType.Type.KEYS_ONLY;
 		List<T> result = doFetchKeys(query, Integer.MAX_VALUE, 0);
 		//query.setNextOffset(result.size());
 		return result;
 	}
 
 	public <T> List<T> fetchKeys(Query<T> query, int limit) {
-		((QueryOptionFetchType)query.option(QueryOptionFetchType.ID)).type=QueryOptionFetchType.Type.KEYS_ONLY;
+		((QueryOptionFetchType)query.option(QueryOptionFetchType.ID)).fetchType=QueryOptionFetchType.Type.KEYS_ONLY;
 		//((QueryOptionPage)query.option(QueryOptionPage.ID).activate()).pageSize=limit;
 		List<T> result = doFetchKeys(query, limit, 0);
 		//query.setNextOffset(result.size());
@@ -635,7 +635,7 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 	}
 
 	public <T> List<T> fetchKeys(Query<T> query, int limit, Object offset) {
-		((QueryOptionFetchType)query.option(QueryOptionFetchType.ID)).type=QueryOptionFetchType.Type.KEYS_ONLY;
+		((QueryOptionFetchType)query.option(QueryOptionFetchType.ID)).fetchType=QueryOptionFetchType.Type.KEYS_ONLY;
 //		((QueryOptionPage)query.option(QueryOptionPage.ID).activate()).pageSize=limit;
 //		((QueryOptionOffset)query.option(QueryOptionOffset.ID).activate()).offset=(Integer)offset;
 		List<T> result = doFetchKeys(query, limit, (Integer)offset);
@@ -781,18 +781,18 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 	}
 
 	public <T> Iterable<T> iter(Query<T> query) {
-		((QueryOptionFetchType)query.option(QueryOptionFetchType.ID)).type=QueryOptionFetchType.Type.ITER;
+		((QueryOptionFetchType)query.option(QueryOptionFetchType.ID)).fetchType=QueryOptionFetchType.Type.ITER;
 		return doIter(query, Integer.MAX_VALUE, 0);
 	}
 
 	public <T> Iterable<T> iter(Query<T> query, int limit) {
-		((QueryOptionFetchType)query.option(QueryOptionFetchType.ID)).type=QueryOptionFetchType.Type.ITER;
+		((QueryOptionFetchType)query.option(QueryOptionFetchType.ID)).fetchType=QueryOptionFetchType.Type.ITER;
 		//((QueryOptionPage)query.option(QueryOptionPage.ID).activate()).pageSize=limit;
 		return doIter(query, limit, 0);
 	}
 
 	public <T> Iterable<T> iter(Query<T> query, int limit, Object offset) {
-		((QueryOptionFetchType)query.option(QueryOptionFetchType.ID)).type=QueryOptionFetchType.Type.ITER;
+		((QueryOptionFetchType)query.option(QueryOptionFetchType.ID)).fetchType=QueryOptionFetchType.Type.ITER;
 		//((QueryOptionPage)query.option(QueryOptionPage.ID).activate()).pageSize=limit;
 		
 		// if in stateful mode, the offset should be added to the current one

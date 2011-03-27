@@ -1,7 +1,14 @@
 package siena.core.options;
 
+import siena.Json;
+import siena.SienaException;
+import siena.Util;
+import siena.embed.EmbeddedMap;
+import siena.embed.JsonSerializer;
 
-public class QueryOption {
+
+@EmbeddedMap
+public abstract class QueryOption {
     /* the state of an option */
     public enum State {
         ACTIVE, PASSIVE
@@ -10,40 +17,15 @@ public class QueryOption {
     /* an option has a type, a state and an optional value (pagesize for  PAGINATE for example) */
     public int type;
     protected State state = State.PASSIVE;
-    //private Object value = null;
-    
-    /*
-    private static final Map<Integer, QueryOption> defaults = new ConcurrentHashMap<Integer, QueryOption>() {
-    	private static final long serialVersionUID = -2761955744911014026L;
-	{
-    	put(PAGINATE, new QueryOption(PAGINATE, 0));
-    	put(OFFSET, new QueryOption(OFFSET, 0));
-    	put(DB_CLUDGE, new QueryOption(DB_CLUDGE));
-    	put(REUSABLE, new QueryOption(REUSABLE));
-    	put(SEARCH, new QueryOption(SEARCH));
-    }};
-    */
-    
-    /* DEFAULT OPTIONS THAT BE ADDED DIRECTLY TO QUERY */
-    /* PAGINATE is in fact an option and the page size is the value */
-    /* try to reserve all number under 0x100 = 256 */
-    /*public static final int PAGINATE 	= 0x01;
-    public static final int DB_CLUDGE 	= 0x02;
-    public static final int REUSABLE 	= 0x03;
-    public static final int OFFSET 		= 0x04;
-    public static final int SEARCH 		= 0x05;
-    public static final int MAX_RESERVED= 0x100;*/
     
     public QueryOption(int option, State active, Object value){
         this.type = option;
         this.state = active;
-//        this.value = value;
     }
 
     public QueryOption(int option, Object value){
         this.type = option;
         this.state = State.PASSIVE;
-//        this.value = value;
     }
 
     public QueryOption(int option){
@@ -54,7 +36,6 @@ public class QueryOption {
     public QueryOption(QueryOption option){
         this.type = option.type;
         this.state = option.state;
-//        this.value = option.value;
     }
     
     public QueryOption activate() {
@@ -71,15 +52,6 @@ public class QueryOption {
         if(state == State.ACTIVE) return true;
         else return false;
     }
-    
-    /*public QueryOption value(Object value){
-    	this.value = value;
-    	return this;
-    }
-    
-    public Object value(){
-    	return this.value;
-    }*/
 
     public QueryOption state(State state){
     	this.state = state;
@@ -99,42 +71,39 @@ public class QueryOption {
     	return this.type;
     }
     
-	public QueryOption clone() {
-		return new QueryOption(this);
-	}
-    /*
-	public static QueryOption getInstance(int type) {
-		if(defaults.containsKey(type)){
-			return defaults.get(type).clone();
-		}
-		else {
-			if(type>MAX_RESERVED) throw new SienaReservedQueryOptionTypeException(type, MAX_RESERVED);
-			return new QueryOption(type);
-		}
-	}
-	
-	public static QueryOption getInstance(int type, State state) {
-		if(defaults.containsKey(type)) {
-			return defaults.get(type).clone().state(state);
-		}
-		else {
-			if(type>MAX_RESERVED) throw new SienaReservedQueryOptionTypeException(type, MAX_RESERVED);
-			return new QueryOption(type, state);
-		}
-	}
-	
-	public static QueryOption getInstance(int type, State state, Object val) {
-		if(defaults.containsKey(type)){
-			return defaults.get(type).clone().state(state).value(val);
-		}
-		else {
-			if(type>MAX_RESERVED) throw new SienaReservedQueryOptionTypeException(type, MAX_RESERVED);
-			return new QueryOption(type, state, val);
-		}
-	}
-	*/
-	
+	abstract public QueryOption clone();
+		
 	public String toString() {
-		return "type:"+this.type+" - state:"+this.state/*+" - value:"+this.value+"}"*/;
+		return "type:"+this.type+" - state:"+this.state;
+	}
+	
+	public boolean equals(QueryOption opt){
+		return this.type == opt.type && this.state == opt.state;
+	}
+	
+	public QueryOptionJson dump() {
+		QueryOptionJson jsonOpt = new QueryOptionJson();
+		jsonOpt.type = this.getClass().getName();
+		jsonOpt.value = JsonSerializer.serialize(this).toString(); 
+		
+		return jsonOpt;
+	}
+
+	public static QueryOption restore(String jsonStr) {	
+		try {
+			QueryOptionJson optJson = (QueryOptionJson)JsonSerializer.deserialize(QueryOptionJson.class, Json.loads(jsonStr));
+			Class<?> clazz = Class.forName(optJson.type);
+			
+			QueryOption opt = (QueryOption)JsonSerializer.deserialize(clazz, Json.loads(optJson.value));
+			return opt;
+		}catch(Exception ex) {
+			throw new SienaException("Unable to restore QueryOption", ex);
+		}
+	}
+
+	@EmbeddedMap
+	public static class QueryOptionJson {
+		public String type;
+		public String value;
 	}
 }

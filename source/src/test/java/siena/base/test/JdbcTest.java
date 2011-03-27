@@ -1285,7 +1285,25 @@ public class JdbcTest extends BaseTest {
 		// TODO Auto-generated method stub
 		super.testFetchPaginateStatefulTwiceIter();
 	}
-	
+
+	@Override
+	public void testFetchStringAutoInc() {
+		// TODO Auto-generated method stub
+		super.testFetchStringAutoInc();
+	}
+/*
+	@Override
+	public void testDump() {
+		// TODO Auto-generated method stub
+		super.testDump();
+	}
+
+	@Override
+	public void testRestore() {
+		// TODO Auto-generated method stub
+		super.testRestore();
+	}
+*/	
 	
 
 

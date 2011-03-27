@@ -3,7 +3,9 @@ package siena.jdbc;
 import java.sql.PreparedStatement;
 
 import siena.core.options.QueryOption;
+import siena.embed.EmbeddedMap;
 
+@EmbeddedMap
 public class QueryOptionJdbcContext extends QueryOption{
     public static final int ID 	= 0x1001;
 	

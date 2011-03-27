@@ -396,7 +396,7 @@ public class GaePersistenceManagerAsync extends AbstractPersistenceManagerAsync 
 				}
 			}
 			
-			switch(fetchType.type){
+			switch(fetchType.fetchType){
 			case KEYS_ONLY:
 				{
 					// uses iterable as it is the only async request for prepared query for the time being
@@ -424,7 +424,7 @@ public class GaePersistenceManagerAsync extends AbstractPersistenceManagerAsync 
 			// manages cursor limitations for IN and != operators by using offset	
 			if(!gaeCtx.isActive()){
 				// cursor not yet created
-				switch(fetchType.type){
+				switch(fetchType.fetchType){
 				case KEYS_ONLY:
 					{
 						PreparedQuery pq = prepareKeysOnly(query);
@@ -499,7 +499,7 @@ public class GaePersistenceManagerAsync extends AbstractPersistenceManagerAsync 
 				}
 				
 			}else {
-				switch(fetchType.type){
+				switch(fetchType.fetchType){
 				case KEYS_ONLY:
 					{
 						// we prepare the query each time
@@ -676,7 +676,7 @@ public class GaePersistenceManagerAsync extends AbstractPersistenceManagerAsync 
 				}
 			}
 			
-			switch(fetchType.type){
+			switch(fetchType.fetchType){
 			case ITER:
 			default:
 				{
@@ -697,7 +697,7 @@ public class GaePersistenceManagerAsync extends AbstractPersistenceManagerAsync 
 			// manages cursor limitations for IN and != operators		
 			if(!gaeCtx.isActive()){
 				// cursor not yet created
-				switch(fetchType.type){
+				switch(fetchType.fetchType){
 				case ITER:
 				default:
 					{
@@ -742,7 +742,7 @@ public class GaePersistenceManagerAsync extends AbstractPersistenceManagerAsync 
 				}
 				
 			}else {
-				switch(fetchType.type){
+				switch(fetchType.fetchType){
 				case ITER:
 				default:
 					{
@@ -841,52 +841,52 @@ public class GaePersistenceManagerAsync extends AbstractPersistenceManagerAsync 
 
 	
 	public <T> SienaFuture<List<T>> fetch(QueryAsync<T> query) {
-		((QueryOptionFetchType)query.option(QueryOptionFetchType.ID)).type=QueryOptionFetchType.Type.NORMAL;
+		((QueryOptionFetchType)query.option(QueryOptionFetchType.ID)).fetchType=QueryOptionFetchType.Type.NORMAL;
 		return doFetchList(query, Integer.MAX_VALUE, 0);
 	}
 
 	public <T> SienaFuture<List<T>> fetch(QueryAsync<T> query, int limit) {
-		((QueryOptionFetchType)query.option(QueryOptionFetchType.ID)).type=QueryOptionFetchType.Type.NORMAL;
+		((QueryOptionFetchType)query.option(QueryOptionFetchType.ID)).fetchType=QueryOptionFetchType.Type.NORMAL;
 		return doFetchList(query, limit, 0);
 	}
 
 	public <T> SienaFuture<List<T>> fetch(QueryAsync<T> query, int limit, Object offset) {
-		((QueryOptionFetchType)query.option(QueryOptionFetchType.ID)).type=QueryOptionFetchType.Type.NORMAL;
+		((QueryOptionFetchType)query.option(QueryOptionFetchType.ID)).fetchType=QueryOptionFetchType.Type.NORMAL;
 		return doFetchList(query, limit, (Integer)offset);
 	}
 	
 	public <T> SienaFuture<List<T>> fetchKeys(QueryAsync<T> query) {
-		((QueryOptionFetchType)query.option(QueryOptionFetchType.ID)).type=QueryOptionFetchType.Type.KEYS_ONLY;
+		((QueryOptionFetchType)query.option(QueryOptionFetchType.ID)).fetchType=QueryOptionFetchType.Type.KEYS_ONLY;
 
 		return doFetchList(query, Integer.MAX_VALUE, 0);
 	}
 
 	public <T> SienaFuture<List<T>> fetchKeys(QueryAsync<T> query, int limit) {
-		((QueryOptionFetchType)query.option(QueryOptionFetchType.ID)).type=QueryOptionFetchType.Type.KEYS_ONLY;
+		((QueryOptionFetchType)query.option(QueryOptionFetchType.ID)).fetchType=QueryOptionFetchType.Type.KEYS_ONLY;
 
 		return doFetchList(query, limit, 0);
 	}
 
 	public <T> SienaFuture<List<T>>  fetchKeys(QueryAsync<T> query, int limit, Object offset) {
-		((QueryOptionFetchType)query.option(QueryOptionFetchType.ID)).type=QueryOptionFetchType.Type.KEYS_ONLY;
+		((QueryOptionFetchType)query.option(QueryOptionFetchType.ID)).fetchType=QueryOptionFetchType.Type.KEYS_ONLY;
 
 		return doFetchList(query, limit, (Integer)offset);
 	}
 
 	public <T> SienaFuture<Iterable<T>> iter(QueryAsync<T> query) {
-		((QueryOptionFetchType)query.option(QueryOptionFetchType.ID)).type=QueryOptionFetchType.Type.ITER;
+		((QueryOptionFetchType)query.option(QueryOptionFetchType.ID)).fetchType=QueryOptionFetchType.Type.ITER;
 
 		return doFetchIterable(query, Integer.MAX_VALUE, 0);
 	}
 
 	public <T> SienaFuture<Iterable<T>> iter(QueryAsync<T> query, int limit) {
-		((QueryOptionFetchType)query.option(QueryOptionFetchType.ID)).type=QueryOptionFetchType.Type.ITER;
+		((QueryOptionFetchType)query.option(QueryOptionFetchType.ID)).fetchType=QueryOptionFetchType.Type.ITER;
 
 		return doFetchIterable(query, limit, 0);
 	}
 
 	public <T> SienaFuture<Iterable<T>> iter(QueryAsync<T> query, int limit, Object offset) {
-		((QueryOptionFetchType)query.option(QueryOptionFetchType.ID)).type=QueryOptionFetchType.Type.ITER;
+		((QueryOptionFetchType)query.option(QueryOptionFetchType.ID)).fetchType=QueryOptionFetchType.Type.ITER;
 
 		return doFetchIterable(query, limit, (Integer)offset);
 	}

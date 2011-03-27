@@ -295,7 +295,7 @@ public class GaeMappingUtils {
 				if (ClassInfo.isModel(fieldClass)) {
 					Key key = (Key) entity.getProperty(property);
 					if (key != null) {
-						Object value = Util.createModelInstance(fieldClass);
+						Object value = Util.createObjectInstance(fieldClass);
 						Field id = ClassInfo.getIdField(fieldClass);
 						setKey(id, value, key);
 						field.set(obj, value);
@@ -323,7 +323,7 @@ public class GaeMappingUtils {
 		Field id = ClassInfo.getIdField(clazz);
 		T obj;
 		try {
-			obj = Util.createModelInstance(clazz);
+			obj = Util.createObjectInstance(clazz);
 			setKey(id, obj, entity.getKey());
 		} catch (SienaException e) {
 			throw e;
@@ -341,7 +341,7 @@ public class GaeMappingUtils {
 		for (Entity entity : entities) {
 			T obj;
 			try {
-				obj = Util.createModelInstance(clazz);
+				obj = Util.createObjectInstance(clazz);
 				list.add(obj);
 				setKey(id, obj, entity.getKey());
 			} catch (SienaException e) {
@@ -361,7 +361,7 @@ public class GaeMappingUtils {
 		for (Entity entity : entities) {
 			T obj;
 			try {
-				obj = Util.createModelInstance(clazz);
+				obj = Util.createObjectInstance(clazz);
 				list.add(obj);
 				setKey(id, obj, entity.getKey());
 			} catch (SienaException e) {
@@ -378,7 +378,7 @@ public class GaeMappingUtils {
 		T obj;
 		// try to find a constructor
 		try {	
-			obj = Util.createModelInstance(clazz);
+			obj = Util.createObjectInstance(clazz);
 			fillModel(obj, entity);
 			setKey(id, obj, entity.getKey());
 		} catch (SienaException e) {
@@ -397,7 +397,7 @@ public class GaeMappingUtils {
 		for (Entity entity : entities) {
 			T obj;
 			try {
-				obj = Util.createModelInstance(clazz);
+				obj = Util.createObjectInstance(clazz);
 				fillModel(obj, entity);
 				list.add(obj);
 				setKey(id, obj, entity.getKey());
@@ -418,7 +418,7 @@ public class GaeMappingUtils {
 		for (Entity entity : entities) {
 			T obj;
 			try {
-				obj = Util.createModelInstance(clazz);
+				obj = Util.createObjectInstance(clazz);
 				fillModel(obj, entity);
 				list.add(obj);
 				setKey(id, obj, entity.getKey());

@@ -55,7 +55,6 @@ public class JsonSerializer {
 			if(list != null) {
 				return serializeList(obj);
 			}
-
 			EmbeddedMap map = obj.getClass().getAnnotation(EmbeddedMap.class);
 			if(map != null) {
 				return serializeMap(obj);
@@ -93,6 +92,24 @@ public class JsonSerializer {
 				result.put(f.getName(), serialize(f.get(obj), f));
 			}
 		}
+		
+		// TMP
+		/*Class<?> clazz = obj.getClass().getSuperclass();
+		while(clazz!=null){
+			fields = clazz.getDeclaredFields();
+			for (Field f : fields) {
+				if(mustIgnore(f)) continue;
+				
+				Key k = f.getAnnotation(Key.class);
+				if(k != null) {
+					result.put(k.value(), serialize(f.get(obj), f));
+				} else {
+					result.put(f.getName(), serialize(f.get(obj), f));
+				}
+			}
+			clazz = clazz.getSuperclass();
+		}*/
+		// TMP
 		return result;
 	}
 	

@@ -52,7 +52,7 @@ public class JdbcMappingUtils {
 	
 	public static <T> T mapObject(Class<T> clazz, ResultSet rs, String tableName, List<Field >joinFields) {
 		try {
-			T obj = Util.createModelInstance(clazz);
+			T obj = Util.createObjectInstance(clazz);
 			mapObject(obj, rs, tableName, joinFields);
 			return obj;
 		} catch(SienaException e) {
@@ -92,7 +92,7 @@ public class JdbcMappingUtils {
 	
 	public static <T> T mapObjectKeys(Class<T> clazz, ResultSet rs, String tableName, List<Field> joinFields) {
 		try {
-			T obj = Util.createModelInstance(clazz);
+			T obj = Util.createObjectInstance(clazz);
 			mapObjectKeys(obj, rs, tableName, joinFields);
 			return obj;
 		} catch(SienaException e) {
@@ -138,7 +138,7 @@ public class JdbcMappingUtils {
 				
 				if(joinFields==null || joinFields.size()==0 || !joinFields.contains(field)){
 					String[] fks = ClassInfo.getColumnNames(field, tableName);
-					Object rel = Util.createModelInstance(type);
+					Object rel = Util.createObjectInstance(type);
 					boolean none = false;
 					int i = 0;
 					checkForeignKeyMapping(fieldClassInfo.keys, fks, obj.getClass(), field);

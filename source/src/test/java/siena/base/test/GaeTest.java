@@ -1528,6 +1528,12 @@ public class GaeTest extends BaseTest {
 		super.testFetchPaginateStatefulTwiceIter();
 	}
 
+	@Override
+	public void testFetchStringAutoInc() {
+		// TODO Auto-generated method stub
+		super.testFetchStringAutoInc();
+	}
+
 
 	
 }

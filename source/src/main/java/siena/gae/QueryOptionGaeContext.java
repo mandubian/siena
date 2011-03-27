@@ -5,9 +5,11 @@ import java.util.Collections;
 import java.util.List;
 
 import siena.core.options.QueryOption;
+import siena.embed.EmbeddedMap;
 
 import com.google.appengine.api.datastore.PreparedQuery;
 
+@EmbeddedMap
 public class QueryOptionGaeContext extends QueryOption{
     public static final int ID 	= 0x2001;
 	

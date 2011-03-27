@@ -18,13 +18,11 @@ package siena;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.security.MessageDigest;
-import java.sql.ResultSet;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Collection;
 import java.util.Date;
 import java.util.Iterator;
-import java.util.List;
 import java.util.TimeZone;
 
 import siena.embed.Embedded;
@@ -271,7 +269,7 @@ public class Util {
 	 * @param clazz the class of the model
 	 * @return the instance of the model
 	 */
-	public static <T> T createModelInstance(Class<T> clazz){
+	public static <T> T createObjectInstance(Class<T> clazz){
 		try {
 			Constructor<T> c = clazz.getDeclaredConstructor();
 			c.setAccessible(true);

@@ -25,6 +25,7 @@ import siena.base.test.model.DiscoveryPrivate;
 import siena.base.test.model.MultipleKeys;
 import siena.base.test.model.PersonLongAutoID;
 import siena.base.test.model.PersonLongManualID;
+import siena.base.test.model.PersonStringAutoIncID;
 import siena.base.test.model.PersonStringID;
 import siena.base.test.model.PersonUUID;
 import siena.core.async.PersistenceManagerAsync;
@@ -5054,5 +5055,15 @@ public abstract class BaseAsyncTest extends TestCase {
 		for(int i=0; i<50; i++){
 			assertEquals(discs[i+260], res.get(i));
 		}		
+	}
+	
+	public void testFetchStringAutoInc() {
+		PersonStringAutoIncID person = new PersonStringAutoIncID("TEST1", "TEST2", "TEST3", "TEST4", 123);
+		
+		pm.insert(person).get();
+		
+		SienaFuture<List<PersonStringAutoIncID>> future = pm.getByKeys(PersonStringAutoIncID.class, "TEST1");
+		List<PersonStringAutoIncID> l = future.get();
+		assertEquals(person, l.get(0));
 	}
 }

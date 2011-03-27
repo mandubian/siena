@@ -623,7 +623,7 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 				}
 			}
 			
-			switch(fetchType.type){
+			switch(fetchType.fetchType){
 			case KEYS_ONLY:
 				{
 					// uses iterable as it is the only async request for prepared query for the time being
@@ -669,7 +669,7 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 			// manages cursor limitations for IN and != operators with offsets
 			if(!gaeCtx.isActive()){
 				// cursor not yet created
-				switch(fetchType.type){
+				switch(fetchType.fetchType){
 				case KEYS_ONLY:
 					{
 						PreparedQuery pq = prepareKeysOnly(query);
@@ -754,7 +754,7 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 				}
 				
 			}else {
-				switch(fetchType.type){
+				switch(fetchType.fetchType){
 				case KEYS_ONLY:
 					{
 						// we prepare the query each time
@@ -938,7 +938,7 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 				}
 			}
 			
-			switch(fetchType.type){
+			switch(fetchType.fetchType){
 			case ITER:
 			default:
 				{
@@ -959,7 +959,7 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 			// manages cursor limitations for IN and != operators		
 			if(!gaeCtx.isActive()){
 				// cursor not yet created
-				switch(fetchType.type){
+				switch(fetchType.fetchType){
 				case ITER:
 				default:
 					{
@@ -1003,7 +1003,7 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 				}
 				
 			}else {
-				switch(fetchType.type){
+				switch(fetchType.fetchType){
 				case ITER:
 				default:
 					{
@@ -1074,7 +1074,7 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 	}
 	
 	public <T> List<T> fetch(Query<T> query) {
-		((QueryOptionFetchType)query.option(QueryOptionFetchType.ID)).type=QueryOptionFetchType.Type.NORMAL;
+		((QueryOptionFetchType)query.option(QueryOptionFetchType.ID)).fetchType=QueryOptionFetchType.Type.NORMAL;
 //		if(!pag.isPaginating()){
 //			if(pag.pageSize==0)
 //				pag.passivate();
@@ -1083,7 +1083,7 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 	}
 
 	public <T> List<T> fetch(Query<T> query, int limit) {
-		((QueryOptionFetchType)query.option(QueryOptionFetchType.ID)).type=QueryOptionFetchType.Type.NORMAL;
+		((QueryOptionFetchType)query.option(QueryOptionFetchType.ID)).fetchType=QueryOptionFetchType.Type.NORMAL;
 		
 //		QueryOptionPage pag = (QueryOptionPage)query.option(QueryOptionPage.ID);
 //		// use this limit only if not paginating
@@ -1095,7 +1095,7 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 	}
 
 	public <T> List<T> fetch(Query<T> query, int limit, Object offset) {
-		((QueryOptionFetchType)query.option(QueryOptionFetchType.ID)).type=QueryOptionFetchType.Type.NORMAL;
+		((QueryOptionFetchType)query.option(QueryOptionFetchType.ID)).fetchType=QueryOptionFetchType.Type.NORMAL;
 //		QueryOptionPage pag = (QueryOptionPage)query.option(QueryOptionPage.ID);
 //		QueryOptionOffset off = (QueryOptionOffset)query.option(QueryOptionOffset.ID);
 		// use this limit/offset only if not paginating
@@ -1127,7 +1127,7 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 	}
 
 	public <T> List<T> fetchKeys(Query<T> query) {
-		((QueryOptionFetchType)query.option(QueryOptionFetchType.ID)).type=QueryOptionFetchType.Type.KEYS_ONLY;
+		((QueryOptionFetchType)query.option(QueryOptionFetchType.ID)).fetchType=QueryOptionFetchType.Type.KEYS_ONLY;
 //		QueryOptionPage pag = (QueryOptionPage)query.option(QueryOptionPage.ID);
 //		if(!pag.isPaginating()){
 //			pag.passivate();
@@ -1137,7 +1137,7 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 	}
 
 	public <T> List<T> fetchKeys(Query<T> query, int limit) {
-		((QueryOptionFetchType)query.option(QueryOptionFetchType.ID)).type=QueryOptionFetchType.Type.KEYS_ONLY;
+		((QueryOptionFetchType)query.option(QueryOptionFetchType.ID)).fetchType=QueryOptionFetchType.Type.KEYS_ONLY;
 //		QueryOptionPage pag = (QueryOptionPage)query.option(QueryOptionPage.ID);
 		// use this limit only if not paginating
 //		if(!pag.isPaginating()){
@@ -1149,7 +1149,7 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 	}
 
 	public <T> List<T> fetchKeys(Query<T> query, int limit, Object offset) {
-		((QueryOptionFetchType)query.option(QueryOptionFetchType.ID)).type=QueryOptionFetchType.Type.KEYS_ONLY;
+		((QueryOptionFetchType)query.option(QueryOptionFetchType.ID)).fetchType=QueryOptionFetchType.Type.KEYS_ONLY;
 //		QueryOptionPage pag = (QueryOptionPage)query.option(QueryOptionPage.ID);
 //		QueryOptionOffset off = (QueryOptionOffset)query.option(QueryOptionOffset.ID);
 		// use this limit/offset only if not paginating
@@ -1164,7 +1164,7 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 	}
 
 	public <T> Iterable<T> iter(Query<T> query) {
-		((QueryOptionFetchType)query.option(QueryOptionFetchType.ID)).type=QueryOptionFetchType.Type.ITER;
+		((QueryOptionFetchType)query.option(QueryOptionFetchType.ID)).fetchType=QueryOptionFetchType.Type.ITER;
 //		QueryOptionPage pag = (QueryOptionPage)query.option(QueryOptionPage.ID);
 //		if(!pag.isPaginating()){
 //			pag.passivate();
@@ -1174,7 +1174,7 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 	}
 
 	public <T> Iterable<T> iter(Query<T> query, int limit) {
-		((QueryOptionFetchType)query.option(QueryOptionFetchType.ID)).type=QueryOptionFetchType.Type.ITER;
+		((QueryOptionFetchType)query.option(QueryOptionFetchType.ID)).fetchType=QueryOptionFetchType.Type.ITER;
 //		QueryOptionPage pag = (QueryOptionPage)query.option(QueryOptionPage.ID);
 //		// use this limit only if not paginating
 //		if(!pag.isPaginating()){
@@ -1186,7 +1186,7 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 	}
 
 	public <T> Iterable<T> iter(Query<T> query, int limit, Object offset) {
-		((QueryOptionFetchType)query.option(QueryOptionFetchType.ID)).type=QueryOptionFetchType.Type.ITER;
+		((QueryOptionFetchType)query.option(QueryOptionFetchType.ID)).fetchType=QueryOptionFetchType.Type.ITER;
 //		QueryOptionPage pag = (QueryOptionPage)query.option(QueryOptionPage.ID);
 //		QueryOptionOffset off = (QueryOptionOffset)query.option(QueryOptionOffset.ID);
 //		// use this limit/offset only if not paginating

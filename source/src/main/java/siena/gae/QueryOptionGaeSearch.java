@@ -1,7 +1,9 @@
 package siena.gae;
 
 import siena.core.options.QueryOption;
+import siena.embed.EmbeddedMap;
 
+@EmbeddedMap
 public class QueryOptionGaeSearch extends QueryOption{
     public static final int ID 	= 0x2002;
 	

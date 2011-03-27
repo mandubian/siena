@@ -1596,6 +1596,12 @@ public class GaeAsyncTest extends BaseAsyncTest {
 		super.testLimitStatefulRealAsync();
 	}
 
+	@Override
+	public void testFetchStringAutoInc() {
+		// TODO Auto-generated method stub
+		super.testFetchStringAutoInc();
+	}
+
 
 
 

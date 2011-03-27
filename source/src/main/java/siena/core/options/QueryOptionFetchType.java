@@ -1,6 +1,8 @@
 package siena.core.options;
 
+import siena.embed.EmbeddedMap;
 
+@EmbeddedMap
 public class QueryOptionFetchType extends QueryOption{
     public static final int ID 	= 0x04;
 	
@@ -10,7 +12,7 @@ public class QueryOptionFetchType extends QueryOption{
     	ITER
     }
     
-    public Type type = Type.NORMAL;
+    public Type fetchType = Type.NORMAL;
     
 	public QueryOptionFetchType() {
 		super(ID);
@@ -18,20 +20,24 @@ public class QueryOptionFetchType extends QueryOption{
 
 	public QueryOptionFetchType(Type type) {
 		super(ID);
-		this.type = type;
+		this.fetchType = type;
 	}
 	
 	public QueryOptionFetchType(QueryOptionFetchType option) {
 		super(option);
-		this.type = option.type;
+		this.fetchType = option.fetchType;
 	}
 	
 	@Override
 	public QueryOption clone() {
 		return new QueryOptionFetchType(this);
 	}
+	
+	public boolean equals(QueryOptionFetchType opt){
+		return super.equals(opt) && this.fetchType == opt.fetchType && this.state == opt.state;
+	}
 
 	public String toString() {
-		return "type:FETCHTYPE - state:"+this.state+ " - type:"+type.toString();
+		return "type:FETCHTYPE - state:"+this.state+ " - type:"+fetchType.toString();
 	}
 }

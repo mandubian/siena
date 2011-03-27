@@ -1,8 +1,10 @@
 package siena.core.options;
 
 import siena.core.options.QueryOptionPage.PageType;
+import siena.embed.EmbeddedMap;
 
 
+@EmbeddedMap
 public class QueryOptionOffset extends QueryOption{
 	public static final int ID 	= 0x02;
 	
@@ -46,4 +48,9 @@ public class QueryOptionOffset extends QueryOption{
 	public String toString() {
 		return "type:OFFSET - state:"+this.state+" - offset:"+this.offset+" - offsetType:"+this.offsetType;
 	}
+	
+	public boolean equals(QueryOptionOffset opt){
+		return super.equals(opt) && this.offset == opt.offset && this.offsetType == opt.offsetType;
+	}
+
 }
