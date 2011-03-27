@@ -1,0 +1,47 @@
+Siena release notes:
+We will try to keep tracks of modifications from now.
+The github issues are not traced because  
+
+v1.0.0-b2
+----------------------------------------------------------
+Second draft of v1.0.0 with bug fixes and code optimization
+
+== BUG FIXES ==
+* @Id without Generator.XXX works now: it is now by default Generator.AUTO_INCREMENT but for String, this is just skipped
+
+== ENHANCEMENTS ==
+* added query.limit(int)/query.offset(int) functions
+* changed the pagination/limit/offset management to make it fully homogeneous between JDBC/GAE sync/async and in fetch/fetchKeys/iter functions
+
+
+
+v1.0.0-b1
+----------------------------------------------------------
+First draft of v1.0.0 with all incoming features:
+    * asynchronous mode for GAE (JDBC will come soon)
+          o based on Java Future concept
+          o maps all existing and also new synchronous APIs to asynchronous APIs
+
+    * stateless/stateful queries (stateless is the default mode and the one you already know)
+          o for those who reuse queries several times and keep the query context between 2 calls
+          o means the cursors, offsets are kept alive between calls
+          o provided for JDBC based on prepared statements reuse
+          o provided for GAE based on GAE cursors reuse
+          o can be mixed with asynchronous mechanism
+          o mechanism of dump/restore of stateful queries in order to be able to restore a query context later (very useful for pagination for example)
+
+    * pagination for JDBC/GAE forward/backward
+
+    * iteration for JDBC/GAE in synchronous/asynchronous mode 
+          o allowing to realize the mapping from DB objects to Java objects dynamically when a new iteration is done and not at once after DB extraction
+          o available for pagination also
+
+    * batch mode for GAE/JDBC
+          o provides select/update/insert/delete in batch mode allowing requests on many entities at once
+
+    * java enum are well managed now
+    * primary keys can be Long/String/UUID for GAE/JDBC
+    * join mechanism for JDBC and simulated for GAE (need some more reflections on this based on GAE groups but it already works even if it might not be optimized)
+    * search for GAE/JDBC
+          o for GAE, it is really simple search with respect to limitations of GAE (don't imagine ElasticSearch or Solr but anyway, it's practical sometimes)
+          o for JDBC, the search can be customized according to the DB because it is one of the main feature which is not really portable between MySQL and Postgres but basic code will work on both side (and on GAE also).
