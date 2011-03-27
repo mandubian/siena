@@ -40,7 +40,6 @@ import siena.Id;
 import siena.Query;
 import siena.SienaException;
 import siena.Util;
-import siena.base.test.model.SampleModel.Type;
 import siena.core.async.PersistenceManagerAsync;
 import siena.core.options.QueryOptionFetchType;
 import siena.core.options.QueryOptionOffset;
