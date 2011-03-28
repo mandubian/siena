@@ -177,12 +177,12 @@ public class Util {
 		Class<?> type = field.getType();
 		if(Number.class.isAssignableFrom(value.getClass())) {
 			Number number = (Number) value;
-			if(byte.class.isAssignableFrom(type))    return number.byteValue();
-			else if(short.class.isAssignableFrom(type))   return number.shortValue();
-			else if(int.class.isAssignableFrom(type) ) return number.intValue();
-			else if(long.class.isAssignableFrom(type))    return number.longValue();
-			else if(float.class.isAssignableFrom(type))   return number.floatValue();
-			else if(double.class.isAssignableFrom(type))  return number.doubleValue();
+			if(byte.class==type || Byte.class==type)    return number.byteValue();
+			else if(Short.TYPE==type || Short.class==type)   return number.shortValue();
+			else if(Integer.TYPE==type || Integer.class==type) return number.intValue();
+			else if(Long.TYPE==type || Long.class==type)    return number.longValue();
+			else if(Float.TYPE==type || Float.class==type)   return number.floatValue();
+			else if(Double.TYPE==type || Double.class==type)  return number.doubleValue();
 		} 
 		else if(String.class.isAssignableFrom(value.getClass()) && Json.class.isAssignableFrom(type)) {
 			return Json.loads((String) value);
