@@ -11,6 +11,8 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 
+import org.dbunit.dataset.datatype.DataType;
+
 import junit.framework.TestCase;
 import siena.Json;
 import siena.PersistenceManager;
@@ -1370,6 +1372,11 @@ public abstract class BaseTest extends TestCase {
 		dataTypes.contacts = new HashMap<String, Contact>();
 		dataTypes.contacts.put("id1", new Contact("Somebody", Arrays.asList("foo", "bar")));
 		
+		dataTypes.shortShort = Short.MAX_VALUE;
+		dataTypes.intInt = Integer.MAX_VALUE;
+		dataTypes.longLong = Long.MAX_VALUE;
+		dataTypes.boolBool = Boolean.TRUE;
+		
 		// Blob
 		dataTypes.typeBlob = new byte[] { 
 				(byte)0x01, (byte)0x02, (byte)0x03, (byte)0x04,
@@ -1395,6 +1402,12 @@ public abstract class BaseTest extends TestCase {
 		assertEquals(dataTypes.typeLong, same.typeLong);
 		assertEquals(dataTypes.typeFloat, same.typeFloat);
 		assertEquals(dataTypes.typeDouble, same.typeDouble);
+		
+		assertEquals(dataTypes.boolBool, same.boolBool);
+		assertEquals(dataTypes.shortShort, same.shortShort);
+		assertEquals(dataTypes.longLong, same.longLong);
+		assertEquals(dataTypes.intInt, same.intInt);
+		
 		if(dataTypes.typeDate != null && same.typeDate != null) {
 			assertEquals(dataTypes.typeDate.getTime() / 1000, same.typeDate.getTime() / 1000);
 		} else {
@@ -4691,24 +4704,124 @@ public abstract class BaseTest extends TestCase {
 		assertEquals(person, l.get(0));
 	}
 	
-	/*public void testDump() {
+	public void testDump() {
 		Query<PersonLongAutoID> query = pm.createQuery(PersonLongAutoID.class);
 		
 		QueryOption opt = query.option(QueryOptionPage.ID);
 		QueryOptionJson dump = opt.dump();
 		assertEquals(dump.type, QueryOptionPage.class.getName());
-		assertEquals(dump.value, "{\"pageType\": \"TEMPORARY\", \"state\": \"PASSIVE\", \"pageSize\": 0, \"type\": 1}");
-
+		assertEquals(dump.value.toString(), "{\"pageType\": \"TEMPORARY\", \"state\": \"PASSIVE\", \"pageSize\": 0, \"type\": 1}");
+		String str = JsonSerializer.serialize(dump).toString();
 		assertNotNull(str);
 	}
 	
 	public void testRestore() {
-		QueryOption optRestored = QueryOption.restore(
-				"{\"type\":\"siena.options.QueryOptionPage\", \"value\": {\"pageType\": \"TEMPORARY\", \"state\": \"PASSIVE\", \"pageSize\": 0, \"type\": 1} }");
+		/*QueryOption optRestored = QueryOption.restore(
+				"{\"type\":\""+QueryOptionPage.class.getName()+"\", \"value\": {\"pageType\": \"TEMPORARY\", \"state\": \"PASSIVE\", \"pageSize\": 0, \"type\": 1} }");
 		Query<PersonLongAutoID> query = pm.createQuery(PersonLongAutoID.class);
 		
 		QueryOption opt = query.option(QueryOptionPage.ID);
 		
-		assertEquals(opt, optRestored);
-	}*/
+		assertEquals(opt, optRestored);*/
+	}
+	
+	public void testIterPerPageStateless(){
+		Discovery[] discs = new Discovery[500];
+		for(int i=0; i<500; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs);
+		
+		Query<Discovery> query = pm.createQuery(Discovery.class).order("id");
+		Iterable<Discovery> iter = query.iterPerPage(50);
+		int i=0;
+		for(Discovery disc: iter){
+			assertEquals(discs[i++], disc);
+		}	
+		assertEquals(500, i);	
+	}
+	
+	public void testIterPerPageStateless2(){
+		Discovery[] discs = new Discovery[500];
+		for(int i=0; i<500; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs);
+		
+		Query<Discovery> query = pm.createQuery(Discovery.class).order("id");
+		Iterable<Discovery> iter = query.iterPerPage(50);
+		Iterator<Discovery> it = iter.iterator();
+		int i=0;
+		while(it.hasNext()){
+			assertEquals(discs[i++], it.next());
+		}	
+		assertEquals(500, i);	
+	}
+	
+	public void testIterPerPageStateless3(){
+		Discovery[] discs = new Discovery[500];
+		for(int i=0; i<500; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs);
+		
+		Query<Discovery> query = pm.createQuery(Discovery.class).order("id");
+		Iterable<Discovery> iter = query.offset(25).iterPerPage(50);
+		Iterator<Discovery> it = iter.iterator();
+		int i=25;
+		while(it.hasNext()){
+			assertEquals(discs[i++], it.next());
+		}	
+		assertEquals(500, i);	
+	}
+	
+	public void testIterPerPageStateful(){
+		Discovery[] discs = new Discovery[500];
+		for(int i=0; i<500; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs);
+		
+		Query<Discovery> query = pm.createQuery(Discovery.class).stateful().order("id");
+		Iterable<Discovery> iter = query.iterPerPage(50);
+		int i=0;
+		for(Discovery disc: iter){
+			assertEquals(discs[i++], disc);
+		}	
+		assertEquals(500, i);	
+	}
+	
+	public void testIterPerPageStateful2(){
+		Discovery[] discs = new Discovery[500];
+		for(int i=0; i<500; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs);
+		
+		Query<Discovery> query = pm.createQuery(Discovery.class).stateful().order("id");
+		Iterable<Discovery> iter = query.iterPerPage(50);
+		Iterator<Discovery> it = iter.iterator();
+		int i=0;
+		while(it.hasNext()){
+			assertEquals(discs[i++], it.next());
+		}	
+		assertEquals(500, i);	
+	}
+	
+	public void testIterPerPageStatefull3(){
+		Discovery[] discs = new Discovery[500];
+		for(int i=0; i<500; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs);
+		
+		Query<Discovery> query = pm.createQuery(Discovery.class).stateful().order("id");
+		Iterable<Discovery> iter = query.offset(25).iterPerPage(50);
+		Iterator<Discovery> it = iter.iterator();
+		int i=25;
+		while(it.hasNext()){
+			assertEquals(discs[i++], it.next());
+		}	
+		assertEquals(500, i);	
+	}
 }

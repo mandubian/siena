@@ -219,7 +219,11 @@ public abstract class Model {
 		public Iterable<T> iter(int limit, Object offset) {
 			return createQuery().iter(limit, offset);
 		}
-
+		
+		public Iterable<T> iterPerPage(int limit) {
+			return createQuery().iterPerPage(limit);
+		}	
+		
 		public ProxyQuery<T> clone() {
 			return new ProxyQuery<T>(clazz, filter, obj);
 		}
@@ -348,7 +352,9 @@ public abstract class Model {
 
 		public PersistenceManager getPersistenceManager() {
 			return obj.getPersistenceManager();
-		}	
+		}
+
+
 		
 	}
 

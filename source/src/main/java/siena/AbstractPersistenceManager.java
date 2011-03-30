@@ -2,9 +2,11 @@ package siena;
 
 import java.util.List;
 
+import siena.core.SienaIterablePerPage;
 import siena.core.batch.BaseBatch;
 import siena.core.batch.Batch;
 import siena.core.options.QueryOption;
+import siena.core.options.QueryOptionFetchType;
 import siena.core.options.QueryOptionOffset;
 import siena.core.options.QueryOptionState;
 
@@ -40,7 +42,13 @@ public abstract class AbstractPersistenceManager implements PersistenceManager {
 			reuse.passivate();
 		}
 	}
-		
+
+	public <T> Iterable<T> iterPerPage(Query<T> query, int pageSize) {
+		((QueryOptionFetchType)query.option(QueryOptionFetchType.ID)).fetchType=QueryOptionFetchType.Type.ITER_PER_PAGE;
+		return new SienaIterablePerPage<T>(query, pageSize);
+	}
+
+	
 	@Deprecated
 	public <T> int count(Query<T> query, int limit) {
 		return fetch(query, limit).size();

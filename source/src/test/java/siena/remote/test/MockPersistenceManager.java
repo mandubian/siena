@@ -363,6 +363,12 @@ public class MockPersistenceManager implements PersistenceManager {
 			return null;
 		}
 
+		@Override
+		public Iterable<T> iterPerPage(int limit) {
+			// TODO Auto-generated method stub
+			return null;
+		}
+
 
 
 
@@ -580,6 +586,13 @@ public class MockPersistenceManager implements PersistenceManager {
 	public <T> void paginate(Query<T> query) {
 		// TODO Auto-generated method stub
 		
+	}
+
+
+	@Override
+	public <T> Iterable<T> iterPerPage(Query<T> query, int pageSize) {
+		// TODO Auto-generated method stub
+		return null;
 	}
 
 }

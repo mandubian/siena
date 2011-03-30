@@ -1291,7 +1291,7 @@ public class JdbcTest extends BaseTest {
 		// TODO Auto-generated method stub
 		super.testFetchStringAutoInc();
 	}
-/*
+
 	@Override
 	public void testDump() {
 		// TODO Auto-generated method stub
@@ -1303,9 +1303,43 @@ public class JdbcTest extends BaseTest {
 		// TODO Auto-generated method stub
 		super.testRestore();
 	}
-*/	
-	
 
+	@Override
+	public void testIterPerPageStateless() {
+		// TODO Auto-generated method stub
+		super.testIterPerPageStateless();
+	}
+
+	@Override
+	public void testIterPerPageStateless2() {
+		// TODO Auto-generated method stub
+		super.testIterPerPageStateless2();
+	}
+
+	@Override
+	public void testIterPerPageStateless3() {
+		// TODO Auto-generated method stub
+		super.testIterPerPageStateless3();
+	}
+
+	@Override
+	public void testIterPerPageStateful() {
+		// TODO Auto-generated method stub
+		super.testIterPerPageStateful();
+	}
+
+	@Override
+	public void testIterPerPageStateful2() {
+		// TODO Auto-generated method stub
+		super.testIterPerPageStateful2();
+	}
+
+	@Override
+	public void testIterPerPageStatefull3() {
+		// TODO Auto-generated method stub
+		super.testIterPerPageStatefull3();
+	}
+	
 
 	
 }

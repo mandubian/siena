@@ -40,6 +40,7 @@ import siena.Id;
 import siena.Query;
 import siena.SienaException;
 import siena.Util;
+import siena.core.SienaIterablePerPage;
 import siena.core.async.PersistenceManagerAsync;
 import siena.core.options.QueryOptionFetchType;
 import siena.core.options.QueryOptionOffset;
@@ -649,24 +650,33 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 			jdbcCtx = new QueryOptionJdbcContext();
 			query.customize(jdbcCtx);
 		}
-		
+				
 		// activates page and offset options as there are always used in SQL requests
 		QueryOptionPage pag = (QueryOptionPage)query.option(QueryOptionPage.ID);
-		if(!pag.isPaginating()){
-			if(pag.isActive()){
-				if(limit!=Integer.MAX_VALUE){
-					jdbcCtx.realPageSize = limit;
+//		QueryOptionFetchType fetchType = (QueryOptionFetchType)query.option(QueryOptionFetchType.ID);
+		// in iter_per_page mode, always trigger pagination
+//		if(fetchType.fetchType == QueryOptionFetchType.Type.ITER_PER_PAGE){
+//			pag.pageType = QueryOptionPage.PageType.PAGINATING;
+//			pag.pageSize = limit;
+//			jdbcCtx.realPageSize = limit;
+//		}
+//		else {
+			if(!pag.isPaginating()){
+				if(pag.isActive()){
+					if(limit!=Integer.MAX_VALUE){
+						jdbcCtx.realPageSize = limit;
+					}
+					else {
+						jdbcCtx.realPageSize = pag.pageSize;
+					}
 				}
 				else {
-					jdbcCtx.realPageSize = pag.pageSize;
+					jdbcCtx.realPageSize = limit;
 				}
+			}else {
+				jdbcCtx.realPageSize = pag.pageSize;
 			}
-			else {
-				jdbcCtx.realPageSize = limit;
-			}
-		}else {
-			jdbcCtx.realPageSize = pag.pageSize;
-		}
+//		}
 
 		QueryOptionOffset offsetOpt = (QueryOptionOffset)(query.option(QueryOptionOffset.ID));
 		// if local offset has been set, uses it
@@ -798,7 +808,8 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 		//((QueryOptionOffset)query.option(QueryOptionOffset.ID).activate()).offset=(Integer)offset;
 		return doIter(query, limit, (Integer)offset);
 	}
-
+	
+	
 	public <T> void release(Query<T> query) {
 		super.release(query);
 		QueryOptionJdbcContext jdbcCtx = (QueryOptionJdbcContext)query.option(QueryOptionJdbcContext.ID);

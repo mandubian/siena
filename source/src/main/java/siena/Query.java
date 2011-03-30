@@ -52,6 +52,8 @@ public interface Query<T> extends QueryData<T>{
 	Iterable<T> iter();
 	Iterable<T> iter(int limit);
 	Iterable<T> iter(int limit, Object offset);
+	
+	Iterable<T> iterPerPage(int limit);
 		
 	Query<T> clone();
 	

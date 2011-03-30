@@ -135,6 +135,12 @@ public class BaseQuery<T> extends BaseQueryData<T> implements Query<T> {
 		return pm.iter(this, limit, offset);
 	}
 	
+	
+	public Iterable<T> iterPerPage(int pageSize) {
+		return pm.iterPerPage(this, pageSize);
+	}
+	
+	
 	public Query<T> clone() {
 		// TODO code a real deep clone function
 		return new BaseQuery<T>(this);

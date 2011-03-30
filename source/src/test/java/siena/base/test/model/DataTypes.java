@@ -86,5 +86,8 @@ public class DataTypes {
 
     public EnumLong typeEnum;
 
-	
+	public Long longLong;
+	public Integer intInt;
+	public Short shortShort;
+	public Boolean boolBool;
 }

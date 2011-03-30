@@ -200,13 +200,13 @@ public class BaseQueryData<T> implements QueryData<T> {
 		
 		// resets offset to be sure nothing changes the pagination mechanism
 		offOpt.offsetType = QueryOptionOffset.OffsetType.PAGINATING;
-		offOpt.offset = 0;
+		//offOpt.offset = 0;
 		
-		if(stateOpt.isStateful()){
+		/*if(stateOpt.isStateful()){
 			offOpt.passivate();
 		}else {
 			offOpt.activate();
-		}
+		}*/
 	}
 	
 	protected void optionLimit(int limit) {

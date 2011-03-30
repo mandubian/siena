@@ -188,6 +188,7 @@ public interface PersistenceManager {
 	<T> Iterable<T> iter(Query<T> query);
 	<T> Iterable<T> iter(Query<T> query, int limit);
 	<T> Iterable<T> iter(Query<T> query, int limit, Object offset);
+	<T> Iterable<T> iterPerPage(Query<T> query, int pageSize);
 
 	<T> void release(Query<T> query);
 	<T> void paginate(Query<T> query);
