@@ -4716,13 +4716,13 @@ public abstract class BaseTest extends TestCase {
 	}
 	
 	public void testRestore() {
-		/*QueryOption optRestored = QueryOption.restore(
+		QueryOption optRestored = QueryOption.restore(
 				"{\"type\":\""+QueryOptionPage.class.getName()+"\", \"value\": {\"pageType\": \"TEMPORARY\", \"state\": \"PASSIVE\", \"pageSize\": 0, \"type\": 1} }");
 		Query<PersonLongAutoID> query = pm.createQuery(PersonLongAutoID.class);
 		
 		QueryOption opt = query.option(QueryOptionPage.ID);
 		
-		assertEquals(opt, optRestored);*/
+		assertEquals(opt, optRestored);
 	}
 	
 	public void testIterPerPageStateless(){
@@ -4759,7 +4759,7 @@ public abstract class BaseTest extends TestCase {
 	}
 	
 	public void testIterPerPageStateless3(){
-		/*Discovery[] discs = new Discovery[500];
+		Discovery[] discs = new Discovery[500];
 		for(int i=0; i<500; i++){
 			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
 		}
@@ -4772,7 +4772,7 @@ public abstract class BaseTest extends TestCase {
 		while(it.hasNext()){
 			assertEquals(discs[i++], it.next());
 		}	
-		assertEquals(500, i);	*/
+		assertEquals(500, i);	
 	}
 	
 	public void testIterPerPageStateful(){

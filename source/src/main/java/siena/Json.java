@@ -37,30 +37,30 @@ public class Json implements Iterable<Json> {
 	private List<Json> list;
 	
 	public Json(Object object) {
-		this.object = object;
+		if(object == null) {
+			this.object = object;
+			return;
+		}
 		
-		if(object == null) return;
-		if(object instanceof Number) return;
-		if(object instanceof String) return;
-		if(object instanceof Boolean) return;
+		Class<?> clazz = object.getClass();
+		if(object == null
+				|| clazz.isPrimitive()
+				|| Number.class.isAssignableFrom(clazz)
+				|| String.class.isAssignableFrom(clazz)
+				|| Boolean.class.isAssignableFrom(clazz)){
+			this.object = object;			
+		}
 		
-		if(object instanceof Enum) {
+		else if(clazz.isEnum()) {
 			this.object = ((Enum<?>)object).name();
-			return;
-		}
-		
-		if(object instanceof Collection<?>) {
-			object = ((Collection<?>) object).toArray();
-		}
-		
-		if(object instanceof Object[]) {
-			list = new ArrayList<Json>();
-			add((Object[]) object);
-			this.object = null;
-			return;
-		}
-		
-		if(object instanceof Map<?, ?>) {
+		}		
+		else if(Json.class.isAssignableFrom(clazz)){
+			// no copy, just reusing other references
+			this.map = (((Json)object).map);
+			this.list = (((Json)object).list);
+			this.object = ((Json)object).object;
+		}		
+		else if(Map.class.isAssignableFrom(clazz)) {
 			map = new HashMap<String, Json>();
 			
 			Map<?, ?> m = (Map<?, ?>) object;
@@ -68,11 +68,20 @@ public class Json implements Iterable<Json> {
 				put(entry.getKey().toString(), entry.getValue());
 			}
 			this.object = null;
-			return;
+		}		
+		else if(Collection.class.isAssignableFrom(clazz)) {
+			object = ((Collection<?>) object).toArray();
 		}
+		
+		else if(clazz.isArray()) {
+			list = new ArrayList<Json>();
+			add((Object[]) object);
+			this.object = null;
+		}		
 
-		throw new IllegalArgumentException("Unsupported type: " +
-			object.getClass().getName());
+		else {
+			throw new IllegalArgumentException("Unsupported type: " + object.getClass().getName());
+		}
 	}
 	
 	private Json() {

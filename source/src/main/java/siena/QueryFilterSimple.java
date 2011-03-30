@@ -2,6 +2,8 @@ package siena;
 
 import java.lang.reflect.Field;
 
+import siena.embed.EmbeddedMap;
+
 public class QueryFilterSimple extends QueryFilter {
 	
 	public Field field;

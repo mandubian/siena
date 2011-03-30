@@ -1,9 +1,6 @@
 package siena.core.options;
 
-import siena.embed.EmbeddedMap;
 
-
-@EmbeddedMap
 public class QueryOptionPage extends QueryOption{
 	public static final int ID 	= 0x01;
 	
@@ -14,6 +11,10 @@ public class QueryOptionPage extends QueryOption{
 		TEMPORARY,
 		MANUAL,
 		PAGINATING
+	}
+	
+	public QueryOptionPage() {
+		super(ID);
 	}
 	
 	public QueryOptionPage(int pageSize) {
@@ -55,8 +56,11 @@ public class QueryOptionPage extends QueryOption{
 		return "type:PAGE - state:"+this.state+" - pageType:"+pageType+" - pageSize:"+this.pageSize;
 	}
 	
-	public boolean equals(QueryOptionPage opt){
-		return super.equals(opt) && this.pageSize == opt.pageSize && this.pageType == opt.pageType;
+	public boolean equals(Object obj){
+		
+		return super.equals(obj) 
+			&& this.pageSize == ((QueryOptionPage)obj).pageSize 
+			&& this.pageType == ((QueryOptionPage)obj).pageType;
 	}
 
 }

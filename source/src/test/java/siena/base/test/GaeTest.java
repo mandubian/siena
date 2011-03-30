@@ -1564,6 +1564,24 @@ public class GaeTest extends BaseTest {
 		super.testIterPerPageStateful2();
 	}
 
+	@Override
+	public void testDump() {
+		// TODO Auto-generated method stub
+		super.testDump();
+	}
+
+	@Override
+	public void testRestore() {
+		// TODO Auto-generated method stub
+		super.testRestore();
+	}
+
+	@Override
+	public void testIterPerPageStatefull3() {
+		// TODO Auto-generated method stub
+		super.testIterPerPageStatefull3();
+	}
+
 
 	
 }

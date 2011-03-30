@@ -1,9 +1,6 @@
 package siena.core.options;
 
-import siena.embed.EmbeddedMap;
 
-
-@EmbeddedMap
 public class QueryOptionState extends QueryOption{
     public static final int ID 	= 0x03;
 	

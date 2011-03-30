@@ -16,10 +16,10 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import siena.Json;
 import siena.SienaException;
+import siena.Util;
 
 public class JsonSerializer {
 	
@@ -30,7 +30,10 @@ public class JsonSerializer {
 	public static Json serialize(Object obj, Field f) {
 		if(obj == null) return new Json(null);
 		
-		if(obj instanceof Map<?, ?>) {
+		Class<?> clazz = obj.getClass();
+		
+		//if(obj instanceof Map<?, ?>) {
+		if(Map.class.isAssignableFrom(clazz)){
 			Map<?, ?> map = (Map<?, ?>) obj;
 			Json result = map();
 			for (Map.Entry<?, ?> entry : map.entrySet()) {
@@ -41,7 +44,8 @@ public class JsonSerializer {
 			return result;
 		}
 
-		if(obj instanceof Collection<?>) {
+		//if(obj instanceof Collection<?>) {
+		if(Collection.class.isAssignableFrom(clazz)){
 			Json result = list();
 			Collection<?> col = (Collection<?>) obj;
 			for (Object object : col) {
@@ -50,6 +54,10 @@ public class JsonSerializer {
 			return result;
 		}
 
+		if(Json.class.isAssignableFrom(clazz)){
+			return new Json(obj);
+		}
+		
 		try {
 			EmbeddedList list = obj.getClass().getAnnotation(EmbeddedList.class);
 			if(list != null) {
@@ -93,8 +101,9 @@ public class JsonSerializer {
 			}
 		}
 		
-		// TMP
-		/*Class<?> clazz = obj.getClass().getSuperclass();
+		// TEST
+		// serializes super classes
+		Class<?> clazz = obj.getClass().getSuperclass();
 		while(clazz!=null){
 			fields = clazz.getDeclaredFields();
 			for (Field f : fields) {
@@ -102,14 +111,14 @@ public class JsonSerializer {
 				
 				Key k = f.getAnnotation(Key.class);
 				if(k != null) {
-					result.put(k.value(), serialize(f.get(obj), f));
+					result.put(k.value(), serialize(Util.readField(obj, f), f));
 				} else {
-					result.put(f.getName(), serialize(f.get(obj), f));
+					result.put(f.getName(), serialize(Util.readField(obj, f), f));
 				}
 			}
 			clazz = clazz.getSuperclass();
-		}*/
-		// TMP
+		}
+		// TEST
 		return result;
 	}
 	
@@ -123,6 +132,22 @@ public class JsonSerializer {
 			if(at == null) throw new SienaException("Field "+obj.getClass()+"."+f.getName()+" must be annotated with @At(n)");
 			result.addAt(at.value(), serialize(f.get(obj), f));
 		}
+		
+		// TEST
+		// serializes super classes
+		Class<?> clazz = obj.getClass().getSuperclass();
+		while(clazz!=null){
+			fields = clazz.getDeclaredFields();
+			for (Field f : fields) {
+				if(mustIgnore(f)) continue;
+				
+				At at = f.getAnnotation(At.class);
+				if(at == null) throw new SienaException("Field "+obj.getClass()+"."+f.getName()+" must be annotated with @At(n)");
+				result.addAt(at.value(), serialize(f.get(obj), f));
+			}
+			clazz = clazz.getSuperclass();
+		}
+		// TEST
 		return result;
 	}
 	
@@ -138,6 +163,42 @@ public class JsonSerializer {
 	
 	public static Object deserialize(Class<?> clazz, Json data) {
 		try {
+			EmbeddedMap map = clazz.getAnnotation(EmbeddedMap.class);
+			if(map != null) {
+				if(!data.isMap()) {
+					throw new SienaException("Error while deserializating class "+clazz
+							+". A Json map is needed but found: "+data);
+				}
+				Object obj = clazz.newInstance();
+				Field[] fields = clazz.getDeclaredFields();
+				for (Field f : fields) {
+					if(mustIgnore(f)) continue;
+					
+					Key key = f.getAnnotation(Key.class);
+					if(key != null)
+						Util.setField(obj, f, deserialize(f, data.get(key.value())));
+					else
+						Util.setField(obj, f, deserialize(f, data.get(f.getName())));
+				}
+				
+				// deserializes super classes
+				Class<?> superclazz = obj.getClass().getSuperclass();
+				while(superclazz!=null){
+					fields = superclazz.getDeclaredFields();
+					for (Field f : fields) {
+						if(mustIgnore(f)) continue;
+						
+						Key key = f.getAnnotation(Key.class);
+						if(key != null)
+							Util.setField(obj, f, deserialize(f, data.get(key.value())));
+						else
+							Util.setField(obj, f, deserialize(f, data.get(f.getName())));
+					}
+					superclazz = superclazz.getSuperclass();
+				}
+				return obj;
+			}
+			
 			EmbeddedList list = clazz.getAnnotation(EmbeddedList.class);
 			if(list != null) {
 				if(!data.isList()) {
@@ -152,31 +213,28 @@ public class JsonSerializer {
 					At at = f.getAnnotation(At.class);
 					if(at == null) throw new SienaException("Field "+obj.getClass()+"."+f.getName()+" must be annotated with @At(n)");
 					Json value = data.at(at.value());
-					f.set(obj, deserialize(f, value));
+					Util.setField(obj, f, deserialize(f, value));
+				}
+				
+				// deserializes super classes
+				Class<?> superclazz = obj.getClass().getSuperclass();
+				while(superclazz!=null){
+					fields = superclazz.getDeclaredFields();
+					for (Field f : fields) {
+						if(mustIgnore(f)) continue;
+						
+						At at = f.getAnnotation(At.class);
+						if(at == null) throw new SienaException("Field "+obj.getClass()+"."+f.getName()+" must be annotated with @At(n)");
+						Json value = data.at(at.value());
+						Util.setField(obj, f, deserialize(f, value));
+					}
+					superclazz = superclazz.getSuperclass();
 				}
 				return obj;
 			}
-
-			EmbeddedMap map = clazz.getAnnotation(EmbeddedMap.class);
-			if(map != null) {
-				if(!data.isMap()) {
-					throw new SienaException("Error while deserializating class "+clazz
-							+". A Json map is needed but found: "+data);
-				}
-				Object obj = clazz.newInstance();
-				Field[] fields = clazz.getDeclaredFields();
-				for (Field f : fields) {
-					if(mustIgnore(f)) continue;
-					
-					Key key = f.getAnnotation(Key.class);
-					if(key != null)
-						f.set(obj, deserialize(f, data.get(key.value())));
-					else
-						f.set(obj, deserialize(f, data.get(f.getName())));
-				}
-				return obj;
+			if(Json.class.isAssignableFrom(clazz)){
+				return data;
 			}
-			
 			return deserializePlain(clazz, data);
 		} catch(Exception e) {
 			throw new SienaException(e);
@@ -198,7 +256,7 @@ public class JsonSerializer {
 		if(data == null || data.isNull()) return null;
 		
 		Class<?> clazz = f.getType();
-		if(clazz == Map.class) {
+		if(Map.class.isAssignableFrom(clazz)) {
 			if(!data.isMap()) {
 				throw new SienaException("Error while deserializating field "+f.getDeclaringClass()
 						+"."+f.getName()+" of type "+clazz
@@ -210,7 +268,7 @@ public class JsonSerializer {
 			}
 			return map;
 		}
-		if(clazz == Collection.class || clazz == List.class || clazz == Set.class) {
+		else if(Collection.class.isAssignableFrom(clazz)) {
 			if(!data.isList()) {
 				throw new SienaException("Error while deserializating field "+f.getDeclaringClass()
 						+"."+f.getName()+" of type "+clazz
@@ -226,6 +284,9 @@ public class JsonSerializer {
 				collection.add(deserialize(getGenericClass(f, 0), value));
 			}
 			return collection;
+		}
+		else if(Json.class.isAssignableFrom(clazz)){
+			return data;
 		}
 		
 		Format format = f.getAnnotation(Format.class);
@@ -247,15 +308,30 @@ public class JsonSerializer {
 		if(Boolean.class == type || boolean.class == type) {
 			return data.asBoolean();
 		}
-		if(type == Byte.class         || type == Byte.TYPE)    return data.asBoolean();
-		else if(type == Short.class   || type == Short.TYPE)   return data.asShort();
-		else if(type == Integer.class || type == Integer.TYPE) return data.asInt();
-		else if(type == Long.class    || type == Long.TYPE)    return data.asLong();
-		else if(type == Float.class   || type == Float.TYPE)   return data.asFloat();
-		else if(type == Double.class  || type == Double.TYPE)  return data.asDouble();
-		else if(type == String.class)  return data.str();
-		else if(type.isEnum()) return Enum.valueOf((Class<Enum>) type, data.str());
-		
+		if(type == Byte.class || type == Byte.TYPE)    {
+			return data.asBoolean();
+		}
+		else if(type == Short.class || type == Short.TYPE)   {
+			return data.asShort();
+		}
+		else if(type == Integer.class || type == Integer.TYPE) {
+			return data.asInt();
+		}
+		else if(type == Long.class || type == Long.TYPE)    {
+			return data.asLong();
+		}
+		else if(type == Float.class || type == Float.TYPE)   {
+			return data.asFloat();
+		}
+		else if(type == Double.class || type == Double.TYPE)  {
+			return data.asDouble();
+		}
+		else if(type == String.class)  {
+			return data.str();
+		}
+		else if(type.isEnum()) {
+			return Enum.valueOf((Class<Enum>) type, data.str());
+		}
 		return null;
 	}
 

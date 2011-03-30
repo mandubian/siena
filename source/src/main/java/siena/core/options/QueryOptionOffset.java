@@ -1,10 +1,7 @@
 package siena.core.options;
 
-import siena.core.options.QueryOptionPage.PageType;
-import siena.embed.EmbeddedMap;
 
 
-@EmbeddedMap
 public class QueryOptionOffset extends QueryOption{
 	public static final int ID 	= 0x02;
 	

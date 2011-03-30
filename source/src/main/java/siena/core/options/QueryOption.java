@@ -2,7 +2,6 @@ package siena.core.options;
 
 import siena.Json;
 import siena.SienaException;
-import siena.Util;
 import siena.embed.EmbeddedMap;
 import siena.embed.JsonSerializer;
 
@@ -77,14 +76,21 @@ public abstract class QueryOption {
 		return "type:"+this.type+" - state:"+this.state;
 	}
 	
-	public boolean equals(QueryOption opt){
-		return this.type == opt.type && this.state == opt.state;
+	public boolean equals(Object obj){
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		QueryOption opt = (QueryOption)obj;
+		return this.type == opt.type && this.state.equals(opt.state);
 	}
 	
 	public QueryOptionJson dump() {
 		QueryOptionJson jsonOpt = new QueryOptionJson();
 		jsonOpt.type = this.getClass().getName();
-		jsonOpt.value = JsonSerializer.serialize(this).toString(); 
+		jsonOpt.value = JsonSerializer.serialize(this); 
 		
 		return jsonOpt;
 	}
@@ -94,7 +100,7 @@ public abstract class QueryOption {
 			QueryOptionJson optJson = (QueryOptionJson)JsonSerializer.deserialize(QueryOptionJson.class, Json.loads(jsonStr));
 			Class<?> clazz = Class.forName(optJson.type);
 			
-			QueryOption opt = (QueryOption)JsonSerializer.deserialize(clazz, Json.loads(optJson.value));
+			QueryOption opt = (QueryOption)JsonSerializer.deserialize(clazz, optJson.value);
 			return opt;
 		}catch(Exception ex) {
 			throw new SienaException("Unable to restore QueryOption", ex);
@@ -104,6 +110,6 @@ public abstract class QueryOption {
 	@EmbeddedMap
 	public static class QueryOptionJson {
 		public String type;
-		public String value;
+		public Json value;
 	}
 }

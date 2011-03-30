@@ -609,7 +609,8 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 		if(state.isStateless()) {
 			if(pag.isPaginating()){
 				if(off.isActive()){
-					fetchOptions.offset(off.offset+gaeCtx.realOffset);
+					gaeCtx.realOffset+=off.offset;
+					fetchOptions.offset(gaeCtx.realOffset);
 					off.passivate();
 				}else {
 					fetchOptions.offset(gaeCtx.realOffset);
@@ -618,7 +619,8 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 				// if stateless and not paginating, resets the realoffset to 0
 				gaeCtx.realOffset = 0;
 				if(off.isActive()){
-					fetchOptions.offset(off.offset);
+					gaeCtx.realOffset=off.offset;
+					fetchOptions.offset(gaeCtx.realOffset);
 					off.passivate();
 				}
 			}
@@ -923,7 +925,8 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 		if(state.isStateless()) {
 			if(pag.isPaginating()){			
 				if(off.isActive()){
-					fetchOptions.offset(off.offset+gaeCtx.realOffset);
+					gaeCtx.realOffset+=off.offset;
+					fetchOptions.offset(gaeCtx.realOffset);
 					off.passivate();
 				}else {
 					fetchOptions.offset(gaeCtx.realOffset);
@@ -931,9 +934,9 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 			}else {
 								
 				// if stateless and not paginating, resets the realoffset to 0
-				gaeCtx.realOffset = 0;
+				gaeCtx.realOffset = off.offset;
 				if(off.isActive()){
-					fetchOptions.offset(off.offset);
+					fetchOptions.offset(gaeCtx.realOffset);
 					off.passivate();
 				}
 			}
