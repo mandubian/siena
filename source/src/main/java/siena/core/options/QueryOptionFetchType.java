@@ -1,15 +1,14 @@
 package siena.core.options;
 
-import siena.embed.EmbeddedMap;
 
-@EmbeddedMap
 public class QueryOptionFetchType extends QueryOption{
     public static final int ID 	= 0x04;
 	
     public enum Type {
     	NORMAL,
     	KEYS_ONLY,
-    	ITER
+    	ITER,
+    	ITER_PER_PAGE
     }
     
     public Type fetchType = Type.NORMAL;
