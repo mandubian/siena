@@ -71,6 +71,10 @@ public class Json implements Iterable<Json> {
 		}		
 		else if(Collection.class.isAssignableFrom(clazz)) {
 			object = ((Collection<?>) object).toArray();
+			list = new ArrayList<Json>();
+			add((Object[]) object);
+			this.object = null;
+			return;
 		}
 		
 		else if(clazz.isArray()) {
