@@ -211,7 +211,13 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 			// creates the list of joined entity keys to extract 
 			for (final T model : models) {
 				for(Field field: fieldMap.keySet()){
-					Key key = GaeMappingUtils.getKey(field.get(model));
+                    Object objVal = field.get(model);
+                    // our object is not linked to another object...so it doesn't have any key
+                    if(objVal == null) {
+                        continue;
+                    }
+
+                    Key key = GaeMappingUtils.getKey(objVal);
 					List<Key> keys = fieldMap.get(field);
 					if(!keys.contains(key))
 						keys.add(key);
@@ -240,6 +246,10 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 			for (final T model : models) {
 				for(Field field: fieldMap.keySet()){
 					Object objVal = field.get(model);
+                    if(objVal == null) {
+                        continue;
+                    }
+
 					Key key = GaeMappingUtils.getKey(objVal);
 					linkedObj = linkedModels.get(key);
 					if(linkedObj==null){

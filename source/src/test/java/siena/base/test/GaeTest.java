@@ -8,6 +8,7 @@ import siena.Query;
 import siena.SienaException;
 import siena.SienaRestrictedApiException;
 import siena.base.test.model.Discovery;
+import siena.base.test.model.Discovery4Join;
 import siena.base.test.model.Discovery4Search;
 import siena.base.test.model.PersonUUID;
 import siena.gae.GaePersistenceManager;
@@ -71,7 +72,18 @@ public class GaeTest extends BaseTest {
 		
 		fail();
 	}
-	
+
+
+    public void testInsertObjectWithNullJoinObject() {
+        Discovery4Join model = new Discovery4Join();
+        model.discovererJoined = null; // explicitly set the join object to null
+
+        pm.insert(model);
+
+        Query<Discovery4Join> query = pm.createQuery(Discovery4Join.class).filter("id", model.id);
+        Discovery4Join modelFromDatabase = pm.get(query);
+        assertNull(modelFromDatabase.discovererJoined);
+    }
 	
 	public void testFilterWithOperatorINStateful() {
 		List<PersonUUID> l = getOrderedPersonUUIDs();
