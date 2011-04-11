@@ -1339,6 +1339,12 @@ public class JdbcTest extends BaseTest {
 		// TODO Auto-generated method stub
 		super.testIterPerPageStatefull3();
 	}
+
+	@Override
+	public void testInsertObjectWithNullJoinObject() {
+		// TODO Auto-generated method stub
+		//super.testInsertObjectWithNullJoinObject();
+	}
 	
 
 	

@@ -4824,4 +4824,15 @@ public abstract class BaseTest extends TestCase {
 		}	
 		assertEquals(500, i);	
 	}
+	
+    public void testInsertObjectWithNullJoinObject() {
+        Discovery4Join model = new Discovery4Join();
+        model.discovererJoined = null; // explicitly set the join object to null
+
+        pm.insert(model);
+
+        Query<Discovery4Join> query = pm.createQuery(Discovery4Join.class).filter("id", model.id);
+        Discovery4Join modelFromDatabase = pm.get(query);
+        assertNull(modelFromDatabase.discovererJoined);
+    }
 }

@@ -109,7 +109,8 @@ public class JdbcDBUtils {
 				throw new SienaException("Join not possible: Field "+field.getName()+" is not a relation field");
 			}
 			// removes the field itself from columns
-			cols.remove( info.tableName+"."+field.getName());
+			// cols.remove( info.tableName+"."+field.getName());
+			cols.remove(ClassInfo.getColumnNames(field)[0]);
 			
 			// adds all field columns
 			JdbcClassInfo.calculateColumns(fieldInfo.allFields, cols, fieldInfo.tableName, "");
@@ -132,6 +133,9 @@ public class JdbcDBUtils {
 	public static final String IS_NOT_NULL = " IS NOT NULL";
 
 	public static <T> void appendSqlWhere(Query<T> query, StringBuilder sql, List<Object> parameters) {
+		Class<T> clazz = query.getQueriedClass();
+		JdbcClassInfo info = JdbcClassInfo.getClassInfo(clazz);
+		
 		List<QueryFilter> filters = query.getFilters();
 		if(filters.isEmpty()) { return; }
 
@@ -149,7 +153,7 @@ public class JdbcDBUtils {
 				}
 				first = false;
 	
-				String[] columns = ClassInfo.getColumnNames(f);
+				String[] columns = ClassInfo.getColumnNames(f, info.tableName);
 				if("IN".equals(op)) {
 					if(!Collection.class.isAssignableFrom(value.getClass()))
 						throw new SienaException("Collection needed when using IN operator in filter() query");
@@ -202,13 +206,12 @@ public class JdbcDBUtils {
 				}
 			}else if(QueryFilterSearch.class.isAssignableFrom(filter.getClass())){
 				// adds querysearch 
-				Class<T> clazz = query.getQueriedClass();
 				QueryFilterSearch qf = (QueryFilterSearch)filter;
 				List<String> cols = new ArrayList<String>();
 				try {
 					for (String field : qf.fields) {
 						Field f = clazz.getDeclaredField(field);
-						String[] columns = ClassInfo.getColumnNames(f);
+						String[] columns = ClassInfo.getColumnNames(f, info.tableName);
 						for (String col : columns) {
 							cols.add(col);
 						}
@@ -240,6 +243,8 @@ public class JdbcDBUtils {
 	}
 
 	public static <T> void appendSqlOrder(Query<T> query, StringBuilder sql) {
+		Class<T> clazz = query.getQueriedClass();
+		JdbcClassInfo info = JdbcClassInfo.getClassInfo(clazz);
 		List<QueryOrder> orders = query.getOrders();
 		List<QueryJoin> joins = query.getJoins();
 		if(orders.isEmpty() && joins.isEmpty()) { return; }
@@ -253,7 +258,7 @@ public class JdbcDBUtils {
 			first = false;
 
 			if(order.parentField==null){
-				String[] columns = ClassInfo.getColumnNames(order.field);
+				String[] columns = ClassInfo.getColumnNames(order.field, info.tableName);
 				for (String column : columns) {
 					sql.append(column+ (order.ascending? "" : " DESC"));
 				}

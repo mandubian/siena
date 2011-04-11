@@ -17,6 +17,7 @@ import siena.ClassInfo;
 import siena.PersistenceManager;
 import siena.Query;
 import siena.SienaException;
+import siena.Util;
 import siena.core.async.AbstractPersistenceManagerAsync;
 import siena.core.async.QueryAsync;
 import siena.core.async.SienaFuture;
@@ -238,7 +239,13 @@ public class GaePersistenceManagerAsync extends AbstractPersistenceManagerAsync 
 			// creates the list of joined entity keys to extract 
 			for (final T model : models) {
 				for(Field field: fieldMap.keySet()){
-					Key key = GaeMappingUtils.getKey(field.get(model));
+                    Object objVal = Util.readField(model, field);
+                    // our object is not linked to another object...so it doesn't have any key
+                    if(objVal == null) {
+                        continue;
+                    }
+
+                    Key key = GaeMappingUtils.getKey(objVal);
 					List<Key> keys = fieldMap.get(field);
 					if(!keys.contains(key))
 						keys.add(key);

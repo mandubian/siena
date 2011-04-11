@@ -30,6 +30,7 @@ import siena.AbstractPersistenceManager;
 import siena.ClassInfo;
 import siena.Query;
 import siena.SienaException;
+import siena.Util;
 import siena.core.async.PersistenceManagerAsync;
 import siena.core.options.QueryOptionFetchType;
 import siena.core.options.QueryOptionOffset;
@@ -211,7 +212,7 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 			// creates the list of joined entity keys to extract 
 			for (final T model : models) {
 				for(Field field: fieldMap.keySet()){
-                    Object objVal = field.get(model);
+                    Object objVal = Util.readField(model, field);
                     // our object is not linked to another object...so it doesn't have any key
                     if(objVal == null) {
                         continue;
