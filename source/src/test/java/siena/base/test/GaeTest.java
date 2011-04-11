@@ -1591,6 +1591,18 @@ public class GaeTest extends BaseTest {
 		super.testInsertObjectWithNullJoinObject();
 	}
 
+	@Override
+	public void testInsertObjectWithDoubleNullJoinObject() {
+		// TODO Auto-generated method stub
+		super.testInsertObjectWithDoubleNullJoinObject();
+	}
+
+	@Override
+	public void testJoinAnnotationDouble() {
+		// TODO Auto-generated method stub
+		super.testJoinAnnotationDouble();
+	}
+
 
 	
 }

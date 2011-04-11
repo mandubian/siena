@@ -1343,7 +1343,19 @@ public class JdbcTest extends BaseTest {
 	@Override
 	public void testInsertObjectWithNullJoinObject() {
 		// TODO Auto-generated method stub
-		//super.testInsertObjectWithNullJoinObject();
+		super.testInsertObjectWithNullJoinObject();
+	}
+
+	@Override
+	public void testInsertObjectWithDoubleNullJoinObject() {
+		// TODO Auto-generated method stub
+		super.testInsertObjectWithDoubleNullJoinObject();
+	}
+
+	@Override
+	public void testJoinAnnotationDouble() {
+		// TODO Auto-generated method stub
+		super.testJoinAnnotationDouble();
 	}
 	
 

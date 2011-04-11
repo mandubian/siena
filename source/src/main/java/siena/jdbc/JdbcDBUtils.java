@@ -9,7 +9,9 @@ import java.sql.Types;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import siena.ClassInfo;
 import siena.Json;
@@ -101,26 +103,29 @@ public class JdbcDBUtils {
 		// builds fields from primary class
 		JdbcClassInfo.calculateColumns(info.allFields, cols, info.tableName, "");
 		StringBuilder sql = new StringBuilder(" FROM " + info.tableName);
-				
+		Set<String> joinTables = new HashSet<String>(joinFields.size());
+		int i=0;
+		String alias;
 		for(Field field: joinFields){
 			JdbcClassInfo fieldInfo = JdbcClassInfo.getClassInfo(field.getType());
-			
 			if (!ClassInfo.isModel(field.getType())){
 				throw new SienaException("Join not possible: Field "+field.getName()+" is not a relation field");
 			}
-			// removes the field itself from columns
-			// cols.remove( info.tableName+"."+field.getName());
-			cols.remove(ClassInfo.getColumnNames(field)[0]);
+			alias = fieldInfo.tableName + i++;
+			fieldInfo.joinFieldAliases.put(field.getName(), alias);
 			
-			// adds all field columns
-			JdbcClassInfo.calculateColumns(fieldInfo.allFields, cols, fieldInfo.tableName, "");
+			// DO NOT remove the field itself from columns because it allows to find NULL fields
+			// cols.remove( info.tableName+"."+field.getName());
+			// adds all field columns using Alias
+			JdbcClassInfo.calculateColumns(fieldInfo.allFields, cols, alias, "");
 			String[] columns = ClassInfo.getColumnNames(field, info.tableName);		
 			if (columns.length > 1 || fieldInfo.keys.size() > 1){
 				throw new SienaException("Join not possible: join field "+field.getName()+" has multiple keys");
 			}
-			sql.append(" JOIN " + fieldInfo.tableName 
+			// LEFT INNER JOIN TO GET NULL FIELDS
+			sql.append(" LEFT JOIN " + fieldInfo.tableName + " AS " +  alias
 					+ " ON " + columns[0]
-					+ " = " + fieldInfo.tableName+"."+fieldInfo.keys.get(0).getName());
+					+ " = " + alias + "." + fieldInfo.keys.get(0).getName());
 		}
 
 		sql.insert(0, "SELECT " + Util.join(cols, ", "));
@@ -264,9 +269,13 @@ public class JdbcDBUtils {
 				}
 			}else {
 				try {
-					ClassInfo parentCi = ClassInfo.getClassInfo(order.parentField.getType());
+					JdbcClassInfo parentCi = JdbcClassInfo.getClassInfo(order.parentField.getType());
 					Field subField = order.parentField.getType().getField(order.field.getName());
-					String[] columns = ClassInfo.getColumnNames(subField, parentCi.tableName);
+					// get columns using join field alias
+					//String[] columns = ClassInfo.getColumnNames(subField, parentCi.tableName);
+					String[] columns = 
+						ClassInfo.getColumnNames(
+								subField, parentCi.joinFieldAliases.get(order.parentField.getName()));
 					for (String column : columns) {
 						sql.append(column+ (order.ascending? "" : " DESC"));
 					}

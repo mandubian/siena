@@ -156,9 +156,17 @@ public class JdbcMappingUtils {
 					}
 				}
 				else {
-					Object rel = mapObject(type, rs, fieldClassInfo.tableName, null);
+					// this is a JOIN field
+					// first verifies the field is not null
+					Object val = rs.getObject(ClassInfo.getColumnNames(field, tableName)[0]);
+					if(val == null){
+						Util.setField(obj, field, null);
+						return;
+					}
+					// uses join field alias
+					// Object rel = mapObject(type, rs, fieldClassInfo.tableName, null);
+					Object rel = mapObject(type, rs, fieldClassInfo.joinFieldAliases.get(field.getName()), null);
 					Util.setField(obj, field, rel);
-					//field.set(obj, rel);
 				}
 			} else {
 				Object val = rs.getObject(ClassInfo.getColumnNames(field, tableName)[0]);

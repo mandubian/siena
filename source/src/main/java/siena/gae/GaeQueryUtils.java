@@ -74,58 +74,65 @@ public class GaeQueryUtils {
 						Id id = f.getAnnotation(Id.class);
 						switch(id.value()) {
 						case NONE:
-							if(value != null && !Collection.class.isAssignableFrom(value.getClass())){
-								// long or string goes toString
-								Key key = KeyFactory.createKey(
-										q.getKind(),
-										value.toString());
-								q.addFilter(Entity.KEY_RESERVED_PROPERTY, op, key);
-							}else {
-								List<Key> keys = new ArrayList<Key>();
-								for(Object val: (Collection<?>)value) {
-									keys.add(KeyFactory.createKey(q.getKind(), val.toString()));
+							if(value != null){
+								if(!Collection.class.isAssignableFrom(value.getClass())){
+									// long or string goes toString
+									Key key = KeyFactory.createKey(
+											q.getKind(),
+											value.toString());
+									q.addFilter(Entity.KEY_RESERVED_PROPERTY, op, key);
+								}else {
+									List<Key> keys = new ArrayList<Key>();
+									for(Object val: (Collection<?>)value) {
+										keys.add(KeyFactory.createKey(q.getKind(), val.toString()));
+									}
+									q.addFilter(Entity.KEY_RESERVED_PROPERTY, op, keys);
 								}
-								q.addFilter(Entity.KEY_RESERVED_PROPERTY, op, keys);
 							}
 							break;
 						case AUTO_INCREMENT:
-							if(value != null && !Collection.class.isAssignableFrom(value.getClass())){
-								Key key; 
-								Class<?> type = f.getType();
-
-								if(Long.TYPE == type || Long.class.isAssignableFrom(type)){
-									key = KeyFactory.createKey(
-											q.getKind(),
-											(Long)value);
-								} else {
-									key = KeyFactory.createKey(
-											q.getKind(),
-											value.toString());									
+							if(value != null){
+								if(!Collection.class.isAssignableFrom(value.getClass())){
+									Key key; 
+									Class<?> type = f.getType();
+	
+									if(Long.TYPE == type || Long.class.isAssignableFrom(type)){
+										key = KeyFactory.createKey(
+												q.getKind(),
+												(Long)value);
+									} else {
+										key = KeyFactory.createKey(
+												q.getKind(),
+												value.toString());									
+									}
+									
+									q.addFilter(Entity.KEY_RESERVED_PROPERTY, op, key);
+								}else {
+									List<Key> keys = new ArrayList<Key>();
+									for(Object val: (Collection<?>)value) {
+										if (value instanceof String)
+											val = Long.parseLong((String) val);
+										keys.add(KeyFactory.createKey(q.getKind(), (Long)val));
+									}
+									q.addFilter(Entity.KEY_RESERVED_PROPERTY, op, keys);
 								}
-								q.addFilter(Entity.KEY_RESERVED_PROPERTY, op, key);
-							}else {
-								List<Key> keys = new ArrayList<Key>();
-								for(Object val: (Collection<?>)value) {
-									if (value instanceof String)
-										val = Long.parseLong((String) val);
-									keys.add(KeyFactory.createKey(q.getKind(), (Long)val));
-								}
-								q.addFilter(Entity.KEY_RESERVED_PROPERTY, op, keys);
 							}
 							break;
 						case UUID:
-							if(value != null && !Collection.class.isAssignableFrom(value.getClass())){
-								// long or string goes toString
-								Key key = KeyFactory.createKey(
-										q.getKind(),
-										value.toString());
-								q.addFilter(Entity.KEY_RESERVED_PROPERTY, op, key);
-							}else {
-								List<Key> keys = new ArrayList<Key>();
-								for(Object val: (Collection<?>)value) {
-									keys.add(KeyFactory.createKey(q.getKind(), val.toString()));
+							if(value != null) {
+								if(!Collection.class.isAssignableFrom(value.getClass())){
+									// long or string goes toString
+									Key key = KeyFactory.createKey(
+											q.getKind(),
+											value.toString());
+									q.addFilter(Entity.KEY_RESERVED_PROPERTY, op, key);
+								}else {
+									List<Key> keys = new ArrayList<Key>();
+									for(Object val: (Collection<?>)value) {
+										keys.add(KeyFactory.createKey(q.getKind(), val.toString()));
+									}
+									q.addFilter(Entity.KEY_RESERVED_PROPERTY, op, keys);
 								}
-								q.addFilter(Entity.KEY_RESERVED_PROPERTY, op, keys);
 							}
 							break;
 						default:

@@ -40,7 +40,6 @@ import siena.Id;
 import siena.Query;
 import siena.SienaException;
 import siena.Util;
-import siena.core.SienaIterablePerPage;
 import siena.core.async.PersistenceManagerAsync;
 import siena.core.options.QueryOptionFetchType;
 import siena.core.options.QueryOptionOffset;
@@ -1411,6 +1410,7 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 		public List<Field> generatedKeys = null;
 		public List<Field> allFields = null;
 		public List<Field> joinFields = null;
+		public Map<String, String> joinFieldAliases = new HashMap<String, String>();
 
 		public JdbcClassInfo(ClassInfo info) {
 			this.info = info;

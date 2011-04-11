@@ -1602,6 +1602,24 @@ public class GaeAsyncTest extends BaseAsyncTest {
 		super.testFetchStringAutoInc();
 	}
 
+	@Override
+	public void testInsertObjectWithNullJoinObject() {
+		// TODO Auto-generated method stub
+		super.testInsertObjectWithNullJoinObject();
+	}
+
+	@Override
+	public void testInsertObjectWithDoubleNullJoinObject() {
+		// TODO Auto-generated method stub
+		super.testInsertObjectWithDoubleNullJoinObject();
+	}
+
+	@Override
+	public void testJoinAnnotationDouble() {
+		// TODO Auto-generated method stub
+		super.testJoinAnnotationDouble();
+	}
+
 
 
 

@@ -25,6 +25,7 @@ import siena.base.test.model.DataTypes;
 import siena.base.test.model.DataTypes.EnumLong;
 import siena.base.test.model.Discovery;
 import siena.base.test.model.Discovery4Join;
+import siena.base.test.model.Discovery4Join2;
 import siena.base.test.model.Discovery4Search;
 import siena.base.test.model.DiscoveryPrivate;
 import siena.base.test.model.MultipleKeys;
@@ -81,6 +82,7 @@ public abstract class BaseTest extends TestCase {
 			classes.add(MultipleKeys.class);
 		classes.add(Discovery.class);
 		classes.add(Discovery4Join.class);
+		classes.add(Discovery4Join2.class);
 		classes.add(DiscoveryPrivate.class);
 		classes.add(Discovery4Search.class);
 		classes.add(DataTypes.class);
@@ -4835,4 +4837,49 @@ public abstract class BaseTest extends TestCase {
         Discovery4Join modelFromDatabase = pm.get(query);
         assertNull(modelFromDatabase.discovererJoined);
     }
+    
+    public void testInsertObjectWithDoubleNullJoinObject() {
+        Discovery4Join2 model = new Discovery4Join2();
+        model.discovererJoined = null; // explicitly set the join object to null
+        model.discovererJoined2 = null; // explicitly set the join object to null
+
+        pm.insert(model);
+
+        Query<Discovery4Join2> query = pm.createQuery(Discovery4Join2.class).filter("id", model.id);
+        Discovery4Join2 modelFromDatabase = pm.get(query);
+        assertNull(modelFromDatabase.discovererJoined);
+        assertNull(modelFromDatabase.discovererJoined2);
+    }
+    
+	public void testJoinAnnotationDouble() {
+		Discovery4Join2 radioactivity = new Discovery4Join2("Radioactivity", LongAutoID_CURIE, LongAutoID_TESLA);
+		Discovery4Join2 relativity = new Discovery4Join2("Relativity", LongAutoID_EINSTEIN, LongAutoID_TESLA);
+		Discovery4Join2 foo = new Discovery4Join2("Foo", LongAutoID_EINSTEIN, LongAutoID_EINSTEIN);
+		Discovery4Join2 teslaCoil = new Discovery4Join2("Tesla Coil", LongAutoID_TESLA, LongAutoID_CURIE);
+		
+		pm.insert(radioactivity);
+		pm.insert(relativity);
+		pm.insert(foo);
+		pm.insert(teslaCoil);
+		
+		List<Discovery4Join2> res = pm.createQuery(Discovery4Join2.class).fetch();
+		assertEquals(4, res.size());
+		assertEquals(radioactivity, res.get(0));
+		assertEquals(relativity, res.get(1));
+		assertEquals(foo, res.get(2));
+		assertEquals(teslaCoil, res.get(3));
+		
+		assertEquals(LongAutoID_CURIE, res.get(0).discovererJoined);
+		assertEquals(LongAutoID_EINSTEIN, res.get(1).discovererJoined);
+		assertEquals(LongAutoID_EINSTEIN, res.get(2).discovererJoined);
+		assertEquals(LongAutoID_TESLA, res.get(3).discovererJoined);
+
+		assertEquals(LongAutoID_TESLA, res.get(0).discovererJoined2);
+		assertEquals(LongAutoID_TESLA, res.get(1).discovererJoined2);
+		assertEquals(LongAutoID_EINSTEIN, res.get(2).discovererJoined2);
+		assertEquals(LongAutoID_CURIE, res.get(3).discovererJoined2);
+
+	}
+	
+
 }
