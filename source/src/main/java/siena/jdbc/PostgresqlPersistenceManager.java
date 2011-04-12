@@ -4,7 +4,6 @@ import java.lang.reflect.Field;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Date;
@@ -12,14 +11,18 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import siena.ClassInfo;
 import siena.Generator;
 import siena.Id;
+import siena.QueryFilterSearch;
 import siena.SienaException;
 import siena.Util;
-import siena.jdbc.JdbcPersistenceManager.JdbcClassInfo;
+import siena.core.options.QueryOption;
 
 public class PostgresqlPersistenceManager extends JdbcPersistenceManager {
+	private static final String DB = "POSTGRES";
 
+	@Override
     protected void setParameter(PreparedStatement ps, int index, Object value) throws SQLException {
         if (value != null && value instanceof Date) {
             Date date = (Date) value;
@@ -41,7 +44,7 @@ public class PostgresqlPersistenceManager extends JdbcPersistenceManager {
 		try {
 			ps = getConnection().prepareStatement(
 					classInfo.insertSQL + " RETURNING " + Util.join(keyNames, ","));
-			JdbcDBUtils.addParameters(obj, classInfo.insertFields, ps, 1);
+			addParameters(obj, classInfo.insertFields, ps, 1);
 			gk = ps.executeQuery();
 			if (!gk.next())
 				throw new SienaException("No such generated keys");
@@ -91,7 +94,7 @@ public class PostgresqlPersistenceManager extends JdbcPersistenceManager {
 					}
 				}
 				// TODO: implement primary key generation: SEQUENCE
-				JdbcDBUtils.addParameters(obj, classInfo.insertFields, ps, 1);
+				addParameters(obj, classInfo.insertFields, ps, 1);
 				gk = ps.executeQuery();
 				if (!gk.next())
 					throw new SienaException("No such generated keys");
@@ -115,5 +118,38 @@ public class PostgresqlPersistenceManager extends JdbcPersistenceManager {
 		// int[] res = ps.executeBatch();
 		
 		return res;
+	}
+	
+	@Override
+	public <T> void appendSqlSearch(QueryFilterSearch qf, Class<?> clazz, JdbcClassInfo info, StringBuilder sql, List<Object> parameters) {
+		List<String> cols = new ArrayList<String>();
+		try {
+			for (String field : qf.fields) {
+				Field f = clazz.getDeclaredField(field);
+				String[] columns = ClassInfo.getColumnNames(f, info.tableName);
+				for (String col : columns) {
+					cols.add("coalesce("+col+", '')");
+				}
+			}
+			QueryOption opt = qf.option;
+			if(opt != null){
+				// only manages QueryOptionJdbcSearch
+				if(QueryOptionPostgresqlSearch.class.isAssignableFrom(opt.getClass())){
+					String lang = ((QueryOptionPostgresqlSearch)opt).language;
+					if(lang != null && !"".equals(lang) ){
+						sql.append("to_tsvector('"+lang+"', "+Util.join(cols, " || ' ' || ")+") @@ to_tsquery(?)");
+					}
+					else {
+						sql.append("to_tsvector('english', "+Util.join(cols, " || ' ' || ")+") @@ to_tsquery(?)");
+					}
+				}else{
+				}
+			}else {
+				sql.append("to_tsvector('english', "+Util.join(cols, " || ' ' || ")+") @@ to_tsquery(?)");
+			}
+			parameters.add(qf.match);
+		}catch(Exception e){
+			throw new SienaException(e);
+		}
 	}
 }

@@ -11,6 +11,9 @@ import org.apache.ddlutils.PlatformFactory;
 import org.apache.ddlutils.model.Database;
 
 import siena.PersistenceManager;
+import siena.Query;
+import siena.base.test.model.Discovery4Search;
+import siena.base.test.model.Discovery4Search2;
 import siena.jdbc.PostgresqlPersistenceManager;
 import siena.jdbc.ddl.DdlGenerator;
 
@@ -80,6 +83,68 @@ public class PostgresqlTest extends BaseTest {
 		return false;
 	}
 
+	// SPECIFIC POSTGRES TESTS
+	public void testSearchMultipleSingleField() {
+		Discovery4Search[] discs = new Discovery4Search[10];
+		for(int i=0; i<10; i++){
+			if(i%2==0) discs[i] = new Discovery4Search("even_"+i, LongAutoID_CURIE);
+			else discs[i] = new Discovery4Search("odd_"+i, LongAutoID_CURIE);
+			pm.insert(discs[i]);
+		}
+		
+		Query<Discovery4Search> query = 
+			pm.createQuery(Discovery4Search.class).search("even_", "name").order("name");
+		
+		List<Discovery4Search> res = query.fetch();
+		
+		assertEquals(5, res.size());
+		for(int i=0; i<res.size();i++){
+			assertEquals(discs[2*i], res.get(i));
+		}		
+	}
+	
+	public void testSearchMultipleMultiField() {
+		Discovery4Search2[] discs = new Discovery4Search2[10];
+		for(int i=0; i<10; i++){
+			if(i%2==0) discs[i] = new Discovery4Search2("even_"+i, "even_"+i+" body", LongAutoID_CURIE);
+			else discs[i] = new Discovery4Search2("odd_"+i, "odd_"+i+" body", LongAutoID_CURIE);
+			pm.insert(discs[i]);
+		}
+		
+		Query<Discovery4Search2> query = 
+			pm.createQuery(Discovery4Search2.class).search("even_", "name", "body").order("name");
+		
+		List<Discovery4Search2> res = query.fetch();
+		
+		assertEquals(5, res.size());
+		for(int i=0; i<res.size();i++){
+			assertEquals(discs[2*i], res.get(i));
+		}		
+	}
+
+
+	public void testSearchMultipleWordsSingleField() {
+		Discovery4Search AB = new Discovery4Search("alpha beta", LongAutoID_CURIE);
+		Discovery4Search GB = new Discovery4Search("gamma beta", LongAutoID_CURIE);
+		Discovery4Search GD = new Discovery4Search("gamma delta", LongAutoID_CURIE);
+		Discovery4Search ET = new Discovery4Search("epsilon theta", LongAutoID_CURIE);
+		pm.insert(AB);
+		pm.insert(GB);
+		pm.insert(GD);
+		pm.insert(ET);
+
+		Query<Discovery4Search> query = 
+			pm.createQuery(Discovery4Search.class).search("alpha | delta", "name").order("name");
+		
+		List<Discovery4Search> res = query.fetch();
+		
+		assertEquals(2, res.size());
+		assertEquals(AB, res.get(0));
+		assertEquals(GD, res.get(1));
+	}
+
+	
+	// GENERIC JDBC TESTS
 	@Override
 	public void testCount() {
 		// TODO Auto-generated method stub

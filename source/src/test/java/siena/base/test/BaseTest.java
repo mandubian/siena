@@ -11,10 +11,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 
-import org.dbunit.dataset.datatype.DataType;
-
 import junit.framework.TestCase;
-import siena.Json;
 import siena.PersistenceManager;
 import siena.Query;
 import siena.SienaException;
@@ -27,6 +24,7 @@ import siena.base.test.model.Discovery;
 import siena.base.test.model.Discovery4Join;
 import siena.base.test.model.Discovery4Join2;
 import siena.base.test.model.Discovery4Search;
+import siena.base.test.model.Discovery4Search2;
 import siena.base.test.model.DiscoveryPrivate;
 import siena.base.test.model.MultipleKeys;
 import siena.base.test.model.PersonLongAutoID;
@@ -85,6 +83,7 @@ public abstract class BaseTest extends TestCase {
 		classes.add(Discovery4Join2.class);
 		classes.add(DiscoveryPrivate.class);
 		classes.add(Discovery4Search.class);
+		classes.add(Discovery4Search2.class);
 		classes.add(DataTypes.class);
 		pm = createPersistenceManager(classes);
 		
@@ -114,6 +113,7 @@ public abstract class BaseTest extends TestCase {
 		pm.insert(StringID_TESLA, StringID_CURIE, StringID_EINSTEIN);
 	}
 	
+
 	protected List<PersonUUID> getOrderedPersonUUIDs() {
 		@SuppressWarnings("serial")
 		ArrayList<PersonUUID> l = new ArrayList<PersonUUID>() {{ 
@@ -469,6 +469,7 @@ public abstract class BaseTest extends TestCase {
 		List<PersonUUID> people = 
 			pm.createQuery(PersonUUID.class)
 				.filter("id IN", Arrays.asList( l.get(0).id, l.get(1).id))
+				.order("id")
 				.fetch();
 
 		assertNotNull(people);

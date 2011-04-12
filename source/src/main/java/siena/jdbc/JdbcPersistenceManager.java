@@ -21,9 +21,12 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.sql.Types;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -37,14 +40,21 @@ import siena.AbstractPersistenceManager;
 import siena.ClassInfo;
 import siena.Generator;
 import siena.Id;
+import siena.Json;
 import siena.Query;
+import siena.QueryFilter;
+import siena.QueryFilterSearch;
+import siena.QueryFilterSimple;
 import siena.SienaException;
 import siena.Util;
 import siena.core.async.PersistenceManagerAsync;
+import siena.core.options.QueryOption;
 import siena.core.options.QueryOptionFetchType;
 import siena.core.options.QueryOptionOffset;
 import siena.core.options.QueryOptionPage;
 import siena.core.options.QueryOptionState;
+import siena.embed.Embedded;
+import siena.embed.JsonSerializer;
 
 public class JdbcPersistenceManager extends AbstractPersistenceManager {
 	private static final String DB = "JDBC";
@@ -84,7 +94,7 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 		PreparedStatement ps = null;
 		try {
 			ps = getConnection().prepareStatement(classInfo.deleteSQL);
-			JdbcDBUtils.addParameters(obj, classInfo.keys, ps, 1);
+			addParameters(obj, classInfo.keys, ps, 1);
 			int n = ps.executeUpdate();
 			if(n == 0) {
 				throw new SienaException("No updated rows");
@@ -106,7 +116,7 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 		ResultSet rs = null;
 		try {
 			ps = getConnection().prepareStatement(classInfo.selectSQL);
-			JdbcDBUtils.addParameters(obj, classInfo.keys, ps, 1);
+			addParameters(obj, classInfo.keys, ps, 1);
 			rs = ps.executeQuery();
 			if(rs.next()) {
 				JdbcMappingUtils.mapObject(obj, rs, null, null);
@@ -140,7 +150,7 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 				insertWithAutoIncrementKey(classInfo, obj);
 			} else {
 				ps = getConnection().prepareStatement(classInfo.insertSQL);
-				JdbcDBUtils.addParameters(obj, classInfo.insertFields, ps, 1);
+				addParameters(obj, classInfo.insertFields, ps, 1);
 				ps.executeUpdate();
 			}
 		} catch (SienaException e) {
@@ -159,8 +169,8 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 		try {
 			ps = getConnection().prepareStatement(classInfo.updateSQL);
 			int i = 1;
-			i = JdbcDBUtils.addParameters(obj, classInfo.updateFields, ps, i);
-			JdbcDBUtils.addParameters(obj, classInfo.keys, ps, i);
+			i = addParameters(obj, classInfo.updateFields, ps, i);
+			addParameters(obj, classInfo.keys, ps, i);
 			ps.executeUpdate();
 		} catch(SQLException e) {
 			throw new SienaException(e);
@@ -191,7 +201,7 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 		if(parameters != null) {
 			int i = 1;
 			for (Object parameter : parameters) {
-				JdbcDBUtils.setParameter(statement, i++, parameter);
+				setParameter(statement, i++, parameter);
 			}
 		}
 		return statement;
@@ -212,7 +222,7 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 		try {
 			ps = getConnection().prepareStatement(classInfo.insertSQL,
 					Statement.RETURN_GENERATED_KEYS);
-			JdbcDBUtils.addParameters(obj, classInfo.insertFields, ps, 1);
+			addParameters(obj, classInfo.insertFields, ps, 1);
 			ps.executeUpdate();
 			gk = ps.getGeneratedKeys();
 			if (!gk.next())
@@ -251,7 +261,7 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 				}
 			}
 			// TODO: implement primary key generation: SEQUENCE
-			JdbcDBUtils.addParameters(obj, classInfo.insertFields, ps, 1);
+			addParameters(obj, classInfo.insertFields, ps, 1);
 			ps.addBatch();
 		}
 		
@@ -274,7 +284,158 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 		return res.length;
 	}
 
+	protected int addParameters(Object obj, List<Field> fields, PreparedStatement ps, int i) throws SQLException {
+		for (Field field : fields) {
+			Class<?> type = field.getType();
+			if(ClassInfo.isModel(type)) {
+				JdbcClassInfo ci = JdbcClassInfo.getClassInfo(type);
+				Object rel = Util.readField(obj, field);
+				for(Field f : ci.keys) {
+					if(rel != null) {
+						Object value = Util.readField(rel, f);
+						if(value instanceof Json)
+							value = ((Json)value).toString();
+						setParameter(ps, i++, value);
+					} else {
+						setParameter(ps, i++, null);
+					}
+				}
+			} else {
+				Object value = Util.readField(obj, field);
+				if(value != null){
+					if(Json.class.isAssignableFrom(field.getType()))
+						value = ((Json)value).toString();
+					else if(field.getAnnotation(Embedded.class) != null)
+						value = JsonSerializer.serialize(value).toString();
+					else if(Enum.class.isAssignableFrom(field.getType()))
+						value = value.toString();
+				}
+				setParameter(ps, i++, value);
+			}
+		}
+		return i;
+	}
+	
+	protected void setParameter(PreparedStatement ps, int index, Object value) throws SQLException {
+		ps.setObject(index, value);
+	}
 
+	
+	public <T> void appendSqlSearch(QueryFilterSearch qf, Class<?> clazz, JdbcClassInfo info, StringBuilder sql, List<Object> parameters) {
+		List<String> cols = new ArrayList<String>();
+		try {
+			for (String field : qf.fields) {
+				Field f = clazz.getDeclaredField(field);
+				String[] columns = ClassInfo.getColumnNames(f, info.tableName);
+				for (String col : columns) {
+					cols.add(col);
+				}
+			}
+			QueryOption opt = qf.option;
+			if(opt != null){
+				// only manages QueryOptionJdbcSearch
+				if(QueryOptionJdbcSearch.class.isAssignableFrom(opt.getClass())){
+					if(((QueryOptionJdbcSearch)opt).booleanMode){
+						sql.append("MATCH("+Util.join(cols, ",")+") AGAINST(? IN BOOLEAN MODE)");
+					}
+					else {
+						
+					}
+				}else{
+					sql.append("MATCH("+Util.join(cols, ",")+") AGAINST(?)");
+				}
+			}else {
+				// as mysql default search is fulltext and as it requires a FULLTEXT index, 
+				// by default, we use boolean mode which works without fulltext index
+				sql.append("MATCH("+Util.join(cols, ",")+") AGAINST(? IN BOOLEAN MODE)");
+			}
+			parameters.add(qf.match);
+		}catch(Exception e){
+			throw new SienaException(e);
+		}
+	}
+
+	
+	public <T> void appendSqlWhere(Query<T> query, StringBuilder sql, List<Object> parameters) {
+		Class<T> clazz = query.getQueriedClass();
+		JdbcClassInfo info = JdbcClassInfo.getClassInfo(clazz);
+		
+		List<QueryFilter> filters = query.getFilters();
+		if(filters.isEmpty()) { return; }
+
+		sql.append(JdbcDBUtils.WHERE);
+		boolean first = true;
+		for (QueryFilter filter : filters) {
+			if(QueryFilterSimple.class.isAssignableFrom(filter.getClass())){
+				QueryFilterSimple qf = (QueryFilterSimple)filter;
+				String op    = qf.operator;
+				Object value = qf.value;
+				Field f      = qf.field;
+	
+				if(!first) {
+					sql.append(JdbcDBUtils.AND);
+				}
+				first = false;
+	
+				String[] columns = ClassInfo.getColumnNames(f, info.tableName);
+				if("IN".equals(op)) {
+					if(!Collection.class.isAssignableFrom(value.getClass()))
+						throw new SienaException("Collection needed when using IN operator in filter() query");
+					StringBuilder s = new StringBuilder();
+					Collection<?> col = (Collection<?>) value;
+					for (Object object : col) {
+						// TODO: if object isModel
+						parameters.add(object);
+						s.append(",?");
+					}
+					sql.append(columns[0]+" IN("+s.toString().substring(1)+")");
+				} else if(ClassInfo.isModel(f.getType())) {
+					if(!op.equals("=")) {
+						throw new SienaException("Unsupported operator for relationship: "+op);
+					}
+					JdbcClassInfo classInfo = JdbcClassInfo.getClassInfo(f.getType());
+					int i = 0;
+					JdbcMappingUtils.checkForeignKeyMapping(classInfo.keys, columns, query.getQueriedClass(), f);
+					for (Field key : classInfo.keys) {
+						if(value == null) {
+							sql.append(columns[i++]+JdbcDBUtils.IS_NULL);
+						} else {
+							sql.append(columns[i++]+"=?");
+							key.setAccessible(true);
+							Object o;
+							try {
+								o = key.get(value);
+								parameters.add(o);
+							} catch (Exception e) {
+								throw new SienaException(e);
+							}
+						}
+					}
+				} else {
+					if(value == null && op.equals("=")) {
+						sql.append(columns[0]+JdbcDBUtils.IS_NULL);
+					} else if(value == null && op.equals("!=")) {
+						sql.append(columns[0]+JdbcDBUtils.IS_NOT_NULL);
+					} else {
+						sql.append(columns[0]+op+"?");
+						if(value == null) {
+							parameters.add(Types.NULL);
+						} else {
+							if (value instanceof Date) {
+								value = Util.translateDate(f, (Date) value);
+							}
+							parameters.add(value);
+						}
+					}
+				}
+			}else if(QueryFilterSearch.class.isAssignableFrom(filter.getClass())){
+				// adds querysearch 
+				QueryFilterSearch qf = (QueryFilterSearch)filter;
+				appendSqlSearch(qf, clazz, info, sql, parameters);
+			}
+		}
+	}
+	
 	public void setConnectionManager(ConnectionManager connectionManager) {
 		this.connectionManager = connectionManager;
 	}
@@ -351,7 +512,7 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 			Class<T> clazz = query.getQueriedClass();
 			List<Object> parameters = new ArrayList<Object>();
 			StringBuilder sql = JdbcDBUtils.buildSqlSelect(query);
-			JdbcDBUtils.appendSqlWhere(query, sql, parameters);
+			appendSqlWhere(query, sql, parameters);
 			JdbcDBUtils.appendSqlOrder(query, sql);
 			JdbcDBUtils.appendSqlLimitOffset(query, sql, parameters);
 			//sql.append(suffix);
@@ -473,7 +634,7 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 		List<Object> parameters = new ArrayList<Object>();
 		StringBuilder sql = new StringBuilder("SELECT COUNT(*) FROM ");
 		sql.append(info.tableName);
-		JdbcDBUtils.appendSqlWhere(query, sql, parameters);
+		appendSqlWhere(query, sql, parameters);
 		PreparedStatement statement = null;
 		ResultSet rs = null;
 		try {
@@ -494,7 +655,7 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 		List<Object> parameters = new ArrayList<Object>();
 		StringBuilder sql = new StringBuilder("DELETE FROM ");
 		sql.append(info.tableName);
-		JdbcDBUtils.appendSqlWhere(query, sql, parameters);
+		appendSqlWhere(query, sql, parameters);
 		PreparedStatement statement = null;
 		ResultSet rs = null;
 		try {
@@ -580,7 +741,7 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 			Class<T> clazz = query.getQueriedClass();
 			List<Object> parameters = new ArrayList<Object>();
 			StringBuilder sql = JdbcDBUtils.buildSqlSelect(query);
-			JdbcDBUtils.appendSqlWhere(query, sql, parameters);
+			appendSqlWhere(query, sql, parameters);
 			JdbcDBUtils.appendSqlOrder(query, sql);
 			JdbcDBUtils.appendSqlLimitOffset(query, sql, parameters);
 			//sql.append(suffix);
@@ -777,7 +938,7 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 			
 			List<Object> parameters = new ArrayList<Object>();
 			StringBuilder sql = JdbcDBUtils.buildSqlSelect(query);
-			JdbcDBUtils.appendSqlWhere(query, sql, parameters);
+			appendSqlWhere(query, sql, parameters);
 			JdbcDBUtils.appendSqlOrder(query, sql);
 			JdbcDBUtils.appendSqlLimitOffset(query, sql, parameters);
 			//sql.append(suffix);
@@ -1186,7 +1347,7 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 							}
 						}
 						// TODO: implement primary key generation: SEQUENCE
-						JdbcDBUtils.addParameters(obj, classInfo.insertFields, ps, 1);
+						addParameters(obj, classInfo.insertFields, ps, 1);
 						ps.addBatch();
 					}
 					
@@ -1238,7 +1399,7 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 							}
 						}
 						// TODO: implement primary key generation: SEQUENCE
-						JdbcDBUtils.addParameters(obj, classInfo.insertFields, ps, 1);
+						addParameters(obj, classInfo.insertFields, ps, 1);
 						ps.addBatch();
 					}
 					
@@ -1282,7 +1443,7 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 				ps = getConnection().prepareStatement(classInfo.deleteSQL);
 				
 				for(Object obj: objMap.get(classInfo)){
-					JdbcDBUtils.addParameters(obj, classInfo.keys, ps, 1);
+					addParameters(obj, classInfo.keys, ps, 1);
 					ps.addBatch();
 				}
 				
@@ -1325,7 +1486,7 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 				ps = getConnection().prepareStatement(classInfo.deleteSQL);
 				
 				for(Object obj: objMap.get(classInfo)){
-					JdbcDBUtils.addParameters(obj, classInfo.keys, ps, 1);
+					addParameters(obj, classInfo.keys, ps, 1);
 					ps.addBatch();
 				}
 				
@@ -1352,7 +1513,7 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 			ps = getConnection().prepareStatement(classInfo.deleteSQL);
 			
 			for(Object key: keys){
-				JdbcDBUtils.setParameter(ps, 1, key);
+				setParameter(ps, 1, key);
 				ps.addBatch();
 			}
 				
@@ -1375,7 +1536,7 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 			ps = getConnection().prepareStatement(classInfo.deleteSQL);
 			
 			for(Object key: keys){
-				JdbcDBUtils.setParameter(ps, 1, key);
+				setParameter(ps, 1, key);
 				ps.addBatch();
 			}
 				
@@ -1418,8 +1579,8 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 				
 				for(Object obj: objMap.get(classInfo)){
 					int i = 1;
-					i = JdbcDBUtils.addParameters(obj, classInfo.updateFields, ps, i);
-					JdbcDBUtils.addParameters(obj, classInfo.keys, ps, i);
+					i = addParameters(obj, classInfo.updateFields, ps, i);
+					addParameters(obj, classInfo.keys, ps, i);
 					ps.addBatch();
 				}
 				
@@ -1464,8 +1625,8 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 				
 				for(Object obj: objMap.get(classInfo)){
 					int i = 1;
-					i = JdbcDBUtils.addParameters(obj, classInfo.updateFields, ps, i);
-					JdbcDBUtils.addParameters(obj, classInfo.keys, ps, i);
+					i = addParameters(obj, classInfo.updateFields, ps, i);
+					addParameters(obj, classInfo.keys, ps, i);
 					ps.addBatch();
 				}
 				

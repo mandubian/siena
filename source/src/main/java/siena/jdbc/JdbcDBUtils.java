@@ -1,36 +1,27 @@
 package siena.jdbc;
 
 import java.lang.reflect.Field;
-import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.sql.Types;
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Date;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 import siena.ClassInfo;
-import siena.Json;
 import siena.Query;
-import siena.QueryFilter;
-import siena.QueryFilterSearch;
-import siena.QueryFilterSimple;
 import siena.QueryJoin;
 import siena.QueryOrder;
 import siena.SienaException;
 import siena.Util;
-import siena.core.options.QueryOption;
-import siena.core.options.QueryOptionOffset;
-import siena.core.options.QueryOptionPage;
-import siena.embed.Embedded;
-import siena.embed.JsonSerializer;
 import siena.jdbc.JdbcPersistenceManager.JdbcClassInfo;
 
 public class JdbcDBUtils {
+	
+	public static final String WHERE = " WHERE ";
+	public static final String AND = " AND ";
+	public static final String IS_NULL = " IS NULL";
+	public static final String IS_NOT_NULL = " IS NOT NULL";
+	
 	public static void closeStatement(Statement st) {
 		if(st == null) return;
 		try {
@@ -49,41 +40,7 @@ public class JdbcDBUtils {
 		}
 	}
 	
-	public static int addParameters(Object obj, List<Field> fields, PreparedStatement ps, int i) throws SQLException {
-		for (Field field : fields) {
-			Class<?> type = field.getType();
-			if(ClassInfo.isModel(type)) {
-				JdbcClassInfo ci = JdbcClassInfo.getClassInfo(type);
-				Object rel = Util.readField(obj, field);
-				for(Field f : ci.keys) {
-					if(rel != null) {
-						Object value = Util.readField(rel, f);
-						if(value instanceof Json)
-							value = ((Json)value).toString();
-						setParameter(ps, i++, value);
-					} else {
-						setParameter(ps, i++, null);
-					}
-				}
-			} else {
-				Object value = Util.readField(obj, field);
-				if(value != null){
-					if(Json.class.isAssignableFrom(field.getType()))
-						value = ((Json)value).toString();
-					else if(field.getAnnotation(Embedded.class) != null)
-						value = JsonSerializer.serialize(value).toString();
-					else if(Enum.class.isAssignableFrom(field.getType()))
-						value = value.toString();
-				}
-				setParameter(ps, i++, value);
-			}
-		}
-		return i;
-	}
-	
-	public static void setParameter(PreparedStatement ps, int index, Object value) throws SQLException {
-		ps.setObject(index, value);
-	}
+
 	
 	public static <T> StringBuilder buildSqlSelect(Query<T> query) {
 		Class<T> clazz = query.getQueriedClass();
@@ -103,7 +60,6 @@ public class JdbcDBUtils {
 		// builds fields from primary class
 		JdbcClassInfo.calculateColumnsAliases(info.allFields, cols, info.tableName, "");
 		StringBuilder sql = new StringBuilder(" FROM " + info.tableName);
-		Set<String> joinTables = new HashSet<String>(joinFields.size());
 		int i=0;
 		String alias;
 		for(Field field: joinFields){
@@ -131,121 +87,7 @@ public class JdbcDBUtils {
 		sql.insert(0, "SELECT " + Util.join(cols, ", "));
 		return sql;
 	}
-	
-	public static final String WHERE = " WHERE ";
-	public static final String AND = " AND ";
-	public static final String IS_NULL = " IS NULL";
-	public static final String IS_NOT_NULL = " IS NOT NULL";
 
-	public static <T> void appendSqlWhere(Query<T> query, StringBuilder sql, List<Object> parameters) {
-		Class<T> clazz = query.getQueriedClass();
-		JdbcClassInfo info = JdbcClassInfo.getClassInfo(clazz);
-		
-		List<QueryFilter> filters = query.getFilters();
-		if(filters.isEmpty()) { return; }
-
-		sql.append(WHERE);
-		boolean first = true;
-		for (QueryFilter filter : filters) {
-			if(QueryFilterSimple.class.isAssignableFrom(filter.getClass())){
-				QueryFilterSimple qf = (QueryFilterSimple)filter;
-				String op    = qf.operator;
-				Object value = qf.value;
-				Field f      = qf.field;
-	
-				if(!first) {
-					sql.append(AND);
-				}
-				first = false;
-	
-				String[] columns = ClassInfo.getColumnNames(f, info.tableName);
-				if("IN".equals(op)) {
-					if(!Collection.class.isAssignableFrom(value.getClass()))
-						throw new SienaException("Collection needed when using IN operator in filter() query");
-					StringBuilder s = new StringBuilder();
-					Collection<?> col = (Collection<?>) value;
-					for (Object object : col) {
-						// TODO: if object isModel
-						parameters.add(object);
-						s.append(",?");
-					}
-					sql.append(columns[0]+" IN("+s.toString().substring(1)+")");
-				} else if(ClassInfo.isModel(f.getType())) {
-					if(!op.equals("=")) {
-						throw new SienaException("Unsupported operator for relationship: "+op);
-					}
-					JdbcClassInfo classInfo = JdbcClassInfo.getClassInfo(f.getType());
-					int i = 0;
-					JdbcMappingUtils.checkForeignKeyMapping(classInfo.keys, columns, query.getQueriedClass(), f);
-					for (Field key : classInfo.keys) {
-						if(value == null) {
-							sql.append(columns[i++]+IS_NULL);
-						} else {
-							sql.append(columns[i++]+"=?");
-							key.setAccessible(true);
-							Object o;
-							try {
-								o = key.get(value);
-								parameters.add(o);
-							} catch (Exception e) {
-								throw new SienaException(e);
-							}
-						}
-					}
-				} else {
-					if(value == null && op.equals("=")) {
-						sql.append(columns[0]+IS_NULL);
-					} else if(value == null && op.equals("!=")) {
-						sql.append(columns[0]+IS_NOT_NULL);
-					} else {
-						sql.append(columns[0]+op+"?");
-						if(value == null) {
-							parameters.add(Types.NULL);
-						} else {
-							if (value instanceof Date) {
-								value = Util.translateDate(f, (Date) value);
-							}
-							parameters.add(value);
-						}
-					}
-				}
-			}else if(QueryFilterSearch.class.isAssignableFrom(filter.getClass())){
-				// adds querysearch 
-				QueryFilterSearch qf = (QueryFilterSearch)filter;
-				List<String> cols = new ArrayList<String>();
-				try {
-					for (String field : qf.fields) {
-						Field f = clazz.getDeclaredField(field);
-						String[] columns = ClassInfo.getColumnNames(f, info.tableName);
-						for (String col : columns) {
-							cols.add(col);
-						}
-					}
-					QueryOption opt = qf.option;
-					if(opt != null){
-						// only manages QueryOptionJdbcSearch
-						if(QueryOptionJdbcSearch.class.isAssignableFrom(opt.getClass())){
-							if(((QueryOptionJdbcSearch)opt).booleanMode){
-								sql.append("MATCH("+Util.join(cols, ",")+") AGAINST(? IN BOOLEAN MODE)");
-							}
-							else {
-								
-							}
-						}else{
-							sql.append("MATCH("+Util.join(cols, ",")+") AGAINST(?)");
-						}
-					}else {
-						// as mysql default search is fulltext and as it requires a FULLTEXT index, 
-						// by default, we use boolean mode which works without fulltext index
-						sql.append("MATCH("+Util.join(cols, ",")+") AGAINST(? IN BOOLEAN MODE)");
-					}
-					parameters.add(qf.match);
-				}catch(Exception e){
-					throw new SienaException(e);
-				}
-			}
-		}
-	}
 
 	public static <T> void appendSqlOrder(Query<T> query, StringBuilder sql) {
 		Class<T> clazz = query.getQueriedClass();
