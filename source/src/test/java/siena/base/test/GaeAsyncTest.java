@@ -1620,6 +1620,18 @@ public class GaeAsyncTest extends BaseAsyncTest {
 		super.testJoinAnnotationDouble();
 	}
 
+	@Override
+	public void testBatchUpdate() {
+		// TODO Auto-generated method stub
+		super.testBatchUpdate();
+	}
+
+	@Override
+	public void testBatchUpdateList() {
+		// TODO Auto-generated method stub
+		super.testBatchUpdateList();
+	}
+
 
 
 

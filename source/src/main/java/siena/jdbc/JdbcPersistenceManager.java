@@ -1370,12 +1370,96 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 	}
 
 
-	public <T> int update(Object... models) {
-		throw new NotImplementedException("update not implemented for JDBC yet");
+	public <T> int update(Object... objects) {
+		//throw new NotImplementedException("update not implemented for JDBC yet");
+		Map<JdbcClassInfo, List<Object>> objMap = new HashMap<JdbcClassInfo, List<Object>>();
+		PreparedStatement ps = null;
+		
+		for(Object obj:objects){
+			JdbcClassInfo classInfo = JdbcClassInfo.getClassInfo(obj.getClass());
+			if(!objMap.containsKey(classInfo)){
+				List<Object> l = new ArrayList<Object>();
+				l.add(obj);
+				objMap.put(classInfo, l);
+			}else{
+				objMap.get(classInfo).add(obj);
+			}
+		}
+		
+		int total = 0;
+
+		try {
+			for(JdbcClassInfo classInfo: objMap.keySet()){
+				
+				ps = getConnection().prepareStatement(classInfo.updateSQL);
+				
+				for(Object obj: objMap.get(classInfo)){
+					int i = 1;
+					i = JdbcDBUtils.addParameters(obj, classInfo.updateFields, ps, i);
+					JdbcDBUtils.addParameters(obj, classInfo.keys, ps, i);
+					ps.addBatch();
+				}
+				
+				// TODO what to do with results of executeBatch ??????
+				int[] res = ps.executeBatch();
+				
+				total+=res.length;
+			}
+			
+			return total;
+		} catch (SienaException e) {
+			throw e;
+		} catch (Exception e) {
+			throw new SienaException(e);
+		} finally {
+			JdbcDBUtils.closeStatement(ps);
+		}
 	}
 
-	public <T> int update(Iterable<T> models) {
-		throw new NotImplementedException("update not implemented for JDBC yet");
+	public <T> int update(Iterable<T> objects) {
+		//throw new NotImplementedException("update not implemented for JDBC yet");
+		Map<JdbcClassInfo, List<Object>> objMap = new HashMap<JdbcClassInfo, List<Object>>();
+		PreparedStatement ps = null;
+		
+		for(Object obj:objects){
+			JdbcClassInfo classInfo = JdbcClassInfo.getClassInfo(obj.getClass());
+			if(!objMap.containsKey(classInfo)){
+				List<Object> l = new ArrayList<Object>();
+				l.add(obj);
+				objMap.put(classInfo, l);
+			}else{
+				objMap.get(classInfo).add(obj);
+			}
+		}
+		
+		int total = 0;
+
+		try {
+			for(JdbcClassInfo classInfo: objMap.keySet()){
+				
+				ps = getConnection().prepareStatement(classInfo.updateSQL);
+				
+				for(Object obj: objMap.get(classInfo)){
+					int i = 1;
+					i = JdbcDBUtils.addParameters(obj, classInfo.updateFields, ps, i);
+					JdbcDBUtils.addParameters(obj, classInfo.keys, ps, i);
+					ps.addBatch();
+				}
+				
+				// TODO what to do with results of executeBatch ??????
+				int[] res = ps.executeBatch();
+				
+				total+=res.length;
+			}
+			
+			return total;
+		} catch (SienaException e) {
+			throw e;
+		} catch (Exception e) {
+			throw new SienaException(e);
+		} finally {
+			JdbcDBUtils.closeStatement(ps);
+		}
 	}
 
 	public <T> int update(Query<T> query, Map<String, ?> fieldValues) {

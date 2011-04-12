@@ -1603,6 +1603,18 @@ public class GaeTest extends BaseTest {
 		super.testJoinAnnotationDouble();
 	}
 
+	@Override
+	public void testBatchUpdate() {
+		// TODO Auto-generated method stub
+		super.testBatchUpdate();
+	}
+
+	@Override
+	public void testBatchUpdateList() {
+		// TODO Auto-generated method stub
+		super.testBatchUpdateList();
+	}
+
 
 	
 }

@@ -1357,6 +1357,18 @@ public class JdbcTest extends BaseTest {
 		// TODO Auto-generated method stub
 		super.testJoinAnnotationDouble();
 	}
+
+	@Override
+	public void testBatchUpdate() {
+		// TODO Auto-generated method stub
+		super.testBatchUpdate();
+	}
+
+	@Override
+	public void testBatchUpdateList() {
+		// TODO Auto-generated method stub
+		super.testBatchUpdateList();
+	}
 	
 
 	

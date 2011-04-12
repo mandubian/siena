@@ -5128,4 +5128,59 @@ public abstract class BaseAsyncTest extends TestCase {
 		assertEquals(LongAutoID_CURIE, res.get(3).discovererJoined2);
 
 	}
+	
+	public void testBatchUpdate() {
+		Object[] discs = new Discovery[100];
+		for(int i=0; i<100; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert(discs).get();
+
+		List<Discovery> res = 
+			pm.createQuery(Discovery.class).fetch().get();
+		
+		assertEquals(discs.length, res.size());
+		
+		for(int i=0; i<100; i++){
+			((Discovery)discs[i]).discoverer = LongAutoID_EINSTEIN;
+		}
+		
+		int nb = pm.update(discs).get();
+		assertEquals(discs.length, nb);
+		res = 
+			pm.createQuery(Discovery.class).fetch().get();
+		int i=0;
+		for(Discovery disc:res){
+			assertEquals(discs[i++], disc);
+		}
+		
+	}
+	
+	public void testBatchUpdateList() {
+		List<Discovery> discs = new ArrayList<Discovery>();
+		for(int i=0; i<100; i++){
+			discs.add(new Discovery("Disc_"+i, LongAutoID_CURIE));
+		}
+		int nb = pm.insert(discs).get();
+		assertEquals(discs.size(), nb);
+
+		List<Discovery> res = 
+			pm.createQuery(Discovery.class).fetch().get();
+		
+		assertEquals(discs.size(), res.size());
+		
+		for(Discovery d: discs){
+			d.discoverer = LongAutoID_EINSTEIN;
+		}
+		
+		nb = pm.update(discs).get();
+		assertEquals(discs.size(), nb);
+		res = 
+			pm.createQuery(Discovery.class).fetch().get();
+		int i=0;
+		for(Discovery disc:res){
+			assertEquals(discs.get(i++), disc);
+		}
+		
+	}
 }

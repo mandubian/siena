@@ -4881,5 +4881,58 @@ public abstract class BaseTest extends TestCase {
 
 	}
 	
+	public void testBatchUpdate() {
+		Object[] discs = new Discovery[100];
+		for(int i=0; i<100; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert(discs);
 
+		List<Discovery> res = 
+			pm.createQuery(Discovery.class).fetch();
+		
+		assertEquals(discs.length, res.size());
+		
+		for(int i=0; i<100; i++){
+			((Discovery)discs[i]).discoverer = LongAutoID_EINSTEIN;
+		}
+		
+		int nb = pm.update(discs);
+		assertEquals(discs.length, nb);
+		res = 
+			pm.createQuery(Discovery.class).fetch();
+		int i=0;
+		for(Discovery disc:res){
+			assertEquals(discs[i++], disc);
+		}
+		
+	}
+	
+	public void testBatchUpdateList() {
+		List<Discovery> discs = new ArrayList<Discovery>();
+		for(int i=0; i<100; i++){
+			discs.add(new Discovery("Disc_"+i, LongAutoID_CURIE));
+		}
+		int nb = pm.insert(discs);
+		assertEquals(discs.size(), nb);
+
+		List<Discovery> res = 
+			pm.createQuery(Discovery.class).fetch();
+		
+		assertEquals(discs.size(), res.size());
+		
+		for(Discovery d: discs){
+			d.discoverer = LongAutoID_EINSTEIN;
+		}
+		
+		nb = pm.update(discs);
+		assertEquals(discs.size(), nb);
+		res = 
+			pm.createQuery(Discovery.class).fetch();
+		int i=0;
+		for(Discovery disc:res){
+			assertEquals(discs.get(i++), disc);
+		}
+		
+	}
 }

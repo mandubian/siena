@@ -23,9 +23,6 @@ import com.google.appengine.api.datastore.Text;
 
 public class GaeMappingUtils {
 	
-
-
-	
 	public static Entity createEntityInstance(Field idField, ClassInfo info, Object obj){
 		Entity entity = null;
 		Id id = idField.getAnnotation(Id.class);
@@ -35,11 +32,7 @@ public class GaeMappingUtils {
 			switch(id.value()) {
 			case NONE:
 				Object idVal = null;
-				try {
-					idVal = readField(obj, idField);
-				}catch(Exception ex){
-					throw new SienaException("Id Field " + idField.getName() + " access error", ex);
-				}
+				idVal = Util.readField(obj, idField);
 				if(idVal == null)
 					throw new SienaException("Id Field " + idField.getName() + " value null");
 				String keyVal = Util.toString(idField, idVal);				
@@ -51,11 +44,7 @@ public class GaeMappingUtils {
 					entity = new Entity(info.tableName);
 				}else {
 					Object idStringVal = null;
-					try {
-						idStringVal = readField(obj, idField);
-					}catch(Exception ex){
-						throw new SienaException("Id Field " + idField.getName() + " access error", ex);
-					}
+					idStringVal = Util.readField(obj, idField);
 					if(idStringVal == null)
 						throw new SienaException("Id Field " + idField.getName() + " value null");
 					String keyStringVal = Util.toString(idField, idStringVal);				
@@ -74,13 +63,20 @@ public class GaeMappingUtils {
 		return entity;
 	}
 	
-	public static void setKey(Field idField, Object obj, Key key) {
+	public static Entity createEntityInstanceForUpdate(Field idField, ClassInfo info, Object obj){
+		Key key = makeKey(idField, info, obj);
+		Entity entity = new Entity(key);
+		
+		return entity;
+	}
+	
+	public static void setIdFromKey(Field idField, Object obj, Key key) {
 		Id id = idField.getAnnotation(Id.class);
 		Class<?> type = idField.getType();
 		if(id != null){
 			switch(id.value()) {
 			case NONE:
-				idField.setAccessible(true);
+				//idField.setAccessible(true);
 				Object val = null;
 				if (Long.TYPE==type || Long.class.isAssignableFrom(type)){
 					val = Long.parseLong((String) key.getName());
@@ -92,48 +88,30 @@ public class GaeMappingUtils {
 					throw new SienaRestrictedApiException("DB", "setKey", "Id Type "+idField.getType()+ " not supported");
 				}
 					
-				try {
-					idField.set(obj, val);
-				}catch(Exception ex){
-					throw new SienaException("Field " + idField.getName() + " access error", ex);
-				}
+				Util.setField(obj, idField, val);
 				break;
 			case AUTO_INCREMENT:
 				// Long value means key.getId()
-				try {
+				if (Long.TYPE==type || Long.class.isAssignableFrom(idField.getType())){
+					Util.setField(obj, idField, key.getId());
+				}else {
+					idField.setAccessible(true);
+					Object val2 = null;
 					if (Long.TYPE==type || Long.class.isAssignableFrom(idField.getType())){
-						idField.setAccessible(true);
-						idField.set(obj, key.getId());
-					}else {
-						idField.setAccessible(true);
-						Object val2 = null;
-						if (Long.TYPE==type || Long.class.isAssignableFrom(idField.getType())){
-							val = Long.parseLong((String) key.getName());
-						}
-						else if (String.class.isAssignableFrom(idField.getType())){
-							val = key.getName();
-						}
-						else{
-							throw new SienaRestrictedApiException("DB", "setKey", "Id Type "+idField.getType()+ " not supported");
-						}
-							
-						try {
-							idField.set(obj, val2);
-						}catch(Exception ex){
-							throw new SienaException("Field " + idField.getName() + " access error", ex);
-						}
+						val = Long.parseLong((String) key.getName());
 					}
-				}catch(Exception ex){
-					throw new SienaException("Field " + idField.getName() + " access error", ex);
+					else if (String.class.isAssignableFrom(idField.getType())){
+						val = key.getName();
+					}
+					else{
+						throw new SienaRestrictedApiException("DB", "setKey", "Id Type "+idField.getType()+ " not supported");
+					}
+						
+					Util.setField(obj, idField, val2);
 				}
 				break;
 			case UUID:
-				try {
-					idField.setAccessible(true);
-					idField.set(obj, key.getName());					
-				}catch(Exception ex){
-					throw new SienaException("Field " + idField.getName() + " access error", ex);
-				}
+				Util.setField(obj, idField, key.getName());
 				break;
 			default:
 				throw new SienaException("Id Generator "+id.value()+ " not supported");
@@ -141,13 +119,14 @@ public class GaeMappingUtils {
 		}
 		else throw new SienaException("Field " + idField.getName() + " is not an @Id field");
 	}
+	
 	protected static Key getKey(Object obj) {
 		Class<?> clazz = obj.getClass();
 		ClassInfo info = ClassInfo.getClassInfo(clazz);
 		
 		try {
 			Field idField = info.getIdField();
-			Object value = readField(obj, idField);
+			Object value = Util.readField(obj, idField);
 			Class<?> type = idField.getType();
 			
 			if(idField.isAnnotationPresent(Id.class)){
@@ -198,8 +177,9 @@ public class GaeMappingUtils {
 							ClassInfo.getClassInfo(clazz).tableName,
 							value.toString());
 				case AUTO_INCREMENT:
+					Class<?> type = idField.getType();
 					// as a string with auto_increment can't exist, it is not cast into long
-					if (Long.class.isAssignableFrom(idField.getType())){
+					if (Long.TYPE==type || Long.class.isAssignableFrom(type)){
 						return KeyFactory.createKey(
 							ClassInfo.getClassInfo(clazz).tableName,
 							(Long)value);
@@ -221,23 +201,53 @@ public class GaeMappingUtils {
 		}
 	}
 	
-	private static Object readField(Object object, Field field) {
-		field.setAccessible(true);
+	protected static Key makeKey(Field field, ClassInfo info, Object object) {
 		try {
-			return field.get(object);
+			Field idField = info.getIdField();
+			Object idVal = Util.readField(object, idField);
+			if(idVal == null)
+				throw new SienaException("Id Field " + idField.getName() + " value null");
+			
+			if(idField.isAnnotationPresent(Id.class)){
+				Id id = idField.getAnnotation(Id.class);
+				switch(id.value()) {
+				case NONE:
+					// long or string goes toString
+					return KeyFactory.createKey(
+							info.tableName,
+							idVal.toString());
+				case AUTO_INCREMENT:
+					Class<?> type = idField.getType();
+					// as a string with auto_increment can't exist, it is not cast into long
+					if (Long.TYPE==type || Long.class.isAssignableFrom(type)){
+						return KeyFactory.createKey(
+							info.tableName,
+							(Long)idVal);
+					}
+					return KeyFactory.createKey(
+							info.tableName,
+							idVal.toString());
+				case UUID:
+					return KeyFactory.createKey(
+							info.tableName,
+							idVal.toString());
+				default:
+					throw new SienaException("Id Generator "+id.value()+ " not supported");
+				}
+			}
+			else throw new SienaException("Field " + idField.getName() + " is not an @Id field");
 		} catch (Exception e) {
 			throw new SienaException(e);
-		} finally {
-			field.setAccessible(false);
 		}
 	}
+
 
 	public static void fillEntity(Object obj, Entity entity) {
 		Class<?> clazz = obj.getClass();
 
 		for (Field field : ClassInfo.getClassInfo(clazz).updateFields) {
 			String property = ClassInfo.getColumnNames(field)[0];
-			Object value = readField(obj, field);
+			Object value = Util.readField(obj, field);
 			Class<?> fieldClass = field.getType();
 			if (ClassInfo.isModel(fieldClass)) {
 				if (value == null) {
@@ -297,7 +307,7 @@ public class GaeMappingUtils {
 					if (key != null) {
 						Object value = Util.createObjectInstance(fieldClass);
 						Field id = ClassInfo.getIdField(fieldClass);
-						setKey(id, value, key);
+						setIdFromKey(id, value, key);
 						field.set(obj, value);
 					}
 				} else {
@@ -324,7 +334,7 @@ public class GaeMappingUtils {
 		T obj;
 		try {
 			obj = Util.createObjectInstance(clazz);
-			setKey(id, obj, entity.getKey());
+			setIdFromKey(id, obj, entity.getKey());
 		} catch (SienaException e) {
 			throw e;
 		} catch (Exception e) {
@@ -343,7 +353,7 @@ public class GaeMappingUtils {
 			try {
 				obj = Util.createObjectInstance(clazz);
 				list.add(obj);
-				setKey(id, obj, entity.getKey());
+				setIdFromKey(id, obj, entity.getKey());
 			} catch (SienaException e) {
 				throw e;
 			} catch (Exception e) {
@@ -363,7 +373,7 @@ public class GaeMappingUtils {
 			try {
 				obj = Util.createObjectInstance(clazz);
 				list.add(obj);
-				setKey(id, obj, entity.getKey());
+				setIdFromKey(id, obj, entity.getKey());
 			} catch (SienaException e) {
 				throw e;
 			} catch (Exception e) {
@@ -380,7 +390,7 @@ public class GaeMappingUtils {
 		try {	
 			obj = Util.createObjectInstance(clazz);
 			fillModel(obj, entity);
-			setKey(id, obj, entity.getKey());
+			setIdFromKey(id, obj, entity.getKey());
 		} catch (SienaException e) {
 			throw e;
 		} catch (Exception e) {
@@ -400,7 +410,7 @@ public class GaeMappingUtils {
 				obj = Util.createObjectInstance(clazz);
 				fillModel(obj, entity);
 				list.add(obj);
-				setKey(id, obj, entity.getKey());
+				setIdFromKey(id, obj, entity.getKey());
 			} catch (SienaException e) {
 				throw e;
 			} catch (Exception e) {
@@ -421,7 +431,7 @@ public class GaeMappingUtils {
 				obj = Util.createObjectInstance(clazz);
 				fillModel(obj, entity);
 				list.add(obj);
-				setKey(id, obj, entity.getKey());
+				setIdFromKey(id, obj, entity.getKey());
 			} catch (SienaException e) {
 				throw e;
 			} catch (Exception e) {

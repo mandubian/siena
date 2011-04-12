@@ -113,7 +113,7 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 		Entity entity = GaeMappingUtils.createEntityInstance(idField, info, obj);
 		GaeMappingUtils.fillEntity(obj, entity);
 		ds.put(entity);
-		GaeMappingUtils.setKey(idField, obj, entity.getKey());
+		GaeMappingUtils.setIdFromKey(idField, obj, entity.getKey());
 	}
 
 
@@ -1251,7 +1251,7 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 			Class<?> clazz = obj.getClass();
 			ClassInfo info = ClassInfo.getClassInfo(clazz);
 			Field idField = info.getIdField();
-			GaeMappingUtils.setKey(idField, obj, generatedKeys.get(i++));
+			GaeMappingUtils.setIdFromKey(idField, obj, generatedKeys.get(i++));
 		}
 		
 		return generatedKeys.size();
@@ -1275,7 +1275,7 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 			Class<?> clazz = obj.getClass();
 			ClassInfo info = ClassInfo.getClassInfo(clazz);
 			Field idField = info.getIdField();
-			GaeMappingUtils.setKey(idField, obj, generatedKeys.get(i++));
+			GaeMappingUtils.setIdFromKey(idField, obj, generatedKeys.get(i++));
 		}
 		return generatedKeys.size();
 
@@ -1390,17 +1390,41 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 	}
 
 
-	@Override
-	public <T> int update(Object... models) {
-		throw new NotImplementedException("update not implemented for GAE yet");
+	public <T> int update(Object... objects) {
+		//throw new NotImplementedException("update not implemented for GAE yet");
+		List<Entity> entities = new ArrayList<Entity>();
+		for(Object obj:objects){
+			Class<?> clazz = obj.getClass();
+			ClassInfo info = ClassInfo.getClassInfo(clazz);
+			Field idField = info.getIdField();
+			Entity entity = GaeMappingUtils.createEntityInstanceForUpdate(idField, info, obj);
+			GaeMappingUtils.fillEntity(obj, entity);
+			entities.add(entity);
+		}
+				
+		List<Key> generatedKeys = ds.put(entities);
+		
+		return generatedKeys.size();
 	}
 
-	@Override
-	public <T> int update(Iterable<T> models) {
-		throw new NotImplementedException("update not implemented for GAE yet");
+	public <T> int update(Iterable<T> objects) {
+		//throw new NotImplementedException("update not implemented for GAE yet");
+		List<Entity> entities = new ArrayList<Entity>();
+		for(Object obj:objects){
+			Class<?> clazz = obj.getClass();
+			ClassInfo info = ClassInfo.getClassInfo(clazz);
+			Field idField = info.getIdField();
+			Entity entity = GaeMappingUtils.createEntityInstanceForUpdate(idField, info, obj);
+			GaeMappingUtils.fillEntity(obj, entity);
+			entities.add(entity);
+		}
+				
+		List<Key> generatedKeys = ds.put(entities);
+		
+		return generatedKeys.size();
+
 	}
 
-	@Override
 	public <T> int update(Query<T> query, Map<String, ?> fieldValues) {
 		throw new NotImplementedException("update not implemented for GAE yet");
 	}

@@ -15,7 +15,6 @@ import org.apache.commons.lang.NotImplementedException;
 
 import siena.ClassInfo;
 import siena.PersistenceManager;
-import siena.Query;
 import siena.SienaException;
 import siena.Util;
 import siena.core.async.AbstractPersistenceManagerAsync;
@@ -83,7 +82,7 @@ public class GaePersistenceManagerAsync extends AbstractPersistenceManagerAsync 
              @Override
              protected Void wrap(Key generatedKey) throws Exception
              {
-            	 GaeMappingUtils.setKey(idField, obj, generatedKey);  
+            	 GaeMappingUtils.setIdFromKey(idField, obj, generatedKey);  
             	 return null;
              }
 		};
@@ -942,7 +941,7 @@ public class GaePersistenceManagerAsync extends AbstractPersistenceManagerAsync 
             		 Class<?> clazz = obj.getClass();
             		 ClassInfo info = ClassInfo.getClassInfo(clazz);
             		 Field idField = info.getIdField();
-            		 GaeMappingUtils.setKey(idField, obj, generatedKeys.get(i++));
+            		 GaeMappingUtils.setIdFromKey(idField, obj, generatedKeys.get(i++));
             	 }
             	 return generatedKeys.size();
              }
@@ -973,7 +972,7 @@ public class GaePersistenceManagerAsync extends AbstractPersistenceManagerAsync 
             		 Class<?> clazz = obj.getClass();
             		 ClassInfo info = ClassInfo.getClassInfo(clazz);
             		 Field idField = info.getIdField();
-            		 GaeMappingUtils.setKey(idField, obj, generatedKeys.get(i++));
+            		 GaeMappingUtils.setIdFromKey(idField, obj, generatedKeys.get(i++));
             	 }
             	 return generatedKeys.size();
              }
@@ -1159,15 +1158,54 @@ public class GaePersistenceManagerAsync extends AbstractPersistenceManagerAsync 
 
 	@Override
 	public SienaFuture<Integer> update(Object... objects) {
-		throw new NotImplementedException("update not implemented for GAE yet");
-
+		//throw new NotImplementedException("update not implemented for GAE yet");
+		List<Entity> entities = new ArrayList<Entity>();
+		for(Object obj:objects){
+			Class<?> clazz = obj.getClass();
+			ClassInfo info = ClassInfo.getClassInfo(clazz);
+			Field idField = info.getIdField();
+			Entity entity = GaeMappingUtils.createEntityInstanceForUpdate(idField, info, obj);
+			GaeMappingUtils.fillEntity(obj, entity);
+			entities.add(entity);
+		}
+				
+		Future<List<Key>> future = ds.put(entities);
+		
+		Future<Integer> wrapped = new SienaFutureWrapper<List<Key>, Integer>(future) {
+            @Override
+            protected Integer wrap(List<Key> keys) throws Exception
+            {
+            	return keys.size();
+            }
+		};
+		
+		return new SienaFutureContainer<Integer>(wrapped);
 	}
 
 	@Override
 	public <T> SienaFuture<Integer> update(Iterable<T> objects) {
-		throw new NotImplementedException("update not implemented for GAE yet");
-
-	}
+		//throw new NotImplementedException("update not implemented for GAE yet");
+		List<Entity> entities = new ArrayList<Entity>();
+		for(Object obj:objects){
+			Class<?> clazz = obj.getClass();
+			ClassInfo info = ClassInfo.getClassInfo(clazz);
+			Field idField = info.getIdField();
+			Entity entity = GaeMappingUtils.createEntityInstanceForUpdate(idField, info, obj);
+			GaeMappingUtils.fillEntity(obj, entity);
+			entities.add(entity);
+		}
+				
+		Future<List<Key>> future = ds.put(entities);
+		
+		Future<Integer> wrapped = new SienaFutureWrapper<List<Key>, Integer>(future) {
+            @Override
+            protected Integer wrap(List<Key> keys) throws Exception
+            {
+            	return keys.size();
+            }
+		};
+		
+		return new SienaFutureContainer<Integer>(wrapped);	}
 
 	@Override
 	public <T> SienaFuture<Integer> update(QueryAsync<T> query,
