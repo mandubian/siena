@@ -270,6 +270,12 @@
 			<scope>test</scope>
 		</dependency>
 		
+		<dependency>
+		    <groupId>postgresql</groupId>
+		    <artifactId>postgresql</artifactId>
+		    <version>8.4-702.jdbc4</version>
+		</dependency>
+		
         <!-- Google App Engine Dependencies -->
 		<dependency>
 			<groupId>com.google.appengine</groupId>
@@ -398,6 +404,32 @@
 							<includes>
 								<include>**/JdbcTest.java</include>
 								<include>**/JdbcModelTest.java</include>
+							</includes>
+						</configuration>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+		<profile>
+			<id>POSTGRES</id>
+			<build>
+				<plugins>
+					<!-- Test cases -->
+					<plugin>
+						<artifactId>maven-surefire-plugin</artifactId>
+						<configuration>
+							<excludes>
+								<exclude>**/BaseTest.java</exclude>
+								<exclude>**/BaseAsyncTest.java</exclude>
+								<exclude>**/BaseModelTest.java</exclude>
+								<exclude>**/BaseMassTest.java</exclude>
+								<exclude>**/TestAll.java</exclude>
+								<exclude>**/Person.java</exclude>
+								<exclude>**/Message.java</exclude>
+								<exclude>**/Discovery.java</exclude>
+							</excludes>
+							<includes>
+								<include>**/PostgresTest.java</include>
 							</includes>
 						</configuration>
 					</plugin>
