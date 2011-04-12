@@ -197,6 +197,15 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 		return statement;
 	}
 
+	
+	/**
+	 * required to be overriden for Postgres
+	 * 
+	 * @param classInfo
+	 * @param obj
+	 * @throws SQLException
+	 * @throws IllegalAccessException
+	 */
 	protected void insertWithAutoIncrementKey(JdbcClassInfo classInfo, Object obj) throws SQLException, IllegalAccessException {
 		ResultSet gk = null;
 		PreparedStatement ps = null;
@@ -221,6 +230,49 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 		}
 	}
 
+	/**
+	 * required to be overriden for Postgres
+	 * 
+	 * @param classInfo
+	 * @param objMap
+	 * @throws SQLException
+	 * @throws IllegalAccessException
+	 */
+	protected int insertBatchWithAutoIncrementKey(JdbcClassInfo classInfo, Map<JdbcClassInfo, List<Object>> objMap) throws SQLException, IllegalAccessException {
+		PreparedStatement ps = null;
+		ps = getConnection().prepareStatement(classInfo.insertSQL,
+				Statement.RETURN_GENERATED_KEYS);
+		
+		for(Object obj: objMap.get(classInfo)){
+			for (Field field : classInfo.keys) {
+				Id id = field.getAnnotation(Id.class);
+				if (id.value() == Generator.UUID) {
+					field.set(obj, UUID.randomUUID().toString());
+				}
+			}
+			// TODO: implement primary key generation: SEQUENCE
+			JdbcDBUtils.addParameters(obj, classInfo.insertFields, ps, 1);
+			ps.addBatch();
+		}
+		
+		// TODO what to do with results of executeBatch ??????
+		int[] res = ps.executeBatch();
+		
+		if(!classInfo.generatedKeys.isEmpty()){
+			ResultSet gk = ps.getGeneratedKeys();
+			int i;
+			int idx = 0;
+			while(gk.next()) {
+				i=1;
+				for (Field field : classInfo.generatedKeys) {
+					field.setAccessible(true);
+					Util.setFromObject(objMap.get(classInfo).get(idx++), field, gk.getObject(i++));
+				}
+			}
+		}	
+		
+		return res.length;
+	}
 
 
 	public void setConnectionManager(ConnectionManager connectionManager) {
@@ -1125,41 +1177,27 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 			for(JdbcClassInfo classInfo: objMap.keySet()){
 				if(classInfo.generatedKeys.isEmpty()){
 					ps = getConnection().prepareStatement(classInfo.insertSQL);
+					
+					for(Object obj: objMap.get(classInfo)){
+						for (Field field : classInfo.keys) {
+							Id id = field.getAnnotation(Id.class);
+							if (id.value() == Generator.UUID) {
+								field.set(obj, UUID.randomUUID().toString());
+							}
+						}
+						// TODO: implement primary key generation: SEQUENCE
+						JdbcDBUtils.addParameters(obj, classInfo.insertFields, ps, 1);
+						ps.addBatch();
+					}
+					
+					// TODO what to do with results of executeBatch ??????
+					int[] res = ps.executeBatch();
+					total+=res.length;
 				}else {
-					ps = getConnection().prepareStatement(classInfo.insertSQL,
-							Statement.RETURN_GENERATED_KEYS);
-				}
-				
-				for(Object obj: objMap.get(classInfo)){
-					for (Field field : classInfo.keys) {
-						Id id = field.getAnnotation(Id.class);
-						if (id.value() == Generator.UUID) {
-							field.set(obj, UUID.randomUUID().toString());
-						}
-					}
-					// TODO: implement primary key generation: SEQUENCE
-					JdbcDBUtils.addParameters(obj, classInfo.insertFields, ps, 1);
-					ps.addBatch();
-				}
-				
-				// TODO what to do with results of executeBatch ??????
-				int[] res = ps.executeBatch();
-				
-				if(!classInfo.generatedKeys.isEmpty()){
-					ResultSet gk = ps.getGeneratedKeys();
-					int i;
-					int idx = 0;
-					while(gk.next()) {
-						i=1;
-						for (Field field : classInfo.generatedKeys) {
-							field.setAccessible(true);
-							Util.setFromObject(objMap.get(classInfo).get(idx++), field, gk.getObject(i++));
-						}
-					}
-				}	
-				total+=res.length;
-			}
-			
+					total+=insertBatchWithAutoIncrementKey(classInfo, objMap);
+				}			
+
+			}			
 			return total;
 		} catch (SienaException e) {
 			throw e;
@@ -1191,42 +1229,27 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 			for(JdbcClassInfo classInfo: objMap.keySet()){
 				if(classInfo.generatedKeys.isEmpty()){
 					ps = getConnection().prepareStatement(classInfo.insertSQL);
+					
+					for(Object obj: objMap.get(classInfo)){
+						for (Field field : classInfo.keys) {
+							Id id = field.getAnnotation(Id.class);
+							if (id.value() == Generator.UUID) {
+								field.set(obj, UUID.randomUUID().toString());
+							}
+						}
+						// TODO: implement primary key generation: SEQUENCE
+						JdbcDBUtils.addParameters(obj, classInfo.insertFields, ps, 1);
+						ps.addBatch();
+					}
+					
+					// TODO what to do with results of executeBatch ??????
+					int[] res = ps.executeBatch();
+					total+=res.length;
 				}else {
-					ps = getConnection().prepareStatement(classInfo.insertSQL,
-							Statement.RETURN_GENERATED_KEYS);
-				}
-				
-				for(Object obj: objMap.get(classInfo)){
-					for (Field field : classInfo.keys) {
-						Id id = field.getAnnotation(Id.class);
-						if (id.value() == Generator.UUID) {
-							field.set(obj, UUID.randomUUID().toString());
-						}
-					}
-					// TODO: implement primary key generation: SEQUENCE
-					JdbcDBUtils.addParameters(obj, classInfo.insertFields, ps, 1);
-					ps.addBatch();
-				}
-				
-				// TODO what to do with results of executeBatch ??????
-				int[] res = ps.executeBatch();
-				
-				if(!classInfo.generatedKeys.isEmpty()){
-					ResultSet gk = ps.getGeneratedKeys();
-					int i;
-					int idx = 0;
-					while(gk.next()) {
-						i=1;
-						for (Field field : classInfo.generatedKeys) {
-							field.setAccessible(true);
-							Util.setFromObject(objMap.get(classInfo).get(idx++), field, gk.getObject(i++));
-						}
-					}
-				}
-				
-				total+=res.length;
-			}
-			
+					total+=insertBatchWithAutoIncrementKey(classInfo, objMap);
+				}			
+
+			}			
 			return total;
 		} catch (SienaException e) {
 			throw e;
@@ -1543,6 +1566,19 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 					columns.add(columnName+suffix);
 				}
 			}
+		}
+		
+		public static void calculateColumnsAliases(List<Field> fields, List<String> columns, String tableName, String suffix) {
+			for (Field field : fields) {
+				String[] columnNames = ClassInfo.getColumnNames(field, tableName);
+				for (String columnName : columnNames) {
+					columns.add(columnName+suffix+ " AS "+aliasFromCol(columnName+suffix));
+				}
+			}
+		}
+		
+		public static String aliasFromCol(String col){
+			return col.replace('.', '_');
 		}
 		
 		public static JdbcClassInfo getClassInfo(Class<?> clazz) {

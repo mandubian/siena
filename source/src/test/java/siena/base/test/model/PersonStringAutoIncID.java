@@ -21,7 +21,7 @@ import siena.Id;
 import siena.Max;
 import siena.Table;
 
-@Table("people_string")
+@Table("people_string_auto")
 public class PersonStringAutoIncID {
 
 	@Id(Generator.AUTO_INCREMENT)

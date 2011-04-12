@@ -143,7 +143,7 @@ public class JdbcMappingUtils {
 					int i = 0;
 					checkForeignKeyMapping(fieldClassInfo.keys, fks, obj.getClass(), field);
 					for(Field f : fieldClassInfo.keys) {
-						Object o = rs.getObject(fks[i++]);
+						Object o = rs.getObject(JdbcClassInfo.aliasFromCol(fks[i++]));
 						if(o == null) {
 							none = true;
 							break;
@@ -158,7 +158,9 @@ public class JdbcMappingUtils {
 				else {
 					// this is a JOIN field
 					// first verifies the field is not null
-					Object val = rs.getObject(ClassInfo.getColumnNames(field, tableName)[0]);
+					Object val = rs.getObject(
+							JdbcClassInfo.aliasFromCol(
+									ClassInfo.getColumnNames(field, tableName)[0]));
 					if(val == null){
 						Util.setField(obj, field, null);
 						return;
@@ -169,7 +171,7 @@ public class JdbcMappingUtils {
 					Util.setField(obj, field, rel);
 				}
 			} else {
-				Object val = rs.getObject(ClassInfo.getColumnNames(field, tableName)[0]);
+				Object val = rs.getObject(ClassInfo.getColumnNames(field, tableName)[0].replace('.', '_'));
 				Util.setFromObject(obj, field, val);
 			}
 		} catch (SienaException e) {

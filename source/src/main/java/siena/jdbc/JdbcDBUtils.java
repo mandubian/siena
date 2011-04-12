@@ -92,7 +92,7 @@ public class JdbcDBUtils {
 
 		List<Field> joinFields = JdbcMappingUtils.getJoinFields(query, info);
 		if(joinFields==null){
-			JdbcClassInfo.calculateColumns(info.allFields, cols, null, "");
+			JdbcClassInfo.calculateColumnsAliases(info.allFields, cols, info.tableName, "");
 			
 			StringBuilder sql = 
 				new StringBuilder("SELECT " + Util.join(cols, ", ") + " FROM " + info.tableName);
@@ -101,7 +101,7 @@ public class JdbcDBUtils {
 		}
 
 		// builds fields from primary class
-		JdbcClassInfo.calculateColumns(info.allFields, cols, info.tableName, "");
+		JdbcClassInfo.calculateColumnsAliases(info.allFields, cols, info.tableName, "");
 		StringBuilder sql = new StringBuilder(" FROM " + info.tableName);
 		Set<String> joinTables = new HashSet<String>(joinFields.size());
 		int i=0;
@@ -117,7 +117,7 @@ public class JdbcDBUtils {
 			// DO NOT remove the field itself from columns because it allows to find NULL fields
 			// cols.remove( info.tableName+"."+field.getName());
 			// adds all field columns using Alias
-			JdbcClassInfo.calculateColumns(fieldInfo.allFields, cols, alias, "");
+			JdbcClassInfo.calculateColumnsAliases(fieldInfo.allFields, cols, alias, "");
 			String[] columns = ClassInfo.getColumnNames(field, info.tableName);		
 			if (columns.length > 1 || fieldInfo.keys.size() > 1){
 				throw new SienaException("Join not possible: join field "+field.getName()+" has multiple keys");
