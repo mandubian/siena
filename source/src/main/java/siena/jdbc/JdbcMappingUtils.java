@@ -1,15 +1,20 @@
 package siena.jdbc;
 
+import java.io.BufferedReader;
 import java.lang.reflect.Field;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
 import siena.ClassInfo;
+import siena.Json;
 import siena.Query;
 import siena.QueryJoin;
 import siena.SienaException;
 import siena.Util;
+import siena.embed.Embedded;
+import siena.embed.JsonSerializer;
 import siena.jdbc.JdbcPersistenceManager.JdbcClassInfo;
 
 public class JdbcMappingUtils {
@@ -148,7 +153,7 @@ public class JdbcMappingUtils {
 							none = true;
 							break;
 						}
-						Util.setFromObject(rel, f, o);
+						setFromObject(rel, f, o);
 					}
 					if(!none){
 						Util.setField(obj, field, rel);
@@ -172,7 +177,7 @@ public class JdbcMappingUtils {
 				}
 			} else {
 				Object val = rs.getObject(ClassInfo.getColumnNames(field, tableName)[0].replace('.', '_'));
-				Util.setFromObject(obj, field, val);
+				setFromObject(obj, field, val);
 			}
 		} catch (SienaException e) {
 			throw e;
@@ -187,5 +192,34 @@ public class JdbcMappingUtils {
 					"Related class "+field.getType().getName()+" has "+keys.size()+" primary keys, " +
 					"but '"+clazz.getName()+"' only has mappings for "+columns.length+" foreign keys");
 		}
+	}
+	
+	public static void setFromObject(Object object, Field f, Object value)
+		throws IllegalArgumentException, IllegalAccessException {
+		Util.setField(object, f, fromObject(f, value));
+	}
+	
+	public static Object fromObject(Field field, Object value) {
+		Class<?> type = field.getType();
+		// in H2 database, mediumtext is mapped to CLOB
+		if(Json.class.isAssignableFrom(type) && value != null && java.sql.Clob.class.isAssignableFrom(value.getClass())) {
+			java.sql.Clob clob = (java.sql.Clob)value;
+			try {
+				return Json.load(new BufferedReader(clob.getCharacterStream()));
+			} catch (SQLException e) {
+				throw new SienaException(e);
+			}
+		} 
+		
+		if(field.getAnnotation(Embedded.class) != null && value != null && java.sql.Clob.class.isAssignableFrom(value.getClass())) {
+			java.sql.Clob clob = (java.sql.Clob)value;
+			try {
+				Json data = Json.load(new BufferedReader(clob.getCharacterStream()));
+				return JsonSerializer.deserialize(field, data);
+			} catch (SQLException e) {
+				throw new SienaException(e);
+			}
+		} 
+		return Util.fromObject(field, value);
 	}
 }

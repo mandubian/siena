@@ -243,5 +243,9 @@ public class BaseQuery<T> extends BaseQueryData<T> implements Query<T> {
 	public QueryAsync<T> async() {
 		return pm.async().createQuery(this);
 	}
+
+	public T getByKey(Object key) {
+		return pm.getByKey(this.getQueriedClass(), key);
+	}
 		
 }

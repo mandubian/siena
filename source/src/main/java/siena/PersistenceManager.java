@@ -111,6 +111,17 @@ public interface PersistenceManager {
 
 	
 	/**
+	 * save means insertOrUpdate: if the value exists, it updates, if not, it inserts.
+	 * If the object couldn't be inserted or updated a <code>SienaException</code> must be thrown.
+	 * 
+	 * @param obj
+	 *            The object that will be updated.
+	 */
+	void save(Object obj);
+	int save(Object... objects);
+	int save(Iterable<?> objects);
+
+	/**
 	 * Inserts objects in a batch mode into the database. Any generated primary
 	 * key will be loaded into the given object. If the object couldn't be
 	 * inserted a <code>SienaException</code> must be thrown.
@@ -152,6 +163,8 @@ public interface PersistenceManager {
 	int get(Object... models);
 
 	<T> int get(Iterable<T> models);
+
+	<T> T getByKey(Class<T> clazz, Object key);
 
 	<T> List<T> getByKeys(Class<T> clazz, Object... keys);
 

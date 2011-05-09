@@ -169,7 +169,7 @@ public class JsonSerializer {
 					throw new SienaException("Error while deserializating class "+clazz
 							+". A Json map is needed but found: "+data);
 				}
-				Object obj = clazz.newInstance();
+				Object obj = Util.createObjectInstance(clazz);
 				Field[] fields = clazz.getDeclaredFields();
 				for (Field f : fields) {
 					if(mustIgnore(f)) continue;
@@ -205,7 +205,7 @@ public class JsonSerializer {
 					throw new SienaException("Error while deserializating class "+clazz
 							+". A Json list is needed but found: "+data);
 				}
-				Object obj = clazz.newInstance();
+				Object obj = Util.createObjectInstance(clazz);
 				Field[] fields = clazz.getDeclaredFields();
 				for (Field f : fields) {
 					if(mustIgnore(f)) continue;
@@ -253,7 +253,7 @@ public class JsonSerializer {
 	}
 	
 	public static Object deserialize(Field f, Json data) {
-		if(data == null || data.isNull()) return null;
+		if(data == null || data.isNull()) return deserializePlain(f.getType(), data);
 		
 		Class<?> clazz = f.getType();
 		if(Map.class.isAssignableFrom(clazz)) {
@@ -306,31 +306,31 @@ public class JsonSerializer {
 	
 	private static Object deserializePlain(Class<?> type, Json data) {
 		if(Boolean.class == type || boolean.class == type) {
-			return data.asBoolean();
+			return data!=null ? data.asBoolean() : 0;
 		}
 		if(type == Byte.class || type == Byte.TYPE)    {
-			return data.asBoolean();
+			return data!=null ? data.asBoolean() : 0;
 		}
 		else if(type == Short.class || type == Short.TYPE)   {
-			return data.asShort();
+			return data!=null ? data.asShort() : 0;
 		}
 		else if(type == Integer.class || type == Integer.TYPE) {
-			return data.asInt();
+			return data!=null ? data.asInt() : 0;
 		}
 		else if(type == Long.class || type == Long.TYPE)    {
-			return data.asLong();
+			return data!=null ? data.asLong() : 0;
 		}
 		else if(type == Float.class || type == Float.TYPE)   {
-			return data.asFloat();
+			return data!=null ? data.asFloat() : 0;
 		}
 		else if(type == Double.class || type == Double.TYPE)  {
-			return data.asDouble();
+			return data!=null ? data.asDouble() : 0;
 		}
 		else if(type == String.class)  {
-			return data.str();
+			return data!=null ? data.str() : null;
 		}
 		else if(type.isEnum()) {
-			return Enum.valueOf((Class<Enum>) type, data.str());
+			return data!=null ? Enum.valueOf((Class<Enum>) type, data.str()) : null;
 		}
 		return null;
 	}

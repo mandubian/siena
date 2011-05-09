@@ -298,7 +298,6 @@ public class GaeMappingUtils {
 		Class<?> clazz = obj.getClass();
 
 		for (Field field : ClassInfo.getClassInfo(clazz).updateFields) {
-			field.setAccessible(true);
 			String property = ClassInfo.getColumnNames(field)[0];
 			try {
 				Class<?> fieldClass = field.getType();
@@ -308,7 +307,7 @@ public class GaeMappingUtils {
 						Object value = Util.createObjectInstance(fieldClass);
 						Field id = ClassInfo.getIdField(fieldClass);
 						setIdFromKey(id, value, key);
-						field.set(obj, value);
+						Util.setField(obj, field, value);
 					}
 				} else {
 					setFromObject(obj, field, entity.getProperty(property));
@@ -319,6 +318,38 @@ public class GaeMappingUtils {
 		}
 	}
 
+	public static void fillModelAndKey(Object obj, Entity entity) {
+		Class<?> clazz = obj.getClass();
+		ClassInfo info = ClassInfo.getClassInfo(clazz);
+		
+		Field id = info.getIdField();
+		Class<?> fieldClass = id.getType();
+		Key key = entity.getKey();
+		if (key != null) {
+			setIdFromKey(id, obj, key);
+		}
+
+		for (Field field : info.updateFields) {
+			String property = ClassInfo.getColumnNames(field)[0];
+			try {
+				fieldClass = field.getType();
+				if (ClassInfo.isModel(fieldClass)) {
+					key = (Key) entity.getProperty(property);
+					if (key != null) {
+						Object value = Util.createObjectInstance(fieldClass);
+						id = ClassInfo.getIdField(fieldClass);
+						setIdFromKey(id, value, key);
+						Util.setField(obj, field, value);
+					}
+				} else {
+					setFromObject(obj, field, entity.getProperty(property));
+				}
+			} catch (Exception e) {
+				throw new SienaException(e);
+			}
+		}
+	}
+	
 	public static void setFromObject(Object object, Field f, Object value)
 			throws IllegalArgumentException, IllegalAccessException {
 		if(value instanceof Text)

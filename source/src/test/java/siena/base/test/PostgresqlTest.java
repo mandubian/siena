@@ -1387,4 +1387,64 @@ public class PostgresqlTest extends BaseTest {
 		super.testBatchUpdateList();
 	}
 
+	@Override
+	public void testSaveLongAutoID() {
+		// TODO Auto-generated method stub
+		super.testSaveLongAutoID();
+	}
+
+	@Override
+	public void testSaveStringID() {
+		// TODO Auto-generated method stub
+		super.testSaveStringID();
+	}
+
+	@Override
+	public void testSaveUUID() {
+		// TODO Auto-generated method stub
+		super.testSaveUUID();
+	}
+
+	@Override
+	public void testSaveLongManualID() {
+		// TODO Auto-generated method stub
+		super.testSaveLongManualID();
+	}
+
+	@Override
+	public void testGetByKeyUUID() {
+		// TODO Auto-generated method stub
+		super.testGetByKeyUUID();
+	}
+
+	@Override
+	public void testGetByKeyLongAutoID() {
+		// TODO Auto-generated method stub
+		super.testGetByKeyLongAutoID();
+	}
+
+	@Override
+	public void testGetByKeyLongManualID() {
+		// TODO Auto-generated method stub
+		super.testGetByKeyLongManualID();
+	}
+
+	@Override
+	public void testGetByKeyStringID() {
+		// TODO Auto-generated method stub
+		super.testGetByKeyStringID();
+	}
+
+	@Override
+	public void testBatchSave() {
+		// TODO Auto-generated method stub
+		super.testBatchSave();
+	}
+
+	@Override
+	public void testBatchSaveList() {
+		// TODO Auto-generated method stub
+		super.testBatchSaveList();
+	}
+
 }

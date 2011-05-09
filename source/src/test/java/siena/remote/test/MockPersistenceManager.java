@@ -369,6 +369,12 @@ public class MockPersistenceManager implements PersistenceManager {
 			return null;
 		}
 
+		@Override
+		public T getByKey(Object key) {
+			// TODO Auto-generated method stub
+			return null;
+		}
+
 
 
 
@@ -565,6 +571,45 @@ public class MockPersistenceManager implements PersistenceManager {
 	}
 
 	@Override
+	public <T> void paginate(Query<T> query) {
+		// TODO Auto-generated method stub
+		
+	}
+
+
+	@Override
+	public <T> Iterable<T> iterPerPage(Query<T> query, int pageSize) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+
+	@Override
+	public <T> T getByKey(Class<T> clazz, Object key) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+
+	@Override
+	public void save(Object obj) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public int save(Object... objects) {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+
+	@Override
+	public int save(Iterable<?> objects) {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+
+	@Override
 	public <T> int deleteByKeys(Class<T> clazz, Iterable<?> keys) {
 		// TODO Auto-generated method stub
 		return 0;
@@ -580,19 +625,6 @@ public class MockPersistenceManager implements PersistenceManager {
 	public <T> int update(Query<T> query, Map<String, ?> fieldValues) {
 		// TODO Auto-generated method stub
 		return 0;
-	}
-
-	@Override
-	public <T> void paginate(Query<T> query) {
-		// TODO Auto-generated method stub
-		
-	}
-
-
-	@Override
-	public <T> Iterable<T> iterPerPage(Query<T> query, int pageSize) {
-		// TODO Auto-generated method stub
-		return null;
 	}
 
 }

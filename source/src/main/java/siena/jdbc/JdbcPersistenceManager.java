@@ -65,7 +65,6 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 	}
 
 	public JdbcPersistenceManager(ConnectionManager connectionManager, Class<?> listener) {
-		this();
 		this.connectionManager = connectionManager;
 	}
 
@@ -179,6 +178,57 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 		}
 	}
 
+	public void save(Object obj) {
+		JdbcClassInfo classInfo = JdbcClassInfo.getClassInfo(obj.getClass());
+
+		PreparedStatement ps = null;
+		try {
+			Field idField = classInfo.info.getIdField();
+			Object idVal = Util.readField(obj, idField);
+
+			if(idVal == null) {
+				for (Field field : classInfo.keys) {
+					Id id = field.getAnnotation(Id.class);
+					if (id.value() == Generator.UUID) {
+						field.set(obj, UUID.randomUUID().toString());
+					}
+				}
+			}
+			// TODO: implement primary key generation: SEQUENCE
+			
+			if (idVal == null && !classInfo.generatedKeys.isEmpty()) {
+				ps = getConnection().prepareStatement(classInfo.insertOrUpdateSQL,
+						Statement.RETURN_GENERATED_KEYS);
+				//insertWithAutoIncrementKey(classInfo, obj);
+			} else {
+				ps = getConnection().prepareStatement(classInfo.insertOrUpdateSQL);
+			}
+			int i = 1;
+			i = addParameters(obj, classInfo.allFields, ps, i);
+			addParameters(obj, classInfo.updateFields, ps, i);
+			ps.executeUpdate();			
+			
+			if (idVal == null && !classInfo.generatedKeys.isEmpty()) {
+				ResultSet gk = ps.getGeneratedKeys();
+				if (!gk.next())
+					throw new SienaException("No such generated keys");
+				i = 1;
+				for (Field field : classInfo.generatedKeys) {
+					field.setAccessible(true);
+					JdbcMappingUtils.setFromObject(obj, field, gk.getObject(i));
+					// field.set(obj, gk.getObject(i));
+					i++;
+				}
+			}
+		} catch (SienaException e) {
+			throw e;
+		} catch (Exception e) {
+			throw new SienaException(e);
+		} finally {
+			JdbcDBUtils.closeStatement(ps);
+		}
+	}
+	
 	public void beginTransaction(int isolationLevel) {
 		connectionManager.beginTransaction(isolationLevel);
 	}
@@ -230,7 +280,7 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 			int i = 1;
 			for (Field field : classInfo.generatedKeys) {
 				field.setAccessible(true);
-				Util.setFromObject(obj, field, gk.getObject(i));
+				JdbcMappingUtils.setFromObject(obj, field, gk.getObject(i));
 				// field.set(obj, gk.getObject(i));
 				i++;
 			}
@@ -276,7 +326,7 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 				i=1;
 				for (Field field : classInfo.generatedKeys) {
 					field.setAccessible(true);
-					Util.setFromObject(objMap.get(classInfo).get(idx++), field, gk.getObject(i++));
+					JdbcMappingUtils.setFromObject(objMap.get(classInfo).get(idx++), field, gk.getObject(i++));
 				}
 			}
 		}	
@@ -1222,6 +1272,27 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 		}
 	}
 
+	public <T> T getByKey(Class<T> clazz, Object key) {
+		PreparedStatement ps = null;
+		JdbcClassInfo classInfo = JdbcClassInfo.getClassInfo(clazz);
+		
+		try {
+			// doesn't manage multiple keys case
+			if(classInfo.keys.size()>1){
+				throw new SienaException("Can't batch select multiple keys objects");
+			}
+				
+			Query<T> q = createQuery(clazz);
+			return q.filter(classInfo.info.getIdField().getName()+ "=", key).get();
+		} catch (SienaException e) {
+			throw e;
+		} catch (Exception e) {
+			throw new SienaException(e);
+		} finally {
+			JdbcDBUtils.closeStatement(ps);
+		}	
+	}
+
 	public <T> List<T> getByKeys(Class<T> clazz, Object... keys) {
 		PreparedStatement ps = null;
 		JdbcClassInfo classInfo = JdbcClassInfo.getClassInfo(clazz);
@@ -1651,6 +1722,159 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 	}
 
 
+	@Override
+	public int save(Object... objects) {
+		Map<JdbcClassInfo, List<Object>> objMap = new HashMap<JdbcClassInfo, List<Object>>();
+		PreparedStatement ps = null;
+		
+		for(Object obj:objects){
+			JdbcClassInfo classInfo = JdbcClassInfo.getClassInfo(obj.getClass());
+			if(!objMap.containsKey(classInfo)){
+				List<Object> l = new ArrayList<Object>();
+				l.add(obj);
+				objMap.put(classInfo, l);
+			}else{
+				objMap.get(classInfo).add(obj);
+			}
+		}
+		
+		int total = 0;
+		try {
+			for(JdbcClassInfo classInfo: objMap.keySet()){
+				if (!classInfo.generatedKeys.isEmpty()) {
+					ps = getConnection().prepareStatement(classInfo.insertOrUpdateSQL,
+							Statement.RETURN_GENERATED_KEYS);
+				} else {
+					ps = getConnection().prepareStatement(classInfo.insertOrUpdateSQL);
+				}
+			
+				for(Object obj: objMap.get(classInfo)){
+					Field idField = classInfo.info.getIdField();
+					Object idVal = Util.readField(obj, idField);
+					
+					// only generates a UUID if the idVal is null
+					if(idVal == null){
+						for (Field field : classInfo.keys) {
+							Id id = field.getAnnotation(Id.class);
+							if (id.value() == Generator.UUID) {
+								field.set(obj, UUID.randomUUID().toString());
+							}
+						}
+					}
+					// TODO: implement primary key generation: SEQUENCE
+					int i = 1;
+					i = addParameters(obj, classInfo.allFields, ps, i);
+					addParameters(obj, classInfo.updateFields, ps, i);
+					ps.addBatch();
+				}
+			
+				int[] res = ps.executeBatch();
+				
+				if(!classInfo.generatedKeys.isEmpty()){
+					ResultSet gk = ps.getGeneratedKeys();
+					int i;
+					int idx = 0;
+					int sz = objMap.get(classInfo).size();
+					// apparently in the update case, it returns not only the generated keys but also all the updated field values
+					// so we take only the first SZ values which are the key values.
+					while(gk.next() && idx < sz) {
+						i=1;
+						for (Field field : classInfo.generatedKeys) {
+							field.setAccessible(true);
+							JdbcMappingUtils.setFromObject(objMap.get(classInfo).get(idx++), field, gk.getObject(i++));
+						}
+					}
+				}	
+				total+=res.length;
+			}
+			
+			return total;			
+		} catch (SienaException e) {
+			throw e;
+		} catch (Exception e) {
+			throw new SienaException(e);
+		} finally {
+			JdbcDBUtils.closeStatement(ps);
+		}
+	}
+
+	@Override
+	public int save(Iterable<?> objects) {
+		Map<JdbcClassInfo, List<Object>> objMap = new HashMap<JdbcClassInfo, List<Object>>();
+		PreparedStatement ps = null;
+		
+		for(Object obj:objects){
+			JdbcClassInfo classInfo = JdbcClassInfo.getClassInfo(obj.getClass());
+			if(!objMap.containsKey(classInfo)){
+				List<Object> l = new ArrayList<Object>();
+				l.add(obj);
+				objMap.put(classInfo, l);
+			}else{
+				objMap.get(classInfo).add(obj);
+			}
+		}
+		
+		int total = 0;
+		try {
+			for(JdbcClassInfo classInfo: objMap.keySet()){
+				if (!classInfo.generatedKeys.isEmpty()) {
+					ps = getConnection().prepareStatement(classInfo.insertOrUpdateSQL,
+							Statement.RETURN_GENERATED_KEYS);
+				} else {
+					ps = getConnection().prepareStatement(classInfo.insertOrUpdateSQL);
+				}
+			
+				for(Object obj: objMap.get(classInfo)){
+					Field idField = classInfo.info.getIdField();
+					Object idVal = Util.readField(obj, idField);
+					
+					// only generates a UUID if the idVal is null
+					if(idVal == null){
+						for (Field field : classInfo.keys) {
+							Id id = field.getAnnotation(Id.class);
+							if (id.value() == Generator.UUID) {
+								field.set(obj, UUID.randomUUID().toString());
+							}
+						}
+					}
+					// TODO: implement primary key generation: SEQUENCE
+					int i = 1;
+					i = addParameters(obj, classInfo.allFields, ps, i);
+					addParameters(obj, classInfo.updateFields, ps, i);
+					ps.addBatch();
+				}
+			
+				int[] res = ps.executeBatch();
+				
+				if(!classInfo.generatedKeys.isEmpty()){
+					ResultSet gk = ps.getGeneratedKeys();
+					int i;
+					int idx = 0;
+					int sz = objMap.get(classInfo).size();
+					// apparently in the update case, it returns not only the generated keys but also all the updated field values
+					// so we take only the first SZ values which are the key values.
+					while(gk.next() && idx < sz) {
+						i=1;
+						for (Field field : classInfo.generatedKeys) {
+							field.setAccessible(true);
+							JdbcMappingUtils.setFromObject(objMap.get(classInfo).get(idx++), field, gk.getObject(i++));
+						}
+					}
+				}	
+				total+=res.length;
+			}
+			
+			return total;			
+		} catch (SienaException e) {
+			throw e;
+		} catch (Exception e) {
+			throw new SienaException(e);
+		} finally {
+			JdbcDBUtils.closeStatement(ps);
+		}
+	}
+
+
 	private static final String[] supportedOperators = new String[]{ "<", ">", ">=", "<=", "!=", "=", "IN" };
 
 	public String[] supportedOperators() {
@@ -1666,6 +1890,7 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 		public String tableName;
 		public String insertSQL;
 		public String updateSQL;
+		public String insertOrUpdateSQL;
 		public String deleteSQL;
 		public String selectSQL;
 		public String baseSelectSQL;
@@ -1706,13 +1931,24 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 
 			String[] is = new String[insertColumns.size()];
 			Arrays.fill(is, "?");
-			insertSQL = "INSERT INTO "+tableName+" ("+Util.join(insertColumns, ", ")+") VALUES("+Util.join(Arrays.asList(is), ", ")+")";
+			insertSQL = 
+				"INSERT INTO " + tableName
+				+ " ("+Util.join(insertColumns, ", ") + ")" 
+				+ " VALUES(" + Util.join(Arrays.asList(is), ", ") + ")";
 
-			updateSQL = "UPDATE "+tableName+" SET ";
-			updateSQL += Util.join(updateColumns, ", ");
-			updateSQL += JdbcDBUtils.WHERE;
-			updateSQL += Util.join(keyWhereColumns, JdbcDBUtils.AND);
+			updateSQL = 
+				"UPDATE " + tableName 
+				+ " SET " + Util.join(updateColumns, ", ") 
+				+ JdbcDBUtils.WHERE	+ Util.join(keyWhereColumns, JdbcDBUtils.AND);
 
+			// Update or insert for MYSQL ONLY
+			String[] as = new String[allColumns.size()];
+			Arrays.fill(as, "?");
+			insertOrUpdateSQL = 
+				 "INSERT INTO " + tableName + " ("+Util.join(allColumns, ", ") + ")" 
+				 + " VALUES(" + Util.join(Arrays.asList(as), ", ") + ")"
+				 + " ON DUPLICATE KEY UPDATE " + Util.join(updateColumns, ", ");
+			
 			baseSelectSQL = "SELECT "+Util.join(allColumns, ", ")+" FROM "+tableName;
 			baseKeySelectSQL = "SELECT "+Util.join(keyColumns, ", ")+" FROM "+tableName;
 

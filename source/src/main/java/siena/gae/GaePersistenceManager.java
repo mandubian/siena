@@ -105,6 +105,18 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 		}
 	}
 
+	public <T> T getByKey(Class<T> clazz, Object key) {
+		Key gkey = GaeMappingUtils.makeKey(clazz, key);
+		try {
+			Entity entity = ds.get(gkey);
+			T obj = Util.createObjectInstance(clazz);
+			GaeMappingUtils.fillModelAndKey(obj, entity);
+			
+			return obj;
+		} catch (Exception e) {
+			throw new SienaException(e);
+		}
+	}
 
 	public void insert(Object obj) {
 		Class<?> clazz = obj.getClass();
@@ -116,19 +128,40 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 		GaeMappingUtils.setIdFromKey(idField, obj, entity.getKey());
 	}
 
-
-
-
 	public void update(Object obj) {
-		try {
-			Entity entity = new Entity(GaeMappingUtils.getKey(obj));
-			GaeMappingUtils.fillEntity(obj, entity);
-			ds.put(entity);
-		} catch (Exception e) {
-			throw new SienaException(e);
+		Class<?> clazz = obj.getClass();
+		ClassInfo info = ClassInfo.getClassInfo(clazz);
+		Field idField = info.getIdField();
+		Entity entity = GaeMappingUtils.createEntityInstanceForUpdate(idField, info, obj);
+		//Entity entity = new Entity(GaeMappingUtils.getKey(obj));
+		GaeMappingUtils.fillEntity(obj, entity);
+		ds.put(entity);
+	}
+	
+	public void save(Object obj) {
+		Class<?> clazz = obj.getClass();
+		ClassInfo info = ClassInfo.getClassInfo(clazz);
+		Field idField = info.getIdField();
+		
+		Entity entity;
+		Object idVal = Util.readField(obj, idField);
+		// id with null value means insert
+		if(idVal == null){
+			entity = GaeMappingUtils.createEntityInstance(idField, info, obj);
+		}
+		// id with not null value means update
+		else{
+			entity = GaeMappingUtils.createEntityInstanceForUpdate(idField, info, obj);			
+		}
+		
+		GaeMappingUtils.fillEntity(obj, entity);
+		ds.put(entity);
+		
+		if(idVal == null){
+			GaeMappingUtils.setIdFromKey(idField, obj, entity.getKey());
 		}
 	}
-
+	
 	protected DatastoreService getDatastoreService() {
 		return ds;
 	}
@@ -1429,7 +1462,81 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 		throw new NotImplementedException("update not implemented for GAE yet");
 	}
 
+	
+	public int save(Object... objects) {
+		List<Entity> entities = new ArrayList<Entity>();
+		for(Object obj:objects){
+			Class<?> clazz = obj.getClass();
+			ClassInfo info = ClassInfo.getClassInfo(clazz);
+			Field idField = info.getIdField();
+			
+			Entity entity;
+			Object idVal = Util.readField(obj, idField);
+			// id with null value means insert
+			if(idVal == null){
+				entity = GaeMappingUtils.createEntityInstance(idField, info, obj);
+			}
+			// id with not null value means update
+			else{
+				entity = GaeMappingUtils.createEntityInstanceForUpdate(idField, info, obj);			
+			}
+			
+			GaeMappingUtils.fillEntity(obj, entity);
+			entities.add(entity);			
+		}
+		
+		List<Key> generatedKeys = ds.put(entities);
+		
+		int i=0;
+		for(Object obj:objects){
+			Class<?> clazz = obj.getClass();
+			ClassInfo info = ClassInfo.getClassInfo(clazz);
+			Field idField = info.getIdField();
+			Object idVal = Util.readField(obj, idField);
+			if(idVal == null){
+				GaeMappingUtils.setIdFromKey(idField, obj, generatedKeys.get(i++));
+			}
+		}
+		return generatedKeys.size();
+	}
 
+	public int save(Iterable<?> objects) {
+		List<Entity> entities = new ArrayList<Entity>();
+		for(Object obj:objects){
+			Class<?> clazz = obj.getClass();
+			ClassInfo info = ClassInfo.getClassInfo(clazz);
+			Field idField = info.getIdField();
+			
+			Entity entity;
+			Object idVal = Util.readField(obj, idField);
+			// id with null value means insert
+			if(idVal == null){
+				entity = GaeMappingUtils.createEntityInstance(idField, info, obj);
+			}
+			// id with not null value means update
+			else{
+				entity = GaeMappingUtils.createEntityInstanceForUpdate(idField, info, obj);			
+			}
+			
+			GaeMappingUtils.fillEntity(obj, entity);
+			entities.add(entity);			
+		}
+		
+		List<Key> generatedKeys = ds.put(entities);
+		
+		int i=0;
+		for(Object obj:objects){
+			Class<?> clazz = obj.getClass();
+			ClassInfo info = ClassInfo.getClassInfo(clazz);
+			Field idField = info.getIdField();
+			Object idVal = Util.readField(obj, idField);
+			if(idVal == null){
+				GaeMappingUtils.setIdFromKey(idField, obj, generatedKeys.get(i++));
+			}
+		}
+		return generatedKeys.size();
+	}
+	
 	private static String[] supportedOperators;
 
 	static {

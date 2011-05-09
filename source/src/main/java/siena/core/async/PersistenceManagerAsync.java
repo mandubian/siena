@@ -189,6 +189,8 @@ public interface PersistenceManagerAsync {
 	SienaFuture<Integer> update(Object... objects);
 	<T> SienaFuture<Integer> update(Iterable<T> objects);
 	
+	
+	
 	/**
 	 * begins a transaction
 	 * 

@@ -16,7 +16,7 @@ import siena.base.test.model.Discovery4Search;
 import siena.jdbc.JdbcPersistenceManager;
 import siena.jdbc.ddl.DdlGenerator;
 
-public class JdbcTest extends BaseTest {
+public class DrizzleTest extends BaseTest {
 	private static JdbcPersistenceManager pm;
 	
 	@Override
@@ -24,22 +24,22 @@ public class JdbcTest extends BaseTest {
 		if(pm == null){
 			Properties p = new Properties();
 			
-			String driver   = "com.mysql.jdbc.Driver";
-			String username = "siena";
-			String password = "siena";
-			String url      = "jdbc:mysql://localhost/siena";
+			String driver   = "org.drizzle.jdbc.DrizzleDriver";
+			//String username = "root";
+			//String password = "";
+			String url      = "jdbc:mysql://localhost:4427/siena";
 			
 			p.setProperty("driver",   driver);
-			p.setProperty("user",     username);
-			p.setProperty("password", password);
+			//p.setProperty("user",     username);
+			//p.setProperty("password", password);
 			p.setProperty("url",      url);
 	
 			Class.forName(driver);
 			BasicDataSource dataSource = new BasicDataSource();
 			dataSource = new BasicDataSource();
 			dataSource.setUrl(url);
-			dataSource.setUsername(username);
-			dataSource.setPassword(password);
+			//dataSource.setUsername(username);
+			//dataSource.setPassword(password);
 			dataSource.setMaxWait(2000); // 2 seconds max for wait a connection.
 			
 			DdlGenerator generator = new DdlGenerator();
@@ -50,9 +50,9 @@ public class JdbcTest extends BaseTest {
 			// get the Database model
 			Database database = generator.getDatabase();
 	
-			Platform platform = PlatformFactory.createNewPlatformInstance("mysql");
-			Class.forName("com.mysql.jdbc.Driver");
-			Connection connection = DriverManager.getConnection(url, username, password);
+			Platform platform = PlatformFactory.createNewPlatformInstance(dataSource);
+			Class.forName("org.drizzle.jdbc.DrizzleDriver");
+			Connection connection = DriverManager.getConnection(url);
 			
 			System.out.println(platform.getAlterTablesSql(connection, database));
 			
@@ -1368,66 +1368,6 @@ public class JdbcTest extends BaseTest {
 	public void testBatchUpdateList() {
 		// TODO Auto-generated method stub
 		super.testBatchUpdateList();
-	}
-
-	@Override
-	public void testGetByKeyUUID() {
-		// TODO Auto-generated method stub
-		super.testGetByKeyUUID();
-	}
-
-	@Override
-	public void testGetByKeyLongAutoID() {
-		// TODO Auto-generated method stub
-		super.testGetByKeyLongAutoID();
-	}
-
-	@Override
-	public void testGetByKeyLongManualID() {
-		// TODO Auto-generated method stub
-		super.testGetByKeyLongManualID();
-	}
-
-	@Override
-	public void testGetByKeyStringID() {
-		// TODO Auto-generated method stub
-		super.testGetByKeyStringID();
-	}
-
-	@Override
-	public void testSaveLongAutoID() {
-		// TODO Auto-generated method stub
-		super.testSaveLongAutoID();
-	}
-
-	@Override
-	public void testSaveUUID() {
-		// TODO Auto-generated method stub
-		super.testSaveUUID();
-	}
-
-	@Override
-	public void testSaveLongManualID() {
-		// TODO Auto-generated method stub
-		super.testSaveLongManualID();
-	}
-
-	@Override
-	public void testSaveStringID() {
-		// TODO Auto-generated method stub
-		super.testSaveStringID();
-	}
-
-	@Override
-	public void testBatchSave() {
-		// TODO Auto-generated method stub
-		super.testBatchSave();
-	}
-
-	@Override
-	public void testBatchSaveList() {
-		// TODO Auto-generated method stub
-		super.testBatchSaveList();
 	}
 	
 

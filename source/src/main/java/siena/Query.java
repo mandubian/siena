@@ -41,6 +41,8 @@ public interface Query<T> extends QueryData<T>{
 	int update(Map<String, ?> fieldValues);
 	int count();
 
+	T getByKey(Object key);
+	
 	List<T> fetch();
 	List<T> fetch(int limit);
 	List<T> fetch(int limit, Object offset);

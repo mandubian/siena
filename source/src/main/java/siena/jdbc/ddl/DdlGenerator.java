@@ -167,10 +167,12 @@ public class DdlGenerator {
 				
 				Max max = field.getAnnotation(Max.class);
 				if(max == null){
-					throw new SienaRestrictedApiException(DB, "createColumn", "Field "+field.getName()+" in class "
-							+clazz.getName()+" doesn't have a @Max annotation");
+					//throw new SienaRestrictedApiException(DB, "createColumn", "Field "+field.getName()+" in class "
+					//		+clazz.getName()+" doesn't have a @Max annotation");
+					// default is 255 chars as in hibernate
+					column.setSize("255");
 				}
-				column.setSize(""+max.value());
+				else column.setSize(""+max.value());
 			}
 		}
 		else if(type == Boolean.class || type == Boolean.TYPE) columnType = Types.BOOLEAN;
@@ -192,7 +194,7 @@ public class DdlGenerator {
 			columnType = Types.VARCHAR;
 			Max max = field.getAnnotation(Max.class);
 			if(max == null)
-				column.setSize(""+254); // fixes by default to this value in order to prevent alter tables every time
+				column.setSize(""+255); // fixes by default to this value in order to prevent alter tables every time
 			else column.setSize(""+max.value());
 		}						
 		else {

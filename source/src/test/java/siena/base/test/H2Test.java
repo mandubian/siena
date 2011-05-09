@@ -9,39 +9,34 @@ import org.apache.commons.dbcp.BasicDataSource;
 import org.apache.ddlutils.Platform;
 import org.apache.ddlutils.PlatformFactory;
 import org.apache.ddlutils.model.Database;
+import org.h2.jdbcx.JdbcDataSource;
 
 import siena.PersistenceManager;
 import siena.Query;
 import siena.base.test.model.Discovery4Search;
-import siena.jdbc.JdbcPersistenceManager;
+import siena.base.test.model.Discovery4Search2;
+import siena.jdbc.H2PersistenceManager;
+import siena.jdbc.PostgresqlPersistenceManager;
 import siena.jdbc.ddl.DdlGenerator;
 
-public class JdbcTest extends BaseTest {
-	private static JdbcPersistenceManager pm;
-	
+public class H2Test extends BaseTest {
+	private static H2PersistenceManager pm;
+
 	@Override
 	public PersistenceManager createPersistenceManager(List<Class<?>> classes) throws Exception {
-		if(pm == null){
+		if(pm==null){
 			Properties p = new Properties();
 			
-			String driver   = "com.mysql.jdbc.Driver";
-			String username = "siena";
-			String password = "siena";
-			String url      = "jdbc:mysql://localhost/siena";
+			String driver   = "org.h2.Driver";
+			String url      = "jdbc:h2:mem:test;DB_CLOSE_DELAY=-1";
+			String username = "sa";
+			String password = "";
 			
 			p.setProperty("driver",   driver);
+			p.setProperty("url",      url);
 			p.setProperty("user",     username);
 			p.setProperty("password", password);
-			p.setProperty("url",      url);
-	
-			Class.forName(driver);
-			BasicDataSource dataSource = new BasicDataSource();
-			dataSource = new BasicDataSource();
-			dataSource.setUrl(url);
-			dataSource.setUsername(username);
-			dataSource.setPassword(password);
-			dataSource.setMaxWait(2000); // 2 seconds max for wait a connection.
-			
+
 			DdlGenerator generator = new DdlGenerator();
 			for (Class<?> clazz : classes) {
 				generator.addTable(clazz);
@@ -51,7 +46,10 @@ public class JdbcTest extends BaseTest {
 			Database database = generator.getDatabase();
 	
 			Platform platform = PlatformFactory.createNewPlatformInstance("mysql");
-			Class.forName("com.mysql.jdbc.Driver");
+			Class.forName(driver);
+			//JdbcDataSource ds = new JdbcDataSource();
+			//ds.setURL(url);
+			//Connection connection = ds.getConnection();
 			Connection connection = DriverManager.getConnection(url, username, password);
 			
 			System.out.println(platform.getAlterTablesSql(connection, database));
@@ -61,10 +59,9 @@ public class JdbcTest extends BaseTest {
 	
 			connection.close();
 			
-			pm = new JdbcPersistenceManager();
+			pm = new H2PersistenceManager();
 			pm.init(p);
 		}
-		
 		return pm;
 	}
 	
@@ -82,50 +79,8 @@ public class JdbcTest extends BaseTest {
 	public boolean mustFilterToOrder() {
 		return false;
 	}
-
-	// SPECIFIC JDBC TESTS
-	public void testSearchMultipleSingleField() {
-		Discovery4Search[] discs = new Discovery4Search[10];
-		for(int i=0; i<10; i++){
-			if(i%2==0) discs[i] = new Discovery4Search("even_"+i, LongAutoID_CURIE);
-			else discs[i] = new Discovery4Search("odd_"+i, LongAutoID_CURIE);
-			pm.insert(discs[i]);
-		}
-		
-		Query<Discovery4Search> query = 
-			pm.createQuery(Discovery4Search.class).search("even_*", "name").order("name");
-		
-		List<Discovery4Search> res = query.fetch();
-		
-		assertEquals(5, res.size());
-		for(int i=0; i<res.size();i++){
-			assertEquals(discs[2*i], res.get(i));
-		}		
-	}
-
-	public void testSearchMultipleWordsSingleField() {
-		Discovery4Search AB = new Discovery4Search("alpha beta", LongAutoID_CURIE);
-		Discovery4Search GB = new Discovery4Search("gamma beta", LongAutoID_CURIE);
-		Discovery4Search GD = new Discovery4Search("gamma delta", LongAutoID_CURIE);
-		Discovery4Search ET = new Discovery4Search("epsilon theta", LongAutoID_CURIE);
-		pm.insert(AB);
-		pm.insert(GB);
-		pm.insert(GD);
-		pm.insert(ET);
-
-		Query<Discovery4Search> query = 
-			pm.createQuery(Discovery4Search.class).search("alpha delta", "name").order("name");
-		
-		List<Discovery4Search> res = query.fetch();
-		
-		assertEquals(2, res.size());
-		assertEquals(AB, res.get(0));
-		assertEquals(GD, res.get(1));
-	}
-
 	
-	
-	// GENERIC TESTS
+	// GENERIC JDBC TESTS
 	@Override
 	public void testCount() {
 		// TODO Auto-generated method stub
@@ -505,7 +460,6 @@ public class JdbcTest extends BaseTest {
 	}
 
 	@Override
-	@Deprecated
 	public void testCountLimit() {
 		// TODO Auto-generated method stub
 		super.testCountLimit();
@@ -530,7 +484,6 @@ public class JdbcTest extends BaseTest {
 	}
 
 	@Override
-	@Deprecated	
 	public void testCountLimitOffset() {
 		// TODO Auto-generated method stub
 		super.testCountLimitOffset();
@@ -1071,15 +1024,15 @@ public class JdbcTest extends BaseTest {
 	}
 
 	@Override
-	public void testLimitStateful() {
-		// TODO Auto-generated method stub
-		super.testLimitStateful();
-	}
-
-	@Override
 	public void testLimitStateless() {
 		// TODO Auto-generated method stub
 		super.testLimitStateless();
+	}
+
+	@Override
+	public void testLimitStateful() {
+		// TODO Auto-generated method stub
+		super.testLimitStateful();
 	}
 
 	@Override
@@ -1371,6 +1324,30 @@ public class JdbcTest extends BaseTest {
 	}
 
 	@Override
+	public void testSaveLongAutoID() {
+		// TODO Auto-generated method stub
+		super.testSaveLongAutoID();
+	}
+
+	@Override
+	public void testSaveStringID() {
+		// TODO Auto-generated method stub
+		super.testSaveStringID();
+	}
+
+	@Override
+	public void testSaveUUID() {
+		// TODO Auto-generated method stub
+		super.testSaveUUID();
+	}
+
+	@Override
+	public void testSaveLongManualID() {
+		// TODO Auto-generated method stub
+		super.testSaveLongManualID();
+	}
+
+	@Override
 	public void testGetByKeyUUID() {
 		// TODO Auto-generated method stub
 		super.testGetByKeyUUID();
@@ -1395,30 +1372,6 @@ public class JdbcTest extends BaseTest {
 	}
 
 	@Override
-	public void testSaveLongAutoID() {
-		// TODO Auto-generated method stub
-		super.testSaveLongAutoID();
-	}
-
-	@Override
-	public void testSaveUUID() {
-		// TODO Auto-generated method stub
-		super.testSaveUUID();
-	}
-
-	@Override
-	public void testSaveLongManualID() {
-		// TODO Auto-generated method stub
-		super.testSaveLongManualID();
-	}
-
-	@Override
-	public void testSaveStringID() {
-		// TODO Auto-generated method stub
-		super.testSaveStringID();
-	}
-
-	@Override
 	public void testBatchSave() {
 		// TODO Auto-generated method stub
 		super.testBatchSave();
@@ -1429,7 +1382,5 @@ public class JdbcTest extends BaseTest {
 		// TODO Auto-generated method stub
 		super.testBatchSaveList();
 	}
-	
 
-	
 }

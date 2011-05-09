@@ -64,6 +64,10 @@ public abstract class Model {
 	public void update() {
 		getPersistenceManager().update(this);
 	}
+	
+	public void save() {
+		getPersistenceManager().save(this);
+	}
 
 	public final PersistenceManager getPersistenceManager() {
 		if(persistenceManager == null) {
@@ -348,6 +352,11 @@ public abstract class Model {
 
 		public QueryAsync<T> async() {
 			return createQuery().async();
+		}
+
+		@Override
+		public T getByKey(Object key) {
+			return createQuery().getByKey(key);
 		}
 
 		public PersistenceManager getPersistenceManager() {
