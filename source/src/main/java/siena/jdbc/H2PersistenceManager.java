@@ -1,6 +1,8 @@
 package siena.jdbc;
 
 import java.lang.reflect.Field;
+import java.sql.Array;
+import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -9,15 +11,22 @@ import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+
+import org.h2.fulltext.FullText;
 
 import siena.ClassInfo;
 import siena.Generator;
 import siena.Id;
+import siena.Query;
 import siena.QueryFilterSearch;
 import siena.SienaException;
 import siena.Util;
@@ -27,6 +36,8 @@ import siena.jdbc.JdbcPersistenceManager.JdbcClassInfo;
 public class H2PersistenceManager extends JdbcPersistenceManager {
 	private static final String DB = "H2";
 	
+	protected static Map<String, Boolean> tableIndexMap = new ConcurrentHashMap<String, Boolean>();
+
 	public H2PersistenceManager() {
 		
 	}
@@ -156,12 +167,12 @@ public class H2PersistenceManager extends JdbcPersistenceManager {
 		
 		int total = 0;
 		try {
-			// these are the insertion with generated keys
+			// these are the insertions with generated keys
 			for(JdbcClassInfo classInfo: generatedObjMap.keySet()){
 				total += insert(generatedObjMap.get(classInfo));
 			}
 			
-			// these are the insertion or update without generated keys
+			// these are the insertions or updates without generated keys
 			// can't use batch in Postgres with generated keys... known bug
 			// http://postgresql.1045698.n5.nabble.com/PreparedStatement-batch-statement-impossible-td3406927.html
 			for(JdbcClassInfo classInfo: objMap.keySet()){
@@ -170,24 +181,27 @@ public class H2PersistenceManager extends JdbcPersistenceManager {
 					keyNames.add(field.getName());
 				}
 				
-				// !!! insert or update pour postgres : the less worst solution I found!!!!
-				// INSERT INTO myTable (myKey) SELECT myKeyValue WHERE myKeyValue NOT IN (SELECT myKey FROM myTable);
-				// UPDATE myTable SET myUpdateCol = myUpdateColValue WHERE myKey = myKeyValue;
-				ps = getConnection().prepareStatement(
-						"INSERT INTO "+ classInfo.tableName + " (" + Util.join(keyNames, ",") + ") " 
-						+ "SELECT ? WHERE ? NOT IN (SELECT "+ Util.join(keyNames, ",")  
-						+ " FROM "+ classInfo.tableName + ");"
-						+ classInfo.updateSQL);
+				// in H2 "on duplicate" is not supported but MERGE is
+				// merge into employees (id, first_name, last_name) values(1, 'test2', 'test2');
+				List<String> allColumns = new ArrayList<String>();
+				JdbcClassInfo.calculateColumns(classInfo.allFields, allColumns, null, "");
+				String[] is = new String[allColumns.size()];
+				Arrays.fill(is, "?");
 			
+				ps = getConnection().prepareStatement(
+						"MERGE INTO "+ classInfo.tableName + " (" + Util.join(allColumns, ",") + ") " 
+						+ "VALUES(" + Util.join(Arrays.asList(is), ",") + ")"  
+				);
+				
 				for(Object obj: objMap.get(classInfo)){				
 					int i = 1;
-					i = addParameters(obj, classInfo.keys, ps, i);
-					i = addParameters(obj, classInfo.keys, ps, i);
-					i = addParameters(obj, classInfo.updateFields, ps, i);
-					addParameters(obj, classInfo.keys, ps, i);
-					ps.executeUpdate();
-					total++;
+					i = addParameters(obj, classInfo.allFields, ps, i);
+					ps.addBatch();
 				}
+				
+				int[] res = ps.executeBatch();
+				
+				total+=res.length;
 			}
 			
 			return total;			
@@ -232,12 +246,12 @@ public class H2PersistenceManager extends JdbcPersistenceManager {
 		
 		int total = 0;
 		try {
-			// these are the insertion with generated keys
+			// these are the insertions with generated keys
 			for(JdbcClassInfo classInfo: generatedObjMap.keySet()){
 				total += insert(generatedObjMap.get(classInfo));
 			}
 			
-			// these are the insertion or update without generated keys
+			// these are the insertions or updates without generated keys
 			// can't use batch in Postgres with generated keys... known bug
 			// http://postgresql.1045698.n5.nabble.com/PreparedStatement-batch-statement-impossible-td3406927.html
 			for(JdbcClassInfo classInfo: objMap.keySet()){
@@ -246,24 +260,27 @@ public class H2PersistenceManager extends JdbcPersistenceManager {
 					keyNames.add(field.getName());
 				}
 				
-				// !!! insert or update pour postgres : the less worst solution I found!!!!
-				// INSERT INTO myTable (myKey) SELECT myKeyValue WHERE myKeyValue NOT IN (SELECT myKey FROM myTable);
-				// UPDATE myTable SET myUpdateCol = myUpdateColValue WHERE myKey = myKeyValue;
-				ps = getConnection().prepareStatement(
-						"INSERT INTO "+ classInfo.tableName + " (" + Util.join(keyNames, ",") + ") " 
-						+ "SELECT ? WHERE ? NOT IN (SELECT "+ Util.join(keyNames, ",")  
-						+ " FROM "+ classInfo.tableName + ");"
-						+ classInfo.updateSQL);
+				// in H2 "on duplicate" is not supported but MERGE is
+				// merge into employees (id, first_name, last_name) values(1, 'test2', 'test2');
+				List<String> allColumns = new ArrayList<String>();
+				JdbcClassInfo.calculateColumns(classInfo.allFields, allColumns, null, "");
+				String[] is = new String[allColumns.size()];
+				Arrays.fill(is, "?");
 			
+				ps = getConnection().prepareStatement(
+						"MERGE INTO "+ classInfo.tableName + " (" + Util.join(allColumns, ",") + ") " 
+						+ "VALUES(" + Util.join(Arrays.asList(is), ",") + ")"  
+				);
+				
 				for(Object obj: objMap.get(classInfo)){				
 					int i = 1;
-					i = addParameters(obj, classInfo.keys, ps, i);
-					i = addParameters(obj, classInfo.keys, ps, i);
-					i = addParameters(obj, classInfo.updateFields, ps, i);
-					addParameters(obj, classInfo.keys, ps, i);
-					ps.executeUpdate();
-					total++;
+					i = addParameters(obj, classInfo.allFields, ps, i);
+					ps.addBatch();
 				}
+				
+				int[] res = ps.executeBatch();
+				
+				total+=res.length;
 			}
 			
 			return total;			
@@ -276,5 +293,76 @@ public class H2PersistenceManager extends JdbcPersistenceManager {
 		}
 	}
 	
+	private boolean isSearchInit = false; 
 	
+	@Override
+	public void init(Properties p) {
+		super.init(p);
+		// initializes the search mechanism in H2
+		try {
+			FullText.init(this.getConnection());
+		} catch (SQLException e) {
+			throw new SienaException(e);
+		}
+	}
+	public <T> List<T> doSearch(Query<T> query){
+		// TODO this is a very raw impl: need some work certainly 
+		try {
+			Connection conn = this.getConnection();
+			ClassInfo ci = ClassInfo.getClassInfo(query.getQueriedClass());
+			// doesn't index a table that has already been indexed
+			if(!tableIndexMap.containsKey(ci.tableName)){
+				String cols = null;
+				if(!ci.updateFields.isEmpty()){
+					cols = "";
+					// removes auto generated IDs from index
+					int sz = ci.updateFields.size();
+					for (int i=0; i<sz; i++) {
+						String str = ci.updateFields.get(i).getName().toUpperCase();
+						cols += str;
+						if(i<sz-1) cols += ",";
+					}
+				}
+				// creates the index
+				FullText.createIndex(conn, "PUBLIC", "discoveries_search".toUpperCase(), cols);
+				tableIndexMap.put(ci.tableName, true);
+			}
+			
+			String searchString = "";
+			Iterator<QueryFilterSearch> it = query.getSearches().iterator();
+			boolean first = true;
+			while(it.hasNext()){
+				if(!first){ 
+					searchString += " ";
+				}else {
+					first = false;
+				}
+				searchString += it.next().match;				
+			}
+			
+			ResultSet rs = FullText.searchData(conn, searchString, 0, 0);
+			List<T> res = new ArrayList<T>();
+			while(rs.next()) {
+				//String queryStr = rs.getString("QUERY");
+				//String score = rs.getString("SCORE");
+				Array columns = rs.getArray("COLUMNS");
+				Object[] keys = (Object[])rs.getArray("KEYS").getArray();
+				if(res == null) res = this.getByKeys(query.getQueriedClass(), keys);
+				else res.addAll(this.getByKeys(query.getQueriedClass(), keys));
+			}
+			return res;
+		} catch (SQLException e) {
+			throw new SienaException(e);
+		}
+	}
+	
+	@Override
+	public <T> List<T> fetch(Query<T> query) {
+		if(query.getSearches().isEmpty()){
+			return super.fetch(query);
+		}
+		else {
+			return doSearch(query);
+		}
+	}
 }

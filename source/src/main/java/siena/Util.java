@@ -183,6 +183,7 @@ public class Util {
 			else if(Long.TYPE==type || Long.class==type)    return number.longValue();
 			else if(Float.TYPE==type || Float.class==type)   return number.floatValue();
 			else if(Double.TYPE==type || Double.class==type)  return number.doubleValue();
+			else if(Boolean.TYPE==type || Boolean.class==type) return number!=(Number)0 ? true:false;
 		} 
 		else if(String.class.isAssignableFrom(value.getClass()) && Json.class.isAssignableFrom(type)) {
 			return Json.loads((String) value);
@@ -193,6 +194,9 @@ public class Util {
 		}
 		else if(String.class.isAssignableFrom(value.getClass())&& type.isEnum()) {
 			return Enum.valueOf((Class<Enum>) type, (String)value);
+		}
+		else if(String.class.isAssignableFrom(value.getClass())&& type != String.class) {
+			return fromString(field.getType(), (String)value);
 		}
 		return value;
 	}

@@ -46,6 +46,7 @@ import siena.QueryFilter;
 import siena.QueryFilterSearch;
 import siena.QueryFilterSimple;
 import siena.SienaException;
+import siena.SienaRestrictedApiException;
 import siena.Util;
 import siena.core.async.PersistenceManagerAsync;
 import siena.core.options.QueryOption;
@@ -479,6 +480,10 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 					}
 				}
 			}else if(QueryFilterSearch.class.isAssignableFrom(filter.getClass())){
+				// TODO MYSQL implementation manages only 1 search in a query
+				if(query.getSearches().size()>1){
+					throw new SienaRestrictedApiException(DB, "search", "MySQL implementation manages only on single search at a time in a query");
+				}
 				// adds querysearch 
 				QueryFilterSearch qf = (QueryFilterSearch)filter;
 				appendSqlSearch(qf, clazz, info, sql, parameters);
@@ -1317,7 +1322,8 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 					for(int i=0; i<results.size();i++){
 						T res = results.get(i);
 						Object resKey = Util.readField(res, f);
-						if(key.equals(resKey)){
+						Object fromKey = Util.fromObject(f, key);
+						if(fromKey.equals(resKey)){
 							keyObj.put(key, res);
 							results.remove(i);
 							break;

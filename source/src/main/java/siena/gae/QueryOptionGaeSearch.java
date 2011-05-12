@@ -32,6 +32,6 @@ public class QueryOptionGaeSearch extends QueryOption{
 	}
 
 	public String toString() {
-		return "type:JDBC_SEARCH - state:"+this.state+ " - mode:"+mode;
+		return "type:GAE_SEARCH - state:"+this.state+ " - mode:"+mode;
 	}
 }

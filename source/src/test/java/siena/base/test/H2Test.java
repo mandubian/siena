@@ -79,6 +79,67 @@ public class H2Test extends BaseTest {
 	public boolean mustFilterToOrder() {
 		return false;
 	}
+
+	// SPECIFIC JDBC TESTS
+	public void testSearchMultipleSingleField() {
+		Discovery4Search[] discs = new Discovery4Search[10];
+		for(int i=0; i<10; i++){
+			if(i%2==0) discs[i] = new Discovery4Search("even_"+i, LongAutoID_CURIE);
+			else discs[i] = new Discovery4Search("odd_"+i, LongAutoID_CURIE);
+			pm.insert(discs[i]);
+		}
+		
+		Query<Discovery4Search> query = 
+			pm.createQuery(Discovery4Search.class).search("even_*", "name").order("name");
+		
+		List<Discovery4Search> res = query.fetch();
+		
+		assertEquals(5, res.size());
+		for(int i=0; i<res.size();i++){
+			assertEquals(discs[2*i], res.get(i));
+		}		
+	}
+
+	public void testSearchMultipleWordsSingleField() {
+		Discovery4Search AB = new Discovery4Search("alpha beta", LongAutoID_CURIE);
+		Discovery4Search GB = new Discovery4Search("gamma beta", LongAutoID_CURIE);
+		Discovery4Search GD = new Discovery4Search("gamma delta", LongAutoID_CURIE);
+		Discovery4Search ET = new Discovery4Search("epsilon theta", LongAutoID_CURIE);
+		pm.insert(AB, GB, GD, ET);
+
+		Query<Discovery4Search> query = 
+			pm.createQuery(Discovery4Search.class).search("alpha,delta", "name").order("name");
+		
+		List<Discovery4Search> res = query.fetch();
+		
+		// operator OR doesn't work with H2
+		assertEquals(0, res.size());
+		//assertEquals(AB, res.get(0));
+		//assertEquals(GD, res.get(1));
+		
+		query = 
+			pm.createQuery(Discovery4Search.class).search("gamma delta", "name").order("name");
+		res = query.fetch();
+		assertEquals(1, res.size());
+		assertEquals(GD, res.get(0));
+	}
+	
+	public void testSearchSingleTwiceInTheSameQuery() {
+		Discovery4Search[] discs = new Discovery4Search[100];
+		for(int i=0; i<100; i++){
+			discs[i] = new Discovery4Search("Disc_"+i+" "+(100-i)+"_csid", LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs);
+
+		Query<Discovery4Search> query = 
+			pm.createQuery(Discovery4Search.class).search("Disc_5", "name").search("95_csid");
+		
+		List<Discovery4Search> res = query.fetch();
+				
+		assertEquals(2, res.size());
+		assertTrue(res.get(0).equals(discs[95]) || res.get(0).equals(discs[5]));
+		assertTrue(res.get(1).equals(discs[95]) || res.get(1).equals(discs[5]));
+	}
 	
 	// GENERIC JDBC TESTS
 	@Override
@@ -961,6 +1022,12 @@ public class H2Test extends BaseTest {
 	public void testSearchSingle() {
 		// TODO Auto-generated method stub
 		super.testSearchSingle();
+	}
+
+	@Override
+	public void testSearchSingleTwice() {
+		// TODO Auto-generated method stub
+		super.testSearchSingleTwice();
 	}
 
 	@Override

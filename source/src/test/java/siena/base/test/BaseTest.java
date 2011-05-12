@@ -3033,6 +3033,32 @@ public abstract class BaseTest extends TestCase {
 		assertEquals(discs[5], res.get(0));
 	}
 	
+	public void testSearchSingleTwice() {
+		Discovery4Search[] discs = new Discovery4Search[100];
+		for(int i=0; i<100; i++){
+			discs[i] = new Discovery4Search("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs);
+
+		Query<Discovery4Search> query = 
+			pm.createQuery(Discovery4Search.class).search("Disc_5", "name");
+		
+		List<Discovery4Search> res = query.fetch();
+				
+		assertEquals(1, res.size());
+		assertEquals(discs[5], res.get(0));
+
+		query = 
+			pm.createQuery(Discovery4Search.class).search("Disc_48", "name");
+		
+		res = query.fetch();
+				
+		assertEquals(1, res.size());
+		assertEquals(discs[48], res.get(0));
+
+	}
+
+
 	public void testBatchInsert() {
 		Object[] discs = new Discovery[100];
 		for(int i=0; i<100; i++){

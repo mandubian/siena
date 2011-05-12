@@ -220,6 +220,18 @@ public class JdbcMappingUtils {
 				throw new SienaException(e);
 			}
 		} 
+		
+		if(byte[].class == type && value != null && java.sql.Blob.class.isAssignableFrom(value.getClass())){
+			java.sql.Blob blob = (java.sql.Blob)value;
+			try {
+				// converts the blob into a byte[]...
+				// TODO what to do with a very long blob????
+				return blob.getBytes(0, (int)blob.length());
+			} catch (SQLException e) {
+				throw new SienaException(e);
+			}
+		}
+		
 		return Util.fromObject(field, value);
 	}
 }

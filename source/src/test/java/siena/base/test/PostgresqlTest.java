@@ -12,6 +12,7 @@ import org.apache.ddlutils.model.Database;
 
 import siena.PersistenceManager;
 import siena.Query;
+import siena.SienaRestrictedApiException;
 import siena.base.test.model.Discovery4Search;
 import siena.base.test.model.Discovery4Search2;
 import siena.jdbc.PostgresqlPersistenceManager;
@@ -143,7 +144,24 @@ public class PostgresqlTest extends BaseTest {
 		assertEquals(GD, res.get(1));
 	}
 
-	
+	// 2 searches in the same query is not available in Postgres for the time being
+	public void testSearchSingleTwiceInTheSameQuery() {
+		Discovery4Search[] discs = new Discovery4Search[100];
+		for(int i=0; i<100; i++){
+			discs[i] = new Discovery4Search("Disc_"+i+" "+(100-i)+"_csid", LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs);
+
+		Query<Discovery4Search> query = 
+			pm.createQuery(Discovery4Search.class).search("Disc_5", "name").search("95_csid");
+		try {
+			List<Discovery4Search> res = query.fetch();
+		}catch(SienaRestrictedApiException ex){
+			return;
+		}
+		
+		fail();
+	}
 	// GENERIC JDBC TESTS
 	@Override
 	public void testCount() {
@@ -1025,6 +1043,12 @@ public class PostgresqlTest extends BaseTest {
 	public void testSearchSingle() {
 		// TODO Auto-generated method stub
 		super.testSearchSingle();
+	}
+
+	@Override
+	public void testSearchSingleTwice() {
+		// TODO Auto-generated method stub
+		super.testSearchSingleTwice();
 	}
 
 	@Override
