@@ -403,7 +403,7 @@
 			</build>
 		</profile>
 		<profile>
-			<id>JDBC</id>
+			<id>MYSQL</id>
 			<build>
 				<plugins>
 					<!-- Test cases -->
