@@ -380,6 +380,45 @@ public class GaeAsyncTest extends BaseAsyncTest {
 		assertEquals(discs[2], res.get(1));
 	}
 	
+	public void testSearchSingleFieldBeginSeveralResultsKeysOnly() {
+		Discovery4Search[] discs = new Discovery4Search[5];
+		discs[0] = new Discovery4Search("alpha", LongAutoID_CURIE);
+		discs[1] = new Discovery4Search("beta", LongAutoID_CURIE);
+		discs[2] = new Discovery4Search("alphagamma", LongAutoID_CURIE);
+		discs[3] = new Discovery4Search("delta", LongAutoID_CURIE);
+		discs[4] = new Discovery4Search("eta", LongAutoID_CURIE);
+		pm.insert((Object[])discs).get();		
+		
+		QueryAsync<Discovery4Search> query = 
+			pm.createQuery(Discovery4Search.class).search("alpha*", "name");
+		
+		SienaFuture<List<Discovery4Search>> future = query.fetchKeys();
+
+		List<Discovery4Search> res = future.get();
+		assertEquals(2, res.size());
+		assertEquals(discs[0].id, res.get(0).id);
+		assertTrue(res.get(0).isOnlyIdFilled());
+		assertEquals(discs[2].id, res.get(1).id);
+		assertTrue(res.get(1).isOnlyIdFilled());
+	}
+	
+	public void testSearchSingleFieldBeginSeveralResultsCount() {
+		Discovery4Search[] discs = new Discovery4Search[5];
+		discs[0] = new Discovery4Search("alpha", LongAutoID_CURIE);
+		discs[1] = new Discovery4Search("beta", LongAutoID_CURIE);
+		discs[2] = new Discovery4Search("alphagamma", LongAutoID_CURIE);
+		discs[3] = new Discovery4Search("delta", LongAutoID_CURIE);
+		discs[4] = new Discovery4Search("eta", LongAutoID_CURIE);
+		pm.insert((Object[])discs).get();		
+		
+		QueryAsync<Discovery4Search> query = 
+			pm.createQuery(Discovery4Search.class).search("alpha*", "name");
+		
+		int res = query.count().get();
+
+		assertEquals(2, res);
+	}
+	
 	public void testSearchSingleFieldEndException() {
 		Discovery4Search[] discs = new Discovery4Search[5];
 		discs[0] = new Discovery4Search("alpha", LongAutoID_CURIE);
@@ -1306,6 +1345,24 @@ public class GaeAsyncTest extends BaseAsyncTest {
 	public void testSearchSingle() {
 		// TODO Auto-generated method stub
 		super.testSearchSingle();
+	}
+
+	@Override
+	public void testSearchSingleKeysOnly() {
+		// TODO Auto-generated method stub
+		super.testSearchSingleKeysOnly();
+	}
+
+	@Override
+	public void testSearchSingleTwice() {
+		// TODO Auto-generated method stub
+		super.testSearchSingleTwice();
+	}
+
+	@Override
+	public void testSearchSingleCount() {
+		// TODO Auto-generated method stub
+		super.testSearchSingleCount();
 	}
 
 	@Override

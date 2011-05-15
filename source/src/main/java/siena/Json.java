@@ -311,7 +311,7 @@ public class Json implements Iterable<Json> {
 			write(writer);
 		} catch (IOException e) {
 			// Should never happen
-			throw new RuntimeException(e);
+			throw new SienaException(e);
 		}
 		return writer.toString();
 	}
@@ -435,6 +435,7 @@ public class Json implements Iterable<Json> {
 	}
 	
 	public String asString() {
+		if(object == null) return null;
 		return object.toString();
 	}
 	
@@ -443,30 +444,37 @@ public class Json implements Iterable<Json> {
 	}
 	
 	public boolean asBoolean() {
+		if(object == null) return false;
 		return ((Boolean) object).booleanValue();
 	}
 	
 	public int asInt() {
+		if(object == null) return 0;
 		return ((Number) object).intValue();
 	}
 	
 	public short asShort() {
+		if(object == null) return 0;
 		return ((Number) object).shortValue();
 	}
 	
 	public byte asByte() {
+		if(object == null) return 0;
 		return ((Number) object).byteValue();
 	}
 	
 	public long asLong() {
+		if(object == null) return 0;
 		return ((Number) object).longValue();
 	}
 	
 	public Double asDouble() {
+		if(object == null) return 0d;
 		return ((Number) object).doubleValue();
 	}
 	
 	public float asFloat() {
+		if(object == null) return 0f;
 		return ((Number) object).floatValue();
 	}
 	
@@ -541,7 +549,7 @@ public class Json implements Iterable<Json> {
 			get();
 			return next();
 		} catch(IOException e) {
-			throw new RuntimeException(e);
+			throw new SienaException(e);
 		}
 	}
 	
@@ -585,7 +593,7 @@ public class Json implements Iterable<Json> {
 						s+=u;
 						break;
 					default:
-						throw new RuntimeException("Invalid escape character: \\"+c+" at position "+n);
+						throw new SienaException("Invalid escape character: \\"+c+" at position "+n);
 					}
 				} else if(c == '\"') {
 					if(more()) get();
@@ -609,7 +617,7 @@ public class Json implements Iterable<Json> {
 					if(more()) get();
 					return result;
 				}
-				if(c != ',') throw new RuntimeException("expected ',' or ']' at character "+n);
+				if(c != ',') throw new SienaException("expected ',' or ']' at character "+n);
 				get();
 				c = ignoreWS();
 			} while(true);
@@ -624,10 +632,10 @@ public class Json implements Iterable<Json> {
 			do {
 				Json k = next();
 				if(!k.isString())
-					throw new RuntimeException("find non-string key at character "+n);
+					throw new SienaException("find non-string key at character "+n);
 				String key = k.str();
 				c = ignoreWS();
-				if(c != ':') throw new RuntimeException("expected ':' at character "+n);
+				if(c != ':') throw new SienaException("expected ':' at character "+n);
 				get();
 				c = ignoreWS();
 				Json value = next();
@@ -637,23 +645,23 @@ public class Json implements Iterable<Json> {
 					if(more()) get();
 					return result;
 				}
-				if(c != ',') throw new RuntimeException("expected: ',' or '}'' at character "+n);
+				if(c != ',') throw new SienaException("expected: ',' or '}'' at character "+n);
 				get();
 				c = ignoreWS();
 			} while(true);
 		} else if(c == 't') {
 			if(getc() != 'r' || getc() != 'u' || getc() != 'e')
-				throw new RuntimeException("expected 'true' at character "+n);
+				throw new SienaException("expected 'true' at character "+n);
 			if(more()) get();
 			return new Json(Boolean.TRUE);
 		} else if(c == 'f') {
 			if(getc() != 'a' || getc() != 'l' || getc() != 's' || getc() != 'e')
-				throw new RuntimeException("expected 'false' at character "+n);
+				throw new SienaException("expected 'false' at character "+n);
 			if(more()) get();
 			return new Json(Boolean.FALSE);
 		} else if(c == 'n') {
 			if(getc() != 'u' || getc() != 'l' || getc() != 'l')
-				throw new RuntimeException("expected 'true' at character "+n);
+				throw new SienaException("expected 'true' at character "+n);
 			if(more()) get();
 			return new Json(null);
 		} else if(c == '-' || (c >= '0' && c <= '9')) {
@@ -670,7 +678,7 @@ public class Json implements Iterable<Json> {
 				return new Json(Double.parseDouble(s));
 			return new Json(Long.parseLong(s));
 		} else {
-			throw new RuntimeException("expected: '{', '[', '\"', true, false, null, or a number at "+n);
+			throw new SienaException("expected: '{', '[', '\"', true, false, null, or a number at "+n);
 		}
 	}
 	

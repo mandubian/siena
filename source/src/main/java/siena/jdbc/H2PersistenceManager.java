@@ -1,18 +1,13 @@
 package siena.jdbc;
 
 import java.lang.reflect.Field;
-import java.sql.Array;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -21,8 +16,6 @@ import java.util.Properties;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.h2.fulltext.FullText;
-
 import siena.ClassInfo;
 import siena.Generator;
 import siena.Id;
@@ -30,11 +23,13 @@ import siena.Query;
 import siena.QueryFilterSearch;
 import siena.SienaException;
 import siena.Util;
-import siena.core.options.QueryOption;
 import siena.jdbc.JdbcPersistenceManager.JdbcClassInfo;
+import siena.jdbc.h2.FullText;
 
 public class H2PersistenceManager extends JdbcPersistenceManager {
 	private static final String DB = "H2";
+	
+	private String dbMode = "h2";
 	
 	protected static Map<String, Boolean> tableIndexMap = new ConcurrentHashMap<String, Boolean>();
 
@@ -44,6 +39,11 @@ public class H2PersistenceManager extends JdbcPersistenceManager {
 	
 	public H2PersistenceManager(ConnectionManager connectionManager, Class<?> listener) {
 		super(connectionManager, listener);
+	}
+	
+	public H2PersistenceManager(ConnectionManager connectionManager, Class<?> listener, String dbMode) {
+		super(connectionManager, listener);
+		this.dbMode = dbMode; 
 	}
 	
 	/*
@@ -292,9 +292,7 @@ public class H2PersistenceManager extends JdbcPersistenceManager {
 			JdbcDBUtils.closeStatement(ps);
 		}
 	}
-	
-	private boolean isSearchInit = false; 
-	
+		
 	@Override
 	public void init(Properties p) {
 		super.init(p);
@@ -305,26 +303,150 @@ public class H2PersistenceManager extends JdbcPersistenceManager {
 			throw new SienaException(e);
 		}
 	}
-	public <T> List<T> doSearch(Query<T> query){
+	
+	protected <T> List<T> doSearch(Query<T> query, int limit, int offset){
 		// TODO this is a very raw impl: need some work certainly 
 		try {
 			Connection conn = this.getConnection();
 			ClassInfo ci = ClassInfo.getClassInfo(query.getQueriedClass());
 			// doesn't index a table that has already been indexed
 			if(!tableIndexMap.containsKey(ci.tableName)){
+				List<String> colList = ci.getUpdateFieldsColumnNames();
 				String cols = null;
-				if(!ci.updateFields.isEmpty()){
+				if(!colList.isEmpty()){
 					cols = "";
 					// removes auto generated IDs from index
-					int sz = ci.updateFields.size();
+					int sz = colList.size();
 					for (int i=0; i<sz; i++) {
-						String str = ci.updateFields.get(i).getName().toUpperCase();
-						cols += str;
+						if("h2".equals(dbMode)) cols+=colList.get(i).toUpperCase();
+						// !!! mysql mode means case INsensitive to lowercase !!!!
+						else if("mysql".equals(dbMode)) cols+=colList.get(i).toLowerCase();
+						else cols+=colList.get(i).toUpperCase();
+						
 						if(i<sz-1) cols += ",";
 					}
 				}
 				// creates the index
-				FullText.createIndex(conn, "PUBLIC", "discoveries_search".toUpperCase(), cols);
+				FullText.createIndex(conn, "PUBLIC", ci.tableName.toUpperCase(), cols);
+				tableIndexMap.put(ci.tableName, true);
+			}
+			
+			String searchString = "";
+			Iterator<QueryFilterSearch> it = query.getSearches().iterator();
+			boolean first = true;
+			while(it.hasNext()){
+				if(!first){ 
+					searchString += " ";
+				}else {
+					first = false;
+				}
+				searchString += it.next().match;				
+			}
+			
+			ResultSet rs = FullText.searchData(conn, searchString, limit, offset);
+			List<T> res = new ArrayList<T>();
+			while(rs.next()) {
+				//String queryStr = rs.getString("QUERY");
+				//String score = rs.getString("SCORE");
+				//Array columns = rs.getArray("COLUMNS");
+				Object[] keys = (Object[])rs.getArray("KEYS").getArray();
+				if(res == null) res = this.getByKeys(query.getQueriedClass(), keys);
+				else res.addAll(this.getByKeys(query.getQueriedClass(), keys));
+			}
+			return res;
+		} catch (SQLException e) {
+			throw new SienaException(e);
+		}
+	}
+	
+	protected <T> List<T> doSearchKeys(Query<T> query, int limit, int offset){
+		// TODO this is a very raw impl: need some work certainly 
+		try {
+			Connection conn = this.getConnection();
+			ClassInfo ci = ClassInfo.getClassInfo(query.getQueriedClass());
+			// doesn't index a table that has already been indexed
+			if(!tableIndexMap.containsKey(ci.tableName)){
+				List<String> colList = ci.getUpdateFieldsColumnNames();
+				String cols = null;
+				if(!colList.isEmpty()){
+					cols = "";
+					// removes auto generated IDs from index
+					int sz = colList.size();
+					for (int i=0; i<sz; i++) {
+						if("h2".equals(dbMode)) cols+=colList.get(i).toUpperCase();
+						// !!! mysql mode means case INsensitive to lowercase !!!!
+						else if("mysql".equals(dbMode)) cols+=colList.get(i).toLowerCase();
+						else cols+=colList.get(i).toUpperCase();
+						
+						if(i<sz-1) cols += ",";
+					}
+				}
+				// creates the index
+				FullText.createIndex(conn, "PUBLIC", ci.tableName.toUpperCase(), cols);
+				tableIndexMap.put(ci.tableName, true);
+			}
+			
+			String searchString = "";
+			Iterator<QueryFilterSearch> it = query.getSearches().iterator();
+			boolean first = true;
+			while(it.hasNext()){
+				if(!first){ 
+					searchString += " ";
+				}else {
+					first = false;
+				}
+				searchString += it.next().match;				
+			}
+			
+			ResultSet rs = FullText.searchData(conn, searchString, limit, offset);
+			List<T> res = new ArrayList<T>();
+			Class<T> clazz = query.getQueriedClass();
+			while(rs.next()) {
+				//String queryStr = rs.getString("QUERY");
+				//String score = rs.getString("SCORE");
+				//Array columns = rs.getArray("COLUMNS");
+				Object[] keys = (Object[])rs.getArray("KEYS").getArray();
+				for(Object key: keys){
+					T obj = Util.createObjectInstance(clazz);
+					for (Field field : JdbcClassInfo.getClassInfo(clazz).keys) {
+						JdbcMappingUtils.setFromObject(obj, field, key);
+					}
+					
+					res.add(obj);
+				}				
+			}
+			return res;
+		} catch (SQLException e) {
+			throw new SienaException(e);
+		} catch (Exception e) {
+			throw new SienaException(e);
+		}
+	}
+	
+	protected <T> int doSearchCount(Query<T> query){
+		// TODO this is a very raw impl: need some work certainly 
+		try {
+			Connection conn = this.getConnection();
+			ClassInfo ci = ClassInfo.getClassInfo(query.getQueriedClass());
+			// doesn't index a table that has already been indexed
+			if(!tableIndexMap.containsKey(ci.tableName)){
+				List<String> colList = ci.getUpdateFieldsColumnNames();
+				String cols = null;
+				if(!colList.isEmpty()){
+					cols = "";
+					// removes auto generated IDs from index
+					int sz = colList.size();
+					for (int i=0; i<sz; i++) {
+						if("h2".equals(dbMode)) cols+=colList.get(i).toUpperCase();
+						// !!! mysql mode means case INsensitive to lowercase !!!!
+						else if("mysql".equals(dbMode)) cols+=colList.get(i).toLowerCase();
+						else cols+=colList.get(i).toUpperCase();
+						
+						if(i<sz-1) cols += ",";
+					}
+				}
+				// creates the index
+				FullText.createIndex(conn, "PUBLIC", ci.tableName.toUpperCase(), cols);
 				tableIndexMap.put(ci.tableName, true);
 			}
 			
@@ -341,16 +463,15 @@ public class H2PersistenceManager extends JdbcPersistenceManager {
 			}
 			
 			ResultSet rs = FullText.searchData(conn, searchString, 0, 0);
-			List<T> res = new ArrayList<T>();
+			int count = 0;
 			while(rs.next()) {
 				//String queryStr = rs.getString("QUERY");
 				//String score = rs.getString("SCORE");
-				Array columns = rs.getArray("COLUMNS");
+				//Array columns = rs.getArray("COLUMNS");
 				Object[] keys = (Object[])rs.getArray("KEYS").getArray();
-				if(res == null) res = this.getByKeys(query.getQueriedClass(), keys);
-				else res.addAll(this.getByKeys(query.getQueriedClass(), keys));
+				count += keys.length;
 			}
-			return res;
+			return count;
 		} catch (SQLException e) {
 			throw new SienaException(e);
 		}
@@ -362,7 +483,87 @@ public class H2PersistenceManager extends JdbcPersistenceManager {
 			return super.fetch(query);
 		}
 		else {
-			return doSearch(query);
+			return doSearch(query, 0, 0);
 		}
 	}
+
+	@Override
+	public <T> List<T> fetch(Query<T> query, int limit) {
+		if(query.getSearches().isEmpty()){
+			return super.fetch(query, limit);
+		}
+		else {
+			return doSearch(query, limit, 0);
+		}
+	}
+
+	@Override
+	public <T> List<T> fetch(Query<T> query, int limit, Object offset) {
+		if(query.getSearches().isEmpty()){
+			return super.fetch(query, limit, (Integer)offset);
+		}
+		else {
+			return doSearch(query, limit, (Integer)offset);
+		}
+	}
+
+	@Override
+	public <T> List<T> fetchKeys(Query<T> query) {
+		if(query.getSearches().isEmpty()){
+			return super.fetchKeys(query);
+		}
+		else {
+			return doSearchKeys(query, 0, 0);
+		}
+	}
+
+	@Override
+	public <T> List<T> fetchKeys(Query<T> query, int limit) {
+		if(query.getSearches().isEmpty()){
+			return super.fetchKeys(query, limit);
+		}
+		else {
+			return doSearchKeys(query, limit, 0);
+		}
+	}
+
+	@Override
+	public <T> List<T> fetchKeys(Query<T> query, int limit, Object offset) {
+		if(query.getSearches().isEmpty()){
+			return super.fetchKeys(query, limit, (Integer)offset);
+		}
+		else {
+			return doSearchKeys(query, limit, (Integer)offset);
+		}
+	}
+
+	@Override
+	public <T> Iterable<T> iter(Query<T> query) {
+		// TODO Auto-generated method stub
+		return super.iter(query);
+	}
+
+	@Override
+	public <T> Iterable<T> iter(Query<T> query, int limit) {
+		// TODO Auto-generated method stub
+		return super.iter(query, limit);
+	}
+
+	@Override
+	public <T> Iterable<T> iter(Query<T> query, int limit, Object offset) {
+		// TODO Auto-generated method stub
+		return super.iter(query, limit, offset);
+	}
+
+	@Override
+	public <T> int count(Query<T> query) {
+		if(query.getSearches().isEmpty()){
+			return super.count(query);
+		}
+		else {
+			return doSearchCount(query);
+		}
+	}
+	
+	
 }

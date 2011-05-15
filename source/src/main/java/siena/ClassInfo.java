@@ -19,6 +19,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -86,6 +87,28 @@ public class ClassInfo {
 		return t.value();
 	}
 
+	public List<String> getUpdateFieldsColumnNames() {
+		List<String> strs = new ArrayList<String>(this.updateFields.size());
+		for(Field field: this.updateFields){
+			Column c = field.getAnnotation(Column.class);
+			if(c != null && c.value().length > 0) {
+				strs.add(c.value()[0]);
+			}
+			
+			// default mapping: field names
+			else if(isModel(field.getType())) {
+				ClassInfo ci = getClassInfo(field.getType());
+				for (Field key : ci.keys) {
+					Collections.addAll(strs, getColumnNames(key));
+				}
+			}
+			else {
+				strs.add(field.getName());
+			}
+		}
+		return strs;
+	}
+	
 	public static String[] getColumnNames(Field field) {
 		Column c = field.getAnnotation(Column.class);
 		if(c != null && c.value().length > 0) return c.value();

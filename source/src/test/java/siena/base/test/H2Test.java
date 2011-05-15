@@ -86,8 +86,8 @@ public class H2Test extends BaseTest {
 		for(int i=0; i<10; i++){
 			if(i%2==0) discs[i] = new Discovery4Search("even_"+i, LongAutoID_CURIE);
 			else discs[i] = new Discovery4Search("odd_"+i, LongAutoID_CURIE);
-			pm.insert(discs[i]);
 		}
+		pm.insert(discs);
 		
 		Query<Discovery4Search> query = 
 			pm.createQuery(Discovery4Search.class).search("even_*", "name").order("name");
@@ -97,6 +97,50 @@ public class H2Test extends BaseTest {
 		assertEquals(5, res.size());
 		for(int i=0; i<res.size();i++){
 			assertEquals(discs[2*i], res.get(i));
+		}		
+	}
+	
+	public void testSearchMultipleSingleFieldCount() {
+		Discovery4Search[] discs = new Discovery4Search[10];
+		for(int i=0; i<10; i++){
+			if(i%2==0) discs[i] = new Discovery4Search("even_"+i, LongAutoID_CURIE);
+			else discs[i] = new Discovery4Search("odd_"+i, LongAutoID_CURIE);
+		}
+		pm.insert(discs);
+		
+		Query<Discovery4Search> query = 
+			pm.createQuery(Discovery4Search.class).search("even_*", "name").order("name");
+		
+		int res = query.count();
+		
+		assertEquals(5, res);
+		
+	}
+	
+	public void testSearchMultipleSingleFieldKeysOnly() {
+		Discovery4Search[] discs = new Discovery4Search[10];
+		for(int i=0; i<10; i++){
+			if(i%2==0) discs[i] = new Discovery4Search("even_"+i, LongAutoID_CURIE);
+			else discs[i] = new Discovery4Search("odd_"+i, LongAutoID_CURIE);
+		}
+		pm.insert(discs);
+		
+		Query<Discovery4Search> query = 
+			pm.createQuery(Discovery4Search.class).search("even_*", "name").order("name");
+		
+		List<Discovery4Search> res = query.fetchKeys();
+		
+		assertEquals(5, res.size());
+		// apparently sometimes, the returned search order is not the same as the inserted order...
+		for(int i=0; i<res.size();i++){
+			assertTrue(res.get(i).isOnlyIdFilled());
+			int j=0;
+			for(j=0; j<10; j++){
+				if(discs[j].id == res.get(i).id){
+					break;
+				}
+			}
+			if(j==10) fail();
 		}		
 	}
 
@@ -1025,9 +1069,21 @@ public class H2Test extends BaseTest {
 	}
 
 	@Override
+	public void testSearchSingleKeysOnly() {
+		// TODO Auto-generated method stub
+		super.testSearchSingleKeysOnly();
+	}
+
+	@Override
 	public void testSearchSingleTwice() {
 		// TODO Auto-generated method stub
 		super.testSearchSingleTwice();
+	}
+
+	@Override
+	public void testSearchSingleCount() {
+		// TODO Auto-generated method stub
+		super.testSearchSingleCount();
 	}
 
 	@Override

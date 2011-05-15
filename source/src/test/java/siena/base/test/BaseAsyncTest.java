@@ -3133,6 +3133,67 @@ public abstract class BaseAsyncTest extends TestCase {
 		assertEquals(discs[5], res.get(0));
 	}
 	
+	
+	public void testSearchSingleKeysOnly() {
+		Discovery4Search[] discs = new Discovery4Search[100];
+		for(int i=0; i<100; i++){
+			discs[i] = new Discovery4Search("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs).get();
+
+		QueryAsync<Discovery4Search> query = 
+			pm.createQuery(Discovery4Search.class).search("Disc_5", "name");
+		
+		SienaFuture<List<Discovery4Search>> future = query.fetchKeys();
+		List<Discovery4Search> res = future.get();
+				
+		assertEquals(1, res.size());
+		assertEquals(discs[5].id, res.get(0).id);
+		assertTrue(res.get(0).isOnlyIdFilled());
+	}
+	
+	public void testSearchSingleTwice() {
+		Discovery4Search[] discs = new Discovery4Search[100];
+		for(int i=0; i<100; i++){
+			discs[i] = new Discovery4Search("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs).get();
+
+		QueryAsync<Discovery4Search> query = 
+			pm.createQuery(Discovery4Search.class).search("Disc_5", "name");
+		
+		SienaFuture<List<Discovery4Search>> future = query.fetch();
+		List<Discovery4Search> res = future.get();
+				
+		assertEquals(1, res.size());
+		assertEquals(discs[5], res.get(0));
+
+		query = 
+			pm.createQuery(Discovery4Search.class).search("Disc_48", "name");
+		
+		future = query.fetch();
+		res = future.get();
+				
+		assertEquals(1, res.size());
+		assertEquals(discs[48], res.get(0));
+
+	}
+
+	public void testSearchSingleCount() {
+		Discovery4Search[] discs = new Discovery4Search[100];
+		for(int i=0; i<100; i++){
+			discs[i] = new Discovery4Search("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs).get();
+
+		QueryAsync<Discovery4Search> query = 
+			pm.createQuery(Discovery4Search.class).search("Disc_5", "name");
+		
+		int res = query.count().get();
+				
+		assertEquals(1, res);
+	}
+	
 	public void testBatchInsert() {
 		Object[] discs = new Discovery[100];
 		for(int i=0; i<100; i++){

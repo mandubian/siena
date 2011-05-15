@@ -70,14 +70,20 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 	}
 
 	public void init(Properties p) {
-		String cm = p.getProperty("transactions");
-		if(cm != null) {
-			try {
-				connectionManager = (ConnectionManager) Class.forName(cm).newInstance();
-			} catch (Exception e) {
-				throw new SienaException(e);
+		if(p != null) {
+			String cm = p.getProperty("transactions");
+			if(cm != null) {
+				try {
+					connectionManager = (ConnectionManager) Class.forName(cm).newInstance();
+				} catch (Exception e) {
+					throw new SienaException(e);
+				}
+			} else {
+				connectionManager = new ThreadedConnectionManager();
 			}
-		} else {
+		} 
+		
+		if(connectionManager == null){
 			connectionManager = new ThreadedConnectionManager();
 		}
 

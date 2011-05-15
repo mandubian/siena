@@ -361,6 +361,7 @@
 								<include>**/GaeModelTest.java</include>
 								<include>**/JdbcTest.java</include>
 								<include>**/JdbcModelTest.java</include>
+								<include>**/H2Test.java</include>
 								<include>**/ClassInfoTest.java</include>
 								<include>**/ModelTest.java</include>
 								<include>**/JsonSerializerTest.java</include>

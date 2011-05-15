@@ -330,7 +330,11 @@ public class JsonSerializer {
 			return data!=null ? data.str() : null;
 		}
 		else if(type.isEnum()) {
-			return data!=null ? Enum.valueOf((Class<Enum>) type, data.str()) : null;
+			if(data!=null){
+				String str = data.str();
+				if(str != null) return Enum.valueOf((Class<Enum>) type, data.str());
+			}
+			return null;
 		}
 		return null;
 	}

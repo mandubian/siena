@@ -104,6 +104,43 @@ public class PostgresqlTest extends BaseTest {
 		}		
 	}
 	
+	public void testSearchMultipleSingleFieldKeysOnly() {
+		Discovery4Search[] discs = new Discovery4Search[10];
+		for(int i=0; i<10; i++){
+			if(i%2==0) discs[i] = new Discovery4Search("even_"+i, LongAutoID_CURIE);
+			else discs[i] = new Discovery4Search("odd_"+i, LongAutoID_CURIE);
+			pm.insert(discs[i]);
+		}
+		
+		Query<Discovery4Search> query = 
+			pm.createQuery(Discovery4Search.class).search("even_", "name").order("name");
+		
+		List<Discovery4Search> res = query.fetchKeys();
+		
+		assertEquals(5, res.size());
+		for(int i=0; i<res.size();i++){
+			assertEquals(discs[2*i].id, res.get(i).id);
+			assertTrue(res.get(i).isOnlyIdFilled());
+		}		
+	}
+	
+	public void testSearchMultipleSingleFieldCount() {
+		Discovery4Search[] discs = new Discovery4Search[10];
+		for(int i=0; i<10; i++){
+			if(i%2==0) discs[i] = new Discovery4Search("even_"+i, LongAutoID_CURIE);
+			else discs[i] = new Discovery4Search("odd_"+i, LongAutoID_CURIE);
+			pm.insert(discs[i]);
+		}
+		
+		Query<Discovery4Search> query = 
+			pm.createQuery(Discovery4Search.class).search("even_", "name").order("name");
+		
+		int res = query.count();
+		
+		assertEquals(5, res);
+	
+	}
+	
 	public void testSearchMultipleMultiField() {
 		Discovery4Search2[] discs = new Discovery4Search2[10];
 		for(int i=0; i<10; i++){
@@ -1049,6 +1086,18 @@ public class PostgresqlTest extends BaseTest {
 	public void testSearchSingleTwice() {
 		// TODO Auto-generated method stub
 		super.testSearchSingleTwice();
+	}
+
+	@Override
+	public void testSearchSingleKeysOnly() {
+		// TODO Auto-generated method stub
+		super.testSearchSingleKeysOnly();
+	}
+
+	@Override
+	public void testSearchSingleCount() {
+		// TODO Auto-generated method stub
+		super.testSearchSingleCount();
 	}
 
 	@Override
