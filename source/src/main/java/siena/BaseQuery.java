@@ -245,7 +245,7 @@ public class BaseQuery<T> extends BaseQueryData<T> implements Query<T> {
 	}
 
 	public T getByKey(Object key) {
-		return pm.getByKey(this.getQueriedClass(), key);
+		return pm.getByKey(clazz, key);
 	}
 		
 }

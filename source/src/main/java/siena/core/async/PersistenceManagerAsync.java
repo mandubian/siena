@@ -21,7 +21,6 @@ import java.util.Properties;
 
 import siena.BaseQueryData;
 import siena.PersistenceManager;
-import siena.Query;
 import siena.SienaException;
 import siena.core.batch.BatchAsync;
 
@@ -182,6 +181,8 @@ public interface PersistenceManagerAsync {
 
 	<T> SienaFuture<Integer> get(Iterable<T> models);
 
+	<T> SienaFuture<T> getByKey(Class<T> clazz, Object key);
+
 	<T> SienaFuture<List<T>> getByKeys(Class<T> clazz, Object... keys);
 
 	<T> SienaFuture<List<T>> getByKeys(Class<T> clazz, Iterable<?> keys);
@@ -240,6 +241,7 @@ public interface PersistenceManagerAsync {
 	<T> SienaFuture<Iterable<T>> iter(QueryAsync<T> query, int limit);
 
 	<T> SienaFuture<Iterable<T>> iter(QueryAsync<T> query, int limit, Object offset);
+	<T> SienaFuture<Iterable<T>> iterPerPage(QueryAsync<T> query, int pageSize);
 
 	<T> void release(QueryAsync<T> query);
 	<T> void paginate(QueryAsync<T> query);

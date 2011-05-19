@@ -3,6 +3,7 @@ package siena.base.test;
 import java.util.Arrays;
 import java.util.List;
 
+import siena.Query;
 import siena.SienaException;
 import siena.SienaRestrictedApiException;
 import siena.base.test.model.Discovery;
@@ -1687,6 +1688,66 @@ public class GaeAsyncTest extends BaseAsyncTest {
 	public void testBatchUpdateList() {
 		// TODO Auto-generated method stub
 		super.testBatchUpdateList();
+	}
+
+	@Override
+	public void testIterPerPageStateless() {
+		// TODO Auto-generated method stub
+		super.testIterPerPageStateless();
+	}
+
+	@Override
+	public void testIterPerPageStateless2() {
+		// TODO Auto-generated method stub
+		super.testIterPerPageStateless2();
+	}
+
+	@Override
+	public void testIterPerPageStateless3() {
+		// TODO Auto-generated method stub
+		super.testIterPerPageStateless3();
+	}
+
+	@Override
+	public void testIterPerPageStateful() {
+		// TODO Auto-generated method stub
+		super.testIterPerPageStateful();
+	}
+
+	@Override
+	public void testIterPerPageStateful2() {
+		// TODO Auto-generated method stub
+		super.testIterPerPageStateful2();
+	}
+
+	@Override
+	public void testIterPerPageStatefull3() {
+		// TODO Auto-generated method stub
+		super.testIterPerPageStatefull3();
+	}
+
+	@Override
+	public void testGetByKeyUUID() {
+		// TODO Auto-generated method stub
+		super.testGetByKeyUUID();
+	}
+
+	@Override
+	public void testGetByKeyLongAutoID() {
+		// TODO Auto-generated method stub
+		super.testGetByKeyLongAutoID();
+	}
+
+	@Override
+	public void testGetByKeyLongManualID() {
+		// TODO Auto-generated method stub
+		super.testGetByKeyLongManualID();
+	}
+
+	@Override
+	public void testGetByKeyStringID() {
+		// TODO Auto-generated method stub
+		super.testGetByKeyStringID();
 	}
 
 

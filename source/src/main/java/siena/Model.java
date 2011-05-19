@@ -278,10 +278,6 @@ public abstract class Model {
 			return clazz;
 		}
 
-		public Object raw(String request) {
-			return createQuery().raw(request);
-		}
-
 		public Query<T> paginate(int limit) {
 			return createQuery().paginate(limit);
 		}

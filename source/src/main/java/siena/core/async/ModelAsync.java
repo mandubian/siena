@@ -129,6 +129,10 @@ public class ModelAsync {
 			return createQuery().get();
 		}
 
+		public SienaFuture<T> getByKey(Object key) {
+			return createQuery().getByKey(key);
+		}
+
 		public SienaFuture<Integer> delete() {
 			return createQuery().delete();			
 		}
@@ -175,6 +179,10 @@ public class ModelAsync {
 
 		public SienaFuture<Iterable<T>> iter(int limit, Object offset) {
 			return createQuery().iter(limit, offset);
+		}
+
+		public SienaFuture<Iterable<T>> iterPerPage(int limit) {
+			return createQuery().iterPerPage(limit);
 		}
 
 		public Class<T> getQueriedClass() {
@@ -258,17 +266,14 @@ public class ModelAsync {
 			return createQuery().clone();
 		}
 
-		@Override
 		public PersistenceManagerAsync getPersistenceManager() {
 			return obj.getPersistenceManager();
 		}
 
-		@Override
 		public QueryAsync<T> limit(int limit) {
 			return createQuery().limit(limit);
 		}
 
-		@Override
 		public QueryAsync<T> offset(Object offset) {
 			return createQuery().offset(offset);
 		}

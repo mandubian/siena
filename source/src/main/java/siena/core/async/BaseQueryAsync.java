@@ -66,6 +66,10 @@ public class BaseQueryAsync<T> extends BaseQueryData<T> implements QueryAsync<T>
 		return pm.get(this);
 	}
 
+	public SienaFuture<T> getByKey(Object key) {
+		return pm.getByKey(clazz, key);
+	}
+
 	public SienaFuture<Integer> delete() {
 		return pm.delete(this);
 	}
@@ -112,6 +116,10 @@ public class BaseQueryAsync<T> extends BaseQueryData<T> implements QueryAsync<T>
 
 	public SienaFuture<Iterable<T>> iter(int limit, Object offset) {
 		return pm.iter(this, limit, offset);
+	}
+
+	public SienaFuture<Iterable<T>> iterPerPage(int limit) {
+		return pm.iterPerPage(this, limit);
 	}
 
 	public SienaFuture<Object> raw(String request) {

@@ -137,6 +137,7 @@ public abstract class BaseAsyncTest extends TestCase {
 		pm.get(p).get();
 		return p;
 	}
+
 	
 	protected QueryAsync<PersonUUID> queryPersonUUIDOrderBy(String order, Object value, boolean desc) {
 		QueryAsync<PersonUUID> query = pm.createQuery(PersonUUID.class);
@@ -5243,5 +5244,126 @@ public abstract class BaseAsyncTest extends TestCase {
 			assertEquals(discs.get(i++), disc);
 		}
 		
+	}
+	
+	
+	public void testIterPerPageStateless(){
+		Discovery[] discs = new Discovery[500];
+		for(int i=0; i<500; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs).get();
+		
+		QueryAsync<Discovery> query = pm.createQuery(Discovery.class).order("id");
+		SienaFuture<Iterable<Discovery>> iter = query.iterPerPage(50);
+		int i=0;
+		for(Discovery disc: iter.get()){
+			assertEquals(discs[i++], disc);
+		}	
+		assertEquals(500, i);	
+	}
+	
+	public void testIterPerPageStateless2(){
+		Discovery[] discs = new Discovery[500];
+		for(int i=0; i<500; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs).get();
+		
+		QueryAsync<Discovery> query = pm.createQuery(Discovery.class).order("id");
+		SienaFuture<Iterable<Discovery>> iter = query.iterPerPage(50);
+		Iterator<Discovery> it = iter.get().iterator();
+		int i=0;
+		while(it.hasNext()){
+			assertEquals(discs[i++], it.next());
+		}	
+		assertEquals(500, i);	
+	}
+	
+	public void testIterPerPageStateless3(){
+		Discovery[] discs = new Discovery[500];
+		for(int i=0; i<500; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs).get();
+		
+		QueryAsync<Discovery> query = pm.createQuery(Discovery.class).order("id");
+		SienaFuture<Iterable<Discovery>> iter = query.offset(25).iterPerPage(50);
+		Iterator<Discovery> it = iter.get().iterator();
+		int i=25;
+		while(it.hasNext()){
+			assertEquals(discs[i++], it.next());
+		}	
+		assertEquals(500, i);	
+	}
+	
+	public void testIterPerPageStateful(){
+		Discovery[] discs = new Discovery[500];
+		for(int i=0; i<500; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs).get();
+		
+		QueryAsync<Discovery> query = pm.createQuery(Discovery.class).stateful().order("id");
+		SienaFuture<Iterable<Discovery>> iter = query.iterPerPage(50);
+		int i=0;
+		for(Discovery disc: iter.get()){
+			assertEquals(discs[i++], disc);
+		}	
+		assertEquals(500, i);	
+	}
+	
+	public void testIterPerPageStateful2(){
+		Discovery[] discs = new Discovery[500];
+		for(int i=0; i<500; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs).get();
+		
+		QueryAsync<Discovery> query = pm.createQuery(Discovery.class).stateful().order("id");
+		SienaFuture<Iterable<Discovery>> iter = query.iterPerPage(50);
+		Iterator<Discovery> it = iter.get().iterator();
+		int i=0;
+		while(it.hasNext()){
+			assertEquals(discs[i++], it.next());
+		}	
+		assertEquals(500, i);	
+	}
+	
+	public void testIterPerPageStatefull3(){
+		Discovery[] discs = new Discovery[500];
+		for(int i=0; i<500; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.insert((Object[])discs).get();
+		
+		QueryAsync<Discovery> query = pm.createQuery(Discovery.class).stateful().order("id");
+		SienaFuture<Iterable<Discovery>> iter = query.offset(25).iterPerPage(50);
+		Iterator<Discovery> it = iter.get().iterator();
+		int i=25;
+		while(it.hasNext()){
+			assertEquals(discs[i++], it.next());
+		}	
+		assertEquals(500, i);	
+	}
+	
+	public void testGetByKeyUUID() {
+		PersonUUID curie = pm.getByKey(PersonUUID.class, UUID_CURIE.id).get();
+		assertEquals(UUID_CURIE, curie);
+	}
+
+	public void testGetByKeyLongAutoID() {
+		PersonLongAutoID curie = pm.getByKey(PersonLongAutoID.class, LongAutoID_CURIE.id).get();
+		assertEquals(LongAutoID_CURIE, curie);
+	}
+
+	public void testGetByKeyLongManualID() {
+		PersonLongManualID curie = pm.getByKey(PersonLongManualID.class, LongManualID_CURIE.id).get();
+		assertEquals(LongManualID_CURIE, curie);
+	}
+
+	public void testGetByKeyStringID() {
+		PersonStringID curie = pm.getByKey(PersonStringID.class, StringID_CURIE.id).get();
+		assertEquals(StringID_CURIE, curie);
 	}
 }

@@ -59,9 +59,6 @@ public interface Query<T> extends QueryData<T>{
 		
 	Query<T> clone();
 	
-	Object raw(String request);
-	
-	
 	/**
 	 * sets the limit number of entities to fetch
 	 * 

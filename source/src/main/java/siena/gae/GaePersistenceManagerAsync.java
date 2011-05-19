@@ -15,8 +15,10 @@ import org.apache.commons.lang.NotImplementedException;
 
 import siena.ClassInfo;
 import siena.PersistenceManager;
+import siena.Query;
 import siena.SienaException;
 import siena.Util;
+import siena.core.SienaIterablePerPage;
 import siena.core.async.AbstractPersistenceManagerAsync;
 import siena.core.async.QueryAsync;
 import siena.core.async.SienaFuture;
@@ -392,7 +394,8 @@ public class GaePersistenceManagerAsync extends AbstractPersistenceManagerAsync 
 		if(state.isStateless()) {
 			if(pag.isPaginating()){
 				if(off.isActive()){
-					fetchOptions.offset(off.offset+gaeCtx.realOffset);
+					gaeCtx.realOffset+=off.offset;
+					fetchOptions.offset(gaeCtx.realOffset);
 					off.passivate();
 				}else {
 					fetchOptions.offset(gaeCtx.realOffset);
@@ -401,7 +404,8 @@ public class GaePersistenceManagerAsync extends AbstractPersistenceManagerAsync 
 				// if stateless and not paginating, resets the realoffset to 0
 				gaeCtx.realOffset = 0;
 				if(off.isActive()){
-					fetchOptions.offset(off.offset);
+					gaeCtx.realOffset=off.offset;
+					fetchOptions.offset(gaeCtx.realOffset);
 					off.passivate();
 				}
 			}
@@ -671,7 +675,8 @@ public class GaePersistenceManagerAsync extends AbstractPersistenceManagerAsync 
 		if(state.isStateless()) {
 			if(pag.isPaginating()){			
 				if(off.isActive()){
-					fetchOptions.offset(off.offset+gaeCtx.realOffset);
+					gaeCtx.realOffset+=off.offset;
+					fetchOptions.offset(gaeCtx.realOffset);
 					off.passivate();
 				}else {
 					fetchOptions.offset(gaeCtx.realOffset);
@@ -679,9 +684,9 @@ public class GaePersistenceManagerAsync extends AbstractPersistenceManagerAsync 
 			}else {
 								
 				// if stateless and not paginating, resets the realoffset to 0
-				gaeCtx.realOffset = 0;
+				gaeCtx.realOffset = off.offset;
 				if(off.isActive()){
-					fetchOptions.offset(off.offset);
+					fetchOptions.offset(gaeCtx.realOffset);
 					off.passivate();
 				}
 			}
@@ -901,6 +906,11 @@ public class GaePersistenceManagerAsync extends AbstractPersistenceManagerAsync 
 		return doFetchIterable(query, limit, (Integer)offset);
 	}
 
+	public <T> SienaFuture<Iterable<T>> iterPerPage(QueryAsync<T> query,
+			int pageSize) {
+		((QueryOptionFetchType)query.option(QueryOptionFetchType.ID)).fetchType=QueryOptionFetchType.Type.ITER_PER_PAGE;
+		return new SienaIterableAsyncPerPageWrapper<T>(query, pageSize);
+	}
 
 	public <T> void release(QueryAsync<T> query) {
 		super.release(query);
@@ -1106,7 +1116,28 @@ public class GaePersistenceManagerAsync extends AbstractPersistenceManagerAsync 
 		
 		return new SienaFutureContainer<Integer>(wrapped);
 	}
-
+	
+	public <T> SienaFuture<T> getByKey(final Class<T> clazz, final Object key) {
+		Key gkey = GaeMappingUtils.makeKey(clazz, key);
+		try {
+			Future<Entity> future = ds.get(gkey);
+			
+			Future<T> wrapped = new SienaFutureWrapper<Entity, T>(future) {
+	            @Override
+	            protected T wrap(Entity entity) throws Exception
+	            {
+	    			T obj = Util.createObjectInstance(clazz);
+	            	GaeMappingUtils.fillModelAndKey(obj, entity);
+	            	return obj;
+	            }
+			};
+			
+			return new SienaFutureContainer<T>(wrapped);
+		} catch (Exception e) {
+			throw new SienaException(e);
+		}
+	}
+	
 	public <T> SienaFuture<List<T>> getByKeys(final Class<T> clazz, final Object... keys) {
 		List<Key> gaeKeys = new ArrayList<Key>();
 		for(Object key:keys){

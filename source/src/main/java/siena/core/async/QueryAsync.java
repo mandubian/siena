@@ -37,6 +37,7 @@ public interface QueryAsync<T> extends QueryData<T>{
 	QueryAsync<T> search(String match, QueryOption opt, String... fields);
 	
 	SienaFuture<T> get();
+	SienaFuture<T> getByKey(Object key);
 	SienaFuture<Integer> delete();
 	SienaFuture<Integer> update(Map<String, ?> fieldValues);
 	SienaFuture<Integer> count();
@@ -52,6 +53,7 @@ public interface QueryAsync<T> extends QueryData<T>{
 	SienaFuture<Iterable<T>> iter();
 	SienaFuture<Iterable<T>> iter(int limit);
 	SienaFuture<Iterable<T>> iter(int limit, Object offset);
+	SienaFuture<Iterable<T>> iterPerPage(int limit);
 		
 	QueryAsync<T> clone();
 	

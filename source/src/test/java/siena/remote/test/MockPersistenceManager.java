@@ -243,12 +243,6 @@ public class MockPersistenceManager implements PersistenceManager {
 		}
 
 		@Override
-		public Object raw(String request) {
-			// TODO Auto-generated method stub
-			return null;
-		}
-
-		@Override
 		public Query<T> paginate(int size) {
 			// TODO Auto-generated method stub
 			return null;
