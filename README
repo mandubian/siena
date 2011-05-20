@@ -1,1 +1,7 @@
-Welcome to siena project! 
+h1. Welcome to siena project! 
+
+Siena is a persitence API for Java inspired on the Google App Engine Python Datastore.
+
+Siena is a single API with many implementations. You can use siena with relational databases, with the Google App Engine's datastore or with Amazon's SimpleDB. There is also an implementation called siena-remote very useful if you want to use the Google App Engine's datastore remotely. Other implmenetations are planned such as: HBase, DBSLayer,...
+
+Siena is Open Source and is released under the Apache License 2.0.
