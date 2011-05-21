@@ -97,6 +97,34 @@ public class Util {
 		throw new IllegalArgumentException("Unsupported type: "+type.getName());
 	}
 	
+	public static Object fromString(Class<?> type, String value, boolean retValueIfNotSupported) {
+		if(value == null) return null;
+		if(type.isPrimitive()) {
+			if(type == Boolean.TYPE) return Boolean.parseBoolean(value);
+			if(type == Byte.TYPE)    return Byte.parseByte(value);
+			if(type == Short.TYPE)   return Short.parseShort(value);
+			if(type == Integer.TYPE) return Integer.parseInt(value);
+			if(type == Long.TYPE)    return Long.parseLong(value);
+			if(type == Float.TYPE)   return Float.parseFloat(value);
+			if(type == Double.TYPE)  return Double.parseDouble(value);
+		}
+		if(type == String.class)  return value;
+		if(type == Boolean.class) return Boolean.valueOf(value);
+		if(type == Byte.class)    return Byte.valueOf(value);
+		if(type == Short.class)   return Short.valueOf(value);
+		if(type == Integer.class) return Integer.valueOf(value);
+		if(type == Long.class)    return Long.valueOf(value);
+		if(type == Float.class)   return Float.valueOf(value);
+		if(type == Double.class)  return Double.valueOf(value);
+		if(type == Date.class)    return timestamp(value);
+		if(type == Json.class)    return Json.loads(value);
+		if(Enum.class.isAssignableFrom(type)) return Enum.valueOf((Class<Enum>) type, (String)value);
+		if(!retValueIfNotSupported){
+			throw new IllegalArgumentException("Unsupported type: "+type.getName());
+		}
+		return value;
+	}
+	
 	private static final SimpleDateFormat TIMESTAMP_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS") {
 		private static final long serialVersionUID = 1L;
 		{
@@ -196,7 +224,7 @@ public class Util {
 			return Enum.valueOf((Class<Enum>) type, (String)value);
 		}
 		else if(String.class.isAssignableFrom(value.getClass())&& type != String.class) {
-			return fromString(field.getType(), (String)value);
+			return fromString(field.getType(), (String)value, true);
 		}
 		return value;
 	}

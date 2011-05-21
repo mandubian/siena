@@ -32,6 +32,7 @@ import siena.base.test.model.PersonLongManualID;
 import siena.base.test.model.PersonStringAutoIncID;
 import siena.base.test.model.PersonStringID;
 import siena.base.test.model.PersonUUID;
+import siena.base.test.model.PolymorphicModel;
 import siena.core.options.QueryOption;
 import siena.core.options.QueryOption.QueryOptionJson;
 import siena.core.options.QueryOptionPage;
@@ -85,6 +86,7 @@ public abstract class BaseTest extends TestCase {
 		classes.add(Discovery4Search.class);
 		classes.add(Discovery4Search2.class);
 		classes.add(DataTypes.class);
+		classes.add(PolymorphicModel.class);
 		pm = createPersistenceManager(classes);
 		
 		for (Class<?> clazz : classes) {
@@ -5239,4 +5241,24 @@ public abstract class BaseTest extends TestCase {
 			assertEquals(discs.get(i++), disc);
 		}
 	}
+	
+	public void testPolymorphic() {
+		PolymorphicModel<String> poly = new PolymorphicModel<String>("test");
+		pm.insert(poly);
+		
+		PolymorphicModel poly2 = pm.getByKey(PolymorphicModel.class, poly.id);
+		assertEquals(poly, poly2);
+	}
+	
+	public void testPolymorphic2() {
+		List<String> arr = new ArrayList<String>();
+		arr.add("alpha");
+		arr.add("beta");
+		PolymorphicModel<List<String>> poly = new PolymorphicModel<List<String>>(arr);
+		pm.insert(poly);
+		
+		PolymorphicModel<List<String>> poly2 = pm.getByKey(PolymorphicModel.class, poly.id);
+		assertEquals(poly, poly2);
+	}
+
 }

@@ -1,6 +1,8 @@
 package siena.jdbc.ddl;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.sql.Types;
 import java.util.Date;
 import java.util.HashMap;
@@ -27,6 +29,7 @@ import siena.SimpleDate;
 import siena.Text;
 import siena.Time;
 import siena.Unique;
+import siena.core.Polymorphic;
 import siena.embed.Embedded;
 
 public class DdlGenerator {
@@ -201,7 +204,9 @@ public class DdlGenerator {
 			Embedded embedded = field.getAnnotation(Embedded.class);
 			if(embedded != null) {
 				columnType = Types.LONGVARCHAR;
-			} else {
+			} else if(field.isAnnotationPresent(Polymorphic.class)){
+		        columnType = Types.BLOB;
+		    }else {				
 				throw new SienaRestrictedApiException(DB, "createColumn", "Unsupported type for field "
 						+clazz.getName()+"."+field.getName());
 			}

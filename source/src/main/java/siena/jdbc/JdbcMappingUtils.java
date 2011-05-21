@@ -1,6 +1,9 @@
 package siena.jdbc;
 
 import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
 import java.lang.reflect.Field;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -13,6 +16,7 @@ import siena.Query;
 import siena.QueryJoin;
 import siena.SienaException;
 import siena.Util;
+import siena.core.Polymorphic;
 import siena.embed.Embedded;
 import siena.embed.JsonSerializer;
 import siena.jdbc.JdbcPersistenceManager.JdbcClassInfo;
@@ -220,6 +224,26 @@ public class JdbcMappingUtils {
 				throw new SienaException(e);
 			}
 		} 
+		
+		if(field.isAnnotationPresent(Polymorphic.class)){
+			try {
+				if(java.sql.Blob.class.isAssignableFrom(value.getClass())){
+					java.sql.Blob blob = (java.sql.Blob)value;
+					ObjectInputStream in = 
+						new ObjectInputStream(new ByteArrayInputStream(blob.getBytes(0, (int)blob.length())));
+					return in.readObject();
+				}else {
+					ObjectInputStream in = new ObjectInputStream(new ByteArrayInputStream((byte[])value));
+					return in.readObject();
+				}
+			} catch (IOException e) {
+				throw new SienaException(e);
+			} catch (ClassNotFoundException e) {
+				throw new SienaException(e);
+			} catch(SQLException e){
+				throw new SienaException(e);
+			}
+		}
 		
 		if(byte[].class == type && value != null && java.sql.Blob.class.isAssignableFrom(value.getClass())){
 			java.sql.Blob blob = (java.sql.Blob)value;

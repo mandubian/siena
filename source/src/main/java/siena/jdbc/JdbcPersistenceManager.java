@@ -15,6 +15,10 @@
  */
 package siena.jdbc;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.ObjectOutput;
+import java.io.ObjectOutputStream;
 import java.lang.reflect.Field;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -48,6 +52,7 @@ import siena.QueryFilterSimple;
 import siena.SienaException;
 import siena.SienaRestrictedApiException;
 import siena.Util;
+import siena.core.Polymorphic;
 import siena.core.async.PersistenceManagerAsync;
 import siena.core.options.QueryOption;
 import siena.core.options.QueryOptionFetchType;
@@ -360,12 +365,28 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 			} else {
 				Object value = Util.readField(obj, field);
 				if(value != null){
-					if(Json.class.isAssignableFrom(field.getType()))
+					if(Json.class.isAssignableFrom(field.getType())){
 						value = ((Json)value).toString();
-					else if(field.getAnnotation(Embedded.class) != null)
+					}
+					else if(field.getAnnotation(Embedded.class) != null){
 						value = JsonSerializer.serialize(value).toString();
-					else if(Enum.class.isAssignableFrom(field.getType()))
+					}
+					else if(field.getAnnotation(Polymorphic.class) != null){
+						ByteArrayOutputStream bos = new ByteArrayOutputStream();
+						ObjectOutput out;
+						try {
+							out = new ObjectOutputStream(bos);
+							out.writeObject(value);
+							out.close();
+						} catch (IOException e) {
+							throw new SienaException(e);
+						}   
+						
+						value = bos.toByteArray(); 
+					}
+					else if(Enum.class.isAssignableFrom(field.getType())){
 						value = value.toString();
+					}
 				}
 				setParameter(ps, i++, value);
 			}

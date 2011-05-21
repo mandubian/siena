@@ -1732,6 +1732,18 @@ public class GaeTest extends BaseTest {
 		super.testBatchSaveList();
 	}
 
+	@Override
+	public void testPolymorphic() {
+		// TODO Auto-generated method stub
+		super.testPolymorphic();
+	}
+
+	@Override
+	public void testPolymorphic2() {
+		// TODO Auto-generated method stub
+		super.testPolymorphic2();
+	}
+
 
 	
 }
