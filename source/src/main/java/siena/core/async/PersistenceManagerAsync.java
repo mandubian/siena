@@ -170,6 +170,18 @@ public interface PersistenceManagerAsync {
 
 
 	/**
+	 * save means insertOrUpdate: if the value exists, it updates, if not, it inserts.
+	 * If the object couldn't be inserted or updated a <code>SienaException</code> must be thrown.
+	 * 
+	 * @param obj
+	 *            The object that will be updated.
+	 */
+	SienaFuture<Void> save(Object obj);
+	SienaFuture<Integer> save(Object... objects);
+	SienaFuture<Integer> save(Iterable<?> objects);
+
+	
+	/**
 	 * gets objects (by keys or entities) in a batch mode from the database.
 	 * Any generated primary key will be loaded into the given object. If the
 	 * object couldn't be inserted a <code>SienaException</code> must be thrown.

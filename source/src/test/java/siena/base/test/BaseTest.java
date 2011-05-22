@@ -18,6 +18,7 @@ import siena.SienaException;
 import siena.base.test.model.Address;
 import siena.base.test.model.AutoInc;
 import siena.base.test.model.Contact;
+import siena.base.test.model.ContainerModel;
 import siena.base.test.model.DataTypes;
 import siena.base.test.model.DataTypes.EnumLong;
 import siena.base.test.model.Discovery;
@@ -25,7 +26,10 @@ import siena.base.test.model.Discovery4Join;
 import siena.base.test.model.Discovery4Join2;
 import siena.base.test.model.Discovery4Search;
 import siena.base.test.model.Discovery4Search2;
+import siena.base.test.model.DiscoveryNoColumn;
+import siena.base.test.model.DiscoveryNoColumnMultipleKeys;
 import siena.base.test.model.DiscoveryPrivate;
+import siena.base.test.model.EmbeddedModel;
 import siena.base.test.model.MultipleKeys;
 import siena.base.test.model.PersonLongAutoID;
 import siena.base.test.model.PersonLongManualID;
@@ -87,6 +91,10 @@ public abstract class BaseTest extends TestCase {
 		classes.add(Discovery4Search2.class);
 		classes.add(DataTypes.class);
 		classes.add(PolymorphicModel.class);
+		classes.add(EmbeddedModel.class);
+		classes.add(ContainerModel.class);
+		classes.add(DiscoveryNoColumn.class);
+		classes.add(DiscoveryNoColumnMultipleKeys.class);
 		pm = createPersistenceManager(classes);
 		
 		for (Class<?> clazz : classes) {
@@ -5260,5 +5268,91 @@ public abstract class BaseTest extends TestCase {
 		PolymorphicModel<List<String>> poly2 = pm.getByKey(PolymorphicModel.class, poly.id);
 		assertEquals(poly, poly2);
 	}
+	
+	public void testEmbeddedModel() {
+		EmbeddedModel embed = new EmbeddedModel();
+		embed.id = "embed";
+		embed.alpha = "test";
+		embed.beta = 123;
+		pm.insert(embed);
+		
+		ContainerModel container = new ContainerModel();
+		container.id = "container";
+		container.embed = embed;
+		pm.insert(container);
 
+		ContainerModel afterContainer = pm.getByKey(ContainerModel.class, container.id);
+		assertNotNull(afterContainer);
+		assertEquals(container.id, afterContainer.id);
+		assertNotNull(afterContainer.embed);
+		assertEquals(embed.id, afterContainer.embed.id);
+		assertEquals(embed.alpha, afterContainer.embed.alpha);
+		assertEquals(embed.beta, afterContainer.embed.beta);
+	}
+
+	public void testNoColumn() {
+		DiscoveryNoColumn radioactivity = new DiscoveryNoColumn("Radioactivity", LongAutoID_CURIE, LongAutoID_TESLA);
+		DiscoveryNoColumn relativity = new DiscoveryNoColumn("Relativity", LongAutoID_EINSTEIN, LongAutoID_TESLA);
+		DiscoveryNoColumn foo = new DiscoveryNoColumn("Foo", LongAutoID_EINSTEIN, LongAutoID_EINSTEIN);
+		DiscoveryNoColumn teslaCoil = new DiscoveryNoColumn("Tesla Coil", LongAutoID_TESLA, LongAutoID_CURIE);
+		
+		pm.insert(radioactivity);
+		pm.insert(relativity);
+		pm.insert(foo);
+		pm.insert(teslaCoil);
+		
+		List<DiscoveryNoColumn> res = pm.createQuery(DiscoveryNoColumn.class).fetch();
+		assertEquals(4, res.size());
+		assertEquals(radioactivity, res.get(0));
+		assertEquals(relativity, res.get(1));
+		assertEquals(foo, res.get(2));
+		assertEquals(teslaCoil, res.get(3));
+		
+		assertEquals(LongAutoID_CURIE, res.get(0).discovererJoined);
+		assertEquals(LongAutoID_EINSTEIN, res.get(1).discovererJoined);
+		assertEquals(LongAutoID_EINSTEIN, res.get(2).discovererJoined);
+		assertEquals(LongAutoID_TESLA, res.get(3).discovererJoined);
+
+		assertEquals(LongAutoID_TESLA.id, res.get(0).discovererNotJoined.id);
+		assertEquals(LongAutoID_TESLA.id, res.get(1).discovererNotJoined.id);
+		assertEquals(LongAutoID_EINSTEIN.id, res.get(2).discovererNotJoined.id);
+		assertEquals(LongAutoID_CURIE.id, res.get(3).discovererNotJoined.id);
+		
+		assertTrue(res.get(0).discovererNotJoined.isOnlyIdFilled());
+		assertTrue(res.get(1).discovererNotJoined.isOnlyIdFilled());
+		assertTrue(res.get(2).discovererNotJoined.isOnlyIdFilled());
+		assertTrue(res.get(3).discovererNotJoined.isOnlyIdFilled());
+	}
+
+	public void testNoColumnMultipleKeys() {
+		if(!supportsMultipleKeys()) return;
+		
+		MultipleKeys mk1 = new MultipleKeys();
+		mk1.id1 = "aid1";
+		mk1.id2 = "aid2";
+		mk1.name = "first";
+		mk1.parent = null;
+		pm.insert(mk1);
+
+		MultipleKeys mk2 = new MultipleKeys();
+		mk2.id1 = "bid1";
+		mk2.id2 = "bid2";
+		mk2.name = "second";
+		mk2.parent = null;
+		pm.insert(mk2);
+		
+		mk2.parent = mk1;
+		pm.update(mk2);
+		
+		DiscoveryNoColumnMultipleKeys disc = new DiscoveryNoColumnMultipleKeys("disc1", mk1, mk2);
+		pm.insert(disc);
+		
+		DiscoveryNoColumnMultipleKeys afterDisc = pm.getByKey(DiscoveryNoColumnMultipleKeys.class, disc.id);
+		assertNotNull(afterDisc);
+		assertEquals("disc1", afterDisc.name);
+		assertEquals(mk1.id1, afterDisc.mk1.id1);
+		assertEquals(mk1.id2, afterDisc.mk1.id2);
+		assertEquals(mk2.id1, afterDisc.mk2.id1);
+		assertEquals(mk2.id2, afterDisc.mk2.id2);
+	}
 }

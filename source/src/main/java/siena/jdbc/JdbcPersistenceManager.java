@@ -349,7 +349,7 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 	protected int addParameters(Object obj, List<Field> fields, PreparedStatement ps, int i) throws SQLException {
 		for (Field field : fields) {
 			Class<?> type = field.getType();
-			if(ClassInfo.isModel(type)) {
+			if(ClassInfo.isModel(type) && ! ClassInfo.isEmbedded(field)) {
 				JdbcClassInfo ci = JdbcClassInfo.getClassInfo(type);
 				Object rel = Util.readField(obj, field);
 				for(Field f : ci.keys) {

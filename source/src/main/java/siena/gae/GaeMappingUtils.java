@@ -249,7 +249,7 @@ public class GaeMappingUtils {
 			String property = ClassInfo.getColumnNames(field)[0];
 			Object value = Util.readField(obj, field);
 			Class<?> fieldClass = field.getType();
-			if (ClassInfo.isModel(fieldClass)) {
+			if (ClassInfo.isModel(fieldClass) && !ClassInfo.isEmbedded(field)) {
 				if (value == null) {
 					entity.setProperty(property, null);
 				} else {
@@ -301,7 +301,7 @@ public class GaeMappingUtils {
 			String property = ClassInfo.getColumnNames(field)[0];
 			try {
 				Class<?> fieldClass = field.getType();
-				if (ClassInfo.isModel(fieldClass)) {
+				if (ClassInfo.isModel(fieldClass) && !ClassInfo.isEmbedded(field)) {
 					Key key = (Key) entity.getProperty(property);
 					if (key != null) {
 						Object value = Util.createObjectInstance(fieldClass);
@@ -333,7 +333,7 @@ public class GaeMappingUtils {
 			String property = ClassInfo.getColumnNames(field)[0];
 			try {
 				fieldClass = field.getType();
-				if (ClassInfo.isModel(fieldClass)) {
+				if (ClassInfo.isModel(fieldClass) && !ClassInfo.isEmbedded(field)) {
 					key = (Key) entity.getProperty(property);
 					if (key != null) {
 						Object value = Util.createObjectInstance(fieldClass);

@@ -1514,6 +1514,24 @@ public class JdbcTest extends BaseTest {
 		// TODO Auto-generated method stub
 		super.testPolymorphic2();
 	}
+
+	@Override
+	public void testEmbeddedModel() {
+		// TODO Auto-generated method stub
+		super.testEmbeddedModel();
+	}
+
+	@Override
+	public void testNoColumn() {
+		// TODO Auto-generated method stub
+		super.testNoColumn();
+	}
+
+	@Override
+	public void testNoColumnMultipleKeys() {
+		// TODO Auto-generated method stub
+		super.testNoColumnMultipleKeys();
+	}
 	
 
 	

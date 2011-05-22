@@ -1750,6 +1750,72 @@ public class GaeAsyncTest extends BaseAsyncTest {
 		super.testGetByKeyStringID();
 	}
 
+	@Override
+	public void testSaveLongAutoID() {
+		// TODO Auto-generated method stub
+		super.testSaveLongAutoID();
+	}
+
+	@Override
+	public void testSaveUUID() {
+		// TODO Auto-generated method stub
+		super.testSaveUUID();
+	}
+
+	@Override
+	public void testSaveLongManualID() {
+		// TODO Auto-generated method stub
+		super.testSaveLongManualID();
+	}
+
+	@Override
+	public void testSaveStringID() {
+		// TODO Auto-generated method stub
+		super.testSaveStringID();
+	}
+
+	@Override
+	public void testBatchSave() {
+		// TODO Auto-generated method stub
+		super.testBatchSave();
+	}
+
+	@Override
+	public void testBatchSaveList() {
+		// TODO Auto-generated method stub
+		super.testBatchSaveList();
+	}
+
+	@Override
+	public void testPolymorphic() {
+		// TODO Auto-generated method stub
+		super.testPolymorphic();
+	}
+
+	@Override
+	public void testPolymorphic2() {
+		// TODO Auto-generated method stub
+		super.testPolymorphic2();
+	}
+
+	@Override
+	public void testEmbeddedModel() {
+		// TODO Auto-generated method stub
+		super.testEmbeddedModel();
+	}
+
+	@Override
+	public void testNoColumn() {
+		// TODO Auto-generated method stub
+		super.testNoColumn();
+	}
+
+	@Override
+	public void testNoColumnMultipleKeys() {
+		// TODO Auto-generated method stub
+		super.testNoColumnMultipleKeys();
+	}
+
 
 
 

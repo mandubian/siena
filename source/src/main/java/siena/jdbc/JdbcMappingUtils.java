@@ -142,7 +142,7 @@ public class JdbcMappingUtils {
 		Class<?> type = field.getType();
 		//field.setAccessible(true);
 		try {
-			if(ClassInfo.isModel(type)) {
+			if(ClassInfo.isModel(type) && !ClassInfo.isEmbedded(field)) {
 				JdbcClassInfo fieldClassInfo = JdbcClassInfo.getClassInfo(type);
 				
 				if(joinFields==null || joinFields.size()==0 || !joinFields.contains(field)){

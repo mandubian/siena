@@ -15,10 +15,8 @@ import org.apache.commons.lang.NotImplementedException;
 
 import siena.ClassInfo;
 import siena.PersistenceManager;
-import siena.Query;
 import siena.SienaException;
 import siena.Util;
-import siena.core.SienaIterablePerPage;
 import siena.core.async.AbstractPersistenceManagerAsync;
 import siena.core.async.QueryAsync;
 import siena.core.async.SienaFuture;
@@ -1245,6 +1243,128 @@ public class GaePersistenceManagerAsync extends AbstractPersistenceManagerAsync 
 
 	}
 
+	public SienaFuture<Void> save(final Object obj) {
+		Class<?> clazz = obj.getClass();
+		ClassInfo info = ClassInfo.getClassInfo(clazz);
+		final Field idField = info.getIdField();
+		
+		final Entity entity;
+		final Object idVal = Util.readField(obj, idField);
+		// id with null value means insert
+		if(idVal == null){
+			entity = GaeMappingUtils.createEntityInstance(idField, info, obj);
+		}
+		// id with not null value means update
+		else{
+			entity = GaeMappingUtils.createEntityInstanceForUpdate(idField, info, obj);			
+		}
+		
+		GaeMappingUtils.fillEntity(obj, entity);
+		Future<Key> future = ds.put(entity);
+		
+		Future<Void> wrapped = new SienaFutureWrapper<Key, Void>(future) {
+            @Override
+            protected Void wrap(Key generatedKey) throws Exception
+            {
+            	if(idVal == null){
+        			GaeMappingUtils.setIdFromKey(idField, obj, entity.getKey());
+        		}
+            	return null;
+            }
+		};
+		
+		return new SienaFutureContainer<Void>(wrapped);
+	}
+
+	public SienaFuture<Integer> save(final Object... objects) {
+		List<Entity> entities = new ArrayList<Entity>();
+		for(Object obj:objects){
+			Class<?> clazz = obj.getClass();
+			ClassInfo info = ClassInfo.getClassInfo(clazz);
+			Field idField = info.getIdField();
+			
+			Entity entity;
+			Object idVal = Util.readField(obj, idField);
+			// id with null value means insert
+			if(idVal == null){
+				entity = GaeMappingUtils.createEntityInstance(idField, info, obj);
+			}
+			// id with not null value means update
+			else{
+				entity = GaeMappingUtils.createEntityInstanceForUpdate(idField, info, obj);			
+			}
+			
+			GaeMappingUtils.fillEntity(obj, entity);
+			entities.add(entity);			
+		}
+		
+		Future<List<Key>> future = ds.put(entities);
+		
+		Future<Integer> wrapped = new SienaFutureWrapper<List<Key>, Integer>(future) {
+            @Override
+            protected Integer wrap(List<Key> keys) throws Exception
+            {
+            	int i=0;
+        		for(Object obj:objects){
+        			Class<?> clazz = obj.getClass();
+        			ClassInfo info = ClassInfo.getClassInfo(clazz);
+        			Field idField = info.getIdField();
+        			Object idVal = Util.readField(obj, idField);
+        			if(idVal == null){
+        				GaeMappingUtils.setIdFromKey(idField, obj, keys.get(i++));
+        			}
+        		}
+        		return keys.size();
+            }
+		};
+		
+		return new SienaFutureContainer<Integer>(wrapped);
+	}
+
+	public SienaFuture<Integer> save(final Iterable<?> objects) {
+		List<Entity> entities = new ArrayList<Entity>();
+		for(Object obj:objects){
+			Class<?> clazz = obj.getClass();
+			ClassInfo info = ClassInfo.getClassInfo(clazz);
+			Field idField = info.getIdField();
+			
+			Entity entity;
+			Object idVal = Util.readField(obj, idField);
+			// id with null value means insert
+			if(idVal == null){
+				entity = GaeMappingUtils.createEntityInstance(idField, info, obj);
+			}
+			// id with not null value means update
+			else{
+				entity = GaeMappingUtils.createEntityInstanceForUpdate(idField, info, obj);			
+			}
+			
+			GaeMappingUtils.fillEntity(obj, entity);
+			entities.add(entity);			
+		}
+		
+		Future<List<Key>> future = ds.put(entities);
+		
+		Future<Integer> wrapped = new SienaFutureWrapper<List<Key>, Integer>(future) {
+            @Override
+            protected Integer wrap(List<Key> keys) throws Exception
+            {
+            	int i=0;
+        		for(Object obj:objects){
+        			Class<?> clazz = obj.getClass();
+        			ClassInfo info = ClassInfo.getClassInfo(clazz);
+        			Field idField = info.getIdField();
+        			Object idVal = Util.readField(obj, idField);
+        			if(idVal == null){
+        				GaeMappingUtils.setIdFromKey(idField, obj, keys.get(i++));
+        			}
+        		}
+        		return keys.size();
+            }
+		};
+		
+		return new SienaFutureContainer<Integer>(wrapped);
+	}
 
 	private static String[] supportedOperators;
 

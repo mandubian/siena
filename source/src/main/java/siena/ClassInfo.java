@@ -24,6 +24,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import siena.embed.Embedded;
+
 public class ClassInfo {
 	
 	protected static Map<Class<?>, ClassInfo> infoClasses = new ConcurrentHashMap<Class<?>, ClassInfo>();
@@ -117,14 +119,50 @@ public class ClassInfo {
 		if(isModel(field.getType())) {
 			ClassInfo ci = getClassInfo(field.getType());
 			List<String> keys = new ArrayList<String>();
+			// if no @column is provided
+			// if the model has one single key, we use the local field name
+			// if the model has several keys, we concatenate the fieldName+"_"+keyName
+			if(ci.keys.size()==1){
+				return new String[] { field.getName() };
+			}
 			for (Field key : ci.keys) {
-				keys.addAll(Arrays.asList(getColumnNames(key)));
+				// uses the prefix fieldName_ to prevent problem with models having the same field names
+				keys.addAll(Arrays.asList(getColumnNamesWithPrefix(key, field.getName()+"_")));
 			}
 			return keys.toArray(new String[keys.size()]);
 		}
 		return new String[]{ field.getName() };
 	}
 
+	public static String[] getColumnNamesWithPrefix(Field field, String prefix) {
+		Column c = field.getAnnotation(Column.class);
+		if(c != null && c.value().length > 0) {
+			String[] cols = c.value();
+			for(int i=0;i<cols.length;i++){
+				cols[i]=prefix+cols[i];
+			}
+			return cols;
+		}
+		
+		// default mapping: field names
+		if(isModel(field.getType())) {
+			ClassInfo ci = getClassInfo(field.getType());
+			List<String> keys = new ArrayList<String>();
+			// if no @column is provided
+			// if the model has one single key, we use the local field name
+			// if the model has several keys, we concatenate the fieldName+"_"+keyName
+			if(ci.keys.size()==1){
+				return new String[] { field.getName() };
+			}
+			for (Field key : ci.keys) {
+				// concatenates prefix with new prefix
+				keys.addAll(Arrays.asList(getColumnNamesWithPrefix(key, prefix+field.getName()+"_")));
+			}
+			return keys.toArray(new String[keys.size()]);
+		}
+		return new String[]{ prefix + field.getName() };
+	}
+	
 	public static String[] getColumnNames(Field field, String tableName) {
 		Column c = field.getAnnotation(Column.class);
 		if(c != null && c.value().length > 0) {
@@ -142,8 +180,14 @@ public class ClassInfo {
 		if(isModel(field.getType())) {
 			ClassInfo ci = getClassInfo(field.getType());
 			List<String> keys = new ArrayList<String>();
+			// if no @column is provided
+			// if the model has one single key, we use the local field name
+			// if the model has several keys, we concatenate the fieldName+"_"+keyName
+			if(ci.keys.size()==1){
+				return new String[] { field.getName() };
+			}
 			for (Field key : ci.keys) {
-				keys.addAll(Arrays.asList(getColumnNames(key, tableName)));
+				keys.addAll(Arrays.asList(getColumnNamesWithPrefix(key, field.getName()+"_")));
 			}
 			return keys.toArray(new String[keys.size()]);
 		}
@@ -166,6 +210,10 @@ public class ClassInfo {
 
 	public static boolean isId(Field field) {
 		return field.getAnnotation(Id.class) != null;
+	}
+	
+	public static boolean isEmbedded(Field field) {
+		return field.getAnnotation(Embedded.class) != null;
 	}
 	
 	/**

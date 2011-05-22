@@ -59,7 +59,7 @@ public class DdlGenerator {
 			boolean notNull = field.getAnnotation(NotNull.class) != null;
 			
 			Class<?> type = field.getType();
-			if(!ClassInfo.isModel(type)) {
+			if(!ClassInfo.isModel(type) || ClassInfo.isEmbedded(field)) {
 				Column column = createColumn(clazz, field, columns[0]);
 				
 				if(notNull || type.isPrimitive()) {

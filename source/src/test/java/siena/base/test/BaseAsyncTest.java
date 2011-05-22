@@ -19,17 +19,22 @@ import siena.base.test.model.AutoInc;
 import siena.base.test.model.Contact;
 import siena.base.test.model.DataTypes;
 import siena.base.test.model.DataTypes.EnumLong;
+import siena.base.test.model.ContainerModel;
 import siena.base.test.model.Discovery;
 import siena.base.test.model.Discovery4Join;
 import siena.base.test.model.Discovery4Join2;
 import siena.base.test.model.Discovery4Search;
+import siena.base.test.model.DiscoveryNoColumn;
+import siena.base.test.model.DiscoveryNoColumnMultipleKeys;
 import siena.base.test.model.DiscoveryPrivate;
+import siena.base.test.model.EmbeddedModel;
 import siena.base.test.model.MultipleKeys;
 import siena.base.test.model.PersonLongAutoID;
 import siena.base.test.model.PersonLongManualID;
 import siena.base.test.model.PersonStringAutoIncID;
 import siena.base.test.model.PersonStringID;
 import siena.base.test.model.PersonUUID;
+import siena.base.test.model.PolymorphicModel;
 import siena.core.async.PersistenceManagerAsync;
 import siena.core.async.QueryAsync;
 import siena.core.async.SienaFuture;
@@ -5365,5 +5370,327 @@ public abstract class BaseAsyncTest extends TestCase {
 	public void testGetByKeyStringID() {
 		PersonStringID curie = pm.getByKey(PersonStringID.class, StringID_CURIE.id).get();
 		assertEquals(StringID_CURIE, curie);
+	}
+	
+	public void testSaveLongAutoID() {
+		PersonLongAutoID maxwell = new PersonLongAutoID();
+		maxwell.firstName = "James Clerk";
+		maxwell.lastName = "Maxwell";
+		maxwell.city = "Edinburgh";
+		maxwell.n = 4;
+
+		pm.save(maxwell).get();
+		assertNotNull(maxwell.id);
+
+		SienaFuture<List<PersonLongAutoID>> future = queryPersonLongAutoIDOrderBy("n", 0, false).fetch();
+		List<PersonLongAutoID> people = future.get();
+		assertEquals(4, people.size());
+
+		assertEquals(LongAutoID_TESLA, people.get(0));
+		assertEquals(LongAutoID_CURIE, people.get(1));
+		assertEquals(LongAutoID_EINSTEIN, people.get(2));
+		assertEquals(maxwell, people.get(3));
+		
+		maxwell.firstName = "James Clerk UPD";
+		maxwell.lastName = "Maxwell UPD";
+		maxwell.city = "Edinburgh UPD";
+		maxwell.n = 5;
+		
+		pm.save(maxwell).get();
+		assertNotNull(maxwell.id);
+		
+		future = queryPersonLongAutoIDOrderBy("n", 0, false).fetch();
+		people = future.get();
+		assertEquals(4, people.size());
+
+		assertEquals(LongAutoID_TESLA, people.get(0));
+		assertEquals(LongAutoID_CURIE, people.get(1));
+		assertEquals(LongAutoID_EINSTEIN, people.get(2));
+		assertEquals(maxwell, people.get(3));
+	}
+	
+	public void testSaveUUID() {
+		PersonUUID maxwell = new PersonUUID();
+		maxwell.firstName = "James Clerk";
+		maxwell.lastName = "Maxwell";
+		maxwell.city = "Edinburgh";
+		maxwell.n = 4;
+
+		pm.save(maxwell).get();
+		assertNotNull(maxwell.id);
+
+		SienaFuture<List<PersonUUID>> future = queryPersonUUIDOrderBy("n", 0, false).fetch();
+		List<PersonUUID> people = future.get();
+		assertEquals(4, people.size());
+
+		assertEquals(UUID_TESLA, people.get(0));
+		assertEquals(UUID_CURIE, people.get(1));
+		assertEquals(UUID_EINSTEIN, people.get(2));
+		assertEquals(maxwell, people.get(3));
+		
+		maxwell.firstName = "James Clerk UPD";
+		maxwell.lastName = "Maxwell UPD";
+		maxwell.city = "Edinburgh UPD";
+		maxwell.n = 5;
+		
+		pm.save(maxwell).get();
+		assertNotNull(maxwell.id);
+		
+		future = queryPersonUUIDOrderBy("n", 0, false).fetch();
+		people = future.get();
+		assertEquals(4, people.size());
+
+		assertEquals(UUID_TESLA, people.get(0));
+		assertEquals(UUID_CURIE, people.get(1));
+		assertEquals(UUID_EINSTEIN, people.get(2));
+		assertEquals(maxwell, people.get(3));
+	}
+
+
+	public void testSaveLongManualID() {
+		PersonLongManualID maxwell = new PersonLongManualID();
+		maxwell.id = 4L;
+		maxwell.firstName = "James Clerk";
+		maxwell.lastName = "Maxwell";
+		maxwell.city = "Edinburgh";
+		maxwell.n = 4;
+
+		pm.save(maxwell).get();
+		assertEquals((Long)4L, maxwell.id);
+
+		SienaFuture<List<PersonLongManualID>> future = queryPersonLongManualIDOrderBy("n", 0, false).fetch();
+		List<PersonLongManualID> people = future.get();
+		assertEquals(4, people.size());
+
+		assertEquals(LongManualID_TESLA, people.get(0));
+		assertEquals(LongManualID_CURIE, people.get(1));
+		assertEquals(LongManualID_EINSTEIN, people.get(2));
+		assertEquals(maxwell, people.get(3));
+		
+		maxwell.firstName = "James Clerk UPD";
+		maxwell.lastName = "Maxwell UPD";
+		maxwell.city = "Edinburgh UPD";
+		maxwell.n = 5;
+		
+		pm.save(maxwell).get();
+		assertEquals((Long)4L, maxwell.id);
+
+		future = queryPersonLongManualIDOrderBy("n", 0, false).fetch();
+		people = future.get();
+		assertEquals(4, people.size());
+
+		assertEquals(LongManualID_TESLA, people.get(0));
+		assertEquals(LongManualID_CURIE, people.get(1));
+		assertEquals(LongManualID_EINSTEIN, people.get(2));
+		assertEquals(maxwell, people.get(3));
+	}
+	
+	public void testSaveStringID() {
+		PersonStringID maxwell = new PersonStringID();
+		maxwell.id = "MAXWELL";
+		maxwell.firstName = "James Clerk";
+		maxwell.lastName = "Maxwell";
+		maxwell.city = "Edinburgh";
+		maxwell.n = 4;
+
+		pm.save(maxwell).get();
+		assertEquals(maxwell.id, "MAXWELL");
+
+		SienaFuture<List<PersonStringID>> future = queryPersonStringIDOrderBy("n", 0, false).fetch();
+		List<PersonStringID> people = future.get();
+		assertEquals(4, people.size());
+
+		assertEquals(StringID_TESLA, people.get(0));
+		assertEquals(StringID_CURIE, people.get(1));
+		assertEquals(StringID_EINSTEIN, people.get(2));
+		assertEquals(maxwell, people.get(3));
+
+		maxwell.firstName = "James Clerk UPD";
+		maxwell.lastName = "Maxwell UPD";
+		maxwell.city = "Edinburgh UPD";
+		maxwell.n = 5;
+		
+		pm.save(maxwell).get();
+		assertEquals(maxwell.id, "MAXWELL");
+
+		future = queryPersonStringIDOrderBy("n", 0, false).fetch();
+		people = future.get();
+		assertEquals(4, people.size());
+
+		assertEquals(StringID_TESLA, people.get(0));
+		assertEquals(StringID_CURIE, people.get(1));
+		assertEquals(StringID_EINSTEIN, people.get(2));
+		assertEquals(maxwell, people.get(3));
+	}
+	
+	public void testBatchSave() {
+		Object[] discs = new Discovery[100];
+		for(int i=0; i<100; i++){
+			discs[i] = new Discovery("Disc_"+i, LongAutoID_CURIE);
+		}
+		pm.save(discs).get();
+
+		SienaFuture<List<Discovery>> future = 
+			pm.createQuery(Discovery.class).fetch();
+		List<Discovery> res = future.get();
+		assertEquals(discs.length, res.size());
+		int i=0;
+		for(Discovery disc:res){
+			assertEquals(discs[i++], disc);
+		}
+		
+		for(i=0; i<100; i++){
+			((Discovery)discs[i]).name += "UPD";
+			((Discovery)discs[i]).discoverer = LongAutoID_EINSTEIN;
+		}
+		
+		int nb = pm.save(discs).get();
+		assertEquals(discs.length, nb);
+		future = 
+			pm.createQuery(Discovery.class).fetch();
+		res = future.get();
+		i=0;
+		for(Discovery disc:res){
+			assertEquals(discs[i++], disc);
+		}
+		
+	}
+	
+	
+	public void testBatchSaveList() {
+		List<Discovery> discs = new ArrayList<Discovery>();
+		for(int i=0; i<100; i++){
+			discs.add(new Discovery("Disc_"+i, LongAutoID_CURIE));
+		}
+		int nb = pm.insert(discs).get();
+		assertEquals(discs.size(), nb);
+		
+		SienaFuture<List<Discovery>> future = 
+			pm.createQuery(Discovery.class).fetch();
+		List<Discovery> res = future.get();
+		
+		assertEquals(discs.size(), res.size());
+		int i=0;
+		for(Discovery disc:res){
+			assertEquals(discs.get(i++), disc);
+		}
+		
+		for(i=0; i<100; i++){
+			((Discovery)discs.get(i)).name += "UPD";
+			((Discovery)discs.get(i)).discoverer = LongAutoID_EINSTEIN;
+		}
+		
+		nb = pm.save(discs).get();
+		assertEquals(discs.size(), nb);
+		future = 
+			pm.createQuery(Discovery.class).fetch();
+		res = future.get();
+		i=0;
+		for(Discovery disc:res){
+			assertEquals(discs.get(i++), disc);
+		}
+	}
+	
+	public void testPolymorphic() {
+		PolymorphicModel<String> poly = new PolymorphicModel<String>("test");
+		pm.insert(poly).get();
+		
+		PolymorphicModel<String> poly2 = pm.getByKey(PolymorphicModel.class, poly.id).get();
+		assertEquals(poly, poly2);
+	}
+	
+	public void testPolymorphic2() {
+		List<String> arr = new ArrayList<String>();
+		arr.add("alpha");
+		arr.add("beta");
+		PolymorphicModel<List<String>> poly = new PolymorphicModel<List<String>>(arr);
+		pm.insert(poly).get();
+		
+		PolymorphicModel<List<String>> poly2 = pm.getByKey(PolymorphicModel.class, poly.id).get();
+		assertEquals(poly, poly2);
+	}
+	
+	public void testEmbeddedModel() {
+		EmbeddedModel embed = new EmbeddedModel();
+		embed.id = "embed";
+		embed.alpha = "test";
+		embed.beta = 123;
+		pm.insert(embed).get();
+		
+		ContainerModel container = new ContainerModel();
+		container.id = "container";
+		container.embed = embed;
+		pm.insert(container).get();
+
+		ContainerModel afterContainer = pm.getByKey(ContainerModel.class, container.id).get();
+		assertNotNull(afterContainer);
+		assertEquals(container.id, afterContainer.id);
+		assertNotNull(afterContainer.embed);
+		assertEquals(embed.id, afterContainer.embed.id);
+		assertEquals(embed.alpha, afterContainer.embed.alpha);
+		assertEquals(embed.beta, afterContainer.embed.beta);
+	}
+
+	public void testNoColumn() {
+		DiscoveryNoColumn radioactivity = new DiscoveryNoColumn("Radioactivity", LongAutoID_CURIE, LongAutoID_TESLA);
+		DiscoveryNoColumn relativity = new DiscoveryNoColumn("Relativity", LongAutoID_EINSTEIN, LongAutoID_TESLA);
+		DiscoveryNoColumn foo = new DiscoveryNoColumn("Foo", LongAutoID_EINSTEIN, LongAutoID_EINSTEIN);
+		DiscoveryNoColumn teslaCoil = new DiscoveryNoColumn("Tesla Coil", LongAutoID_TESLA, LongAutoID_CURIE);
+		
+		pm.insert(radioactivity, relativity, foo, teslaCoil).get();
+		
+		List<DiscoveryNoColumn> res = pm.createQuery(DiscoveryNoColumn.class).fetch().get();
+		assertEquals(4, res.size());
+		assertEquals(radioactivity, res.get(0));
+		assertEquals(relativity, res.get(1));
+		assertEquals(foo, res.get(2));
+		assertEquals(teslaCoil, res.get(3));
+		
+		assertEquals(LongAutoID_CURIE, res.get(0).discovererJoined);
+		assertEquals(LongAutoID_EINSTEIN, res.get(1).discovererJoined);
+		assertEquals(LongAutoID_EINSTEIN, res.get(2).discovererJoined);
+		assertEquals(LongAutoID_TESLA, res.get(3).discovererJoined);
+
+		assertEquals(LongAutoID_TESLA.id, res.get(0).discovererNotJoined.id);
+		assertEquals(LongAutoID_TESLA.id, res.get(1).discovererNotJoined.id);
+		assertEquals(LongAutoID_EINSTEIN.id, res.get(2).discovererNotJoined.id);
+		assertEquals(LongAutoID_CURIE.id, res.get(3).discovererNotJoined.id);
+		
+		assertTrue(res.get(0).discovererNotJoined.isOnlyIdFilled());
+		assertTrue(res.get(1).discovererNotJoined.isOnlyIdFilled());
+		assertTrue(res.get(2).discovererNotJoined.isOnlyIdFilled());
+		assertTrue(res.get(3).discovererNotJoined.isOnlyIdFilled());
+	}
+
+	public void testNoColumnMultipleKeys() {
+		if(!supportsMultipleKeys()) return;
+		
+		MultipleKeys mk1 = new MultipleKeys();
+		mk1.id1 = "aid1";
+		mk1.id2 = "aid2";
+		mk1.name = "first";
+		mk1.parent = null;
+		pm.insert(mk1).get();
+
+		MultipleKeys mk2 = new MultipleKeys();
+		mk2.id1 = "bid1";
+		mk2.id2 = "bid2";
+		mk2.name = "second";
+		mk2.parent = null;
+		pm.insert(mk2).get();
+		
+		mk2.parent = mk1;
+		pm.update(mk2).get();
+		
+		DiscoveryNoColumnMultipleKeys disc = new DiscoveryNoColumnMultipleKeys("disc1", mk1, mk2);
+		pm.insert(disc);
+		
+		DiscoveryNoColumnMultipleKeys afterDisc = pm.getByKey(DiscoveryNoColumnMultipleKeys.class, disc.id).get();
+		assertNotNull(afterDisc);
+		assertEquals("disc1", afterDisc.name);
+		assertEquals(mk1.id1, afterDisc.mk1.id1);
+		assertEquals(mk1.id2, afterDisc.mk1.id2);
+		assertEquals(mk2.id1, afterDisc.mk2.id1);
+		assertEquals(mk2.id2, afterDisc.mk2.id2);
 	}
 }

@@ -44,6 +44,16 @@
 
 	<developers>
 		<developer>
+			<id>pvoitot</id>
+			<name>Pascal Voitot</name>
+			<email>pascal.voitot.dev@gmail.com</email>
+			<organization>Mandubian</organization>
+			<organizationUrl>http://www.mandubian.org/</organizationUrl>
+			<roles>
+				<role>Developer</role>
+			</roles>
+		</developer>
+		<developer>
 			<id>gimenete</id>
 			<name>Alberto Gimeno</name>
 			<email>gimenete at gmail.com</email>
@@ -61,16 +71,6 @@
 			<email>jsanca at gmail.com</email>
 			<organization>Google Code</organization>
 			<organizationUrl>http://code.google.com/</organizationUrl>
-			<roles>
-				<role>Developer</role>
-			</roles>
-		</developer>
-		<developer>
-			<id>pvoitot</id>
-			<name>Pascal Voitot</name>
-			<email>pascal.voitot.dev@gmail.com</email>
-			<organization>Mandubian</organization>
-			<organizationUrl>http://www.mandubian.org/</organizationUrl>
 			<roles>
 				<role>Developer</role>
 			</roles>
@@ -359,9 +359,10 @@
 								<include>**/GaeTest.java</include>
 								<include>**/GaeAsyncTest.java</include>
 								<include>**/GaeModelTest.java</include>
-								<include>**/JdbcTest.java</include>
 								<include>**/JdbcModelTest.java</include>
+								<include>**/JdbcTest.java</include>
 								<include>**/H2Test.java</include>
+								<include>**/PostgresTest.java</include>
 								<include>**/ClassInfoTest.java</include>
 								<include>**/ModelTest.java</include>
 								<include>**/JsonSerializerTest.java</include>

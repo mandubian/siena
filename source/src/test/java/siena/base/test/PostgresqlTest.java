@@ -1532,4 +1532,10 @@ public class PostgresqlTest extends BaseTest {
 		super.testPolymorphic2();
 	}
 
+	@Override
+	public void testEmbeddedModel() {
+		// TODO Auto-generated method stub
+		super.testEmbeddedModel();
+	}
+
 }
