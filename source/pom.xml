@@ -166,7 +166,7 @@
 	</properties>
 
 	<build>
-		<finalName>siena</finalName>
+		<!-- finalName>siena</finalName-->
 		<plugins>
 			<!-- Compiler settings -->
 			<plugin>
