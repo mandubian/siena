@@ -26,6 +26,8 @@ import siena.base.test.model.Discovery4Join;
 import siena.base.test.model.Discovery4Join2;
 import siena.base.test.model.Discovery4Search;
 import siena.base.test.model.Discovery4Search2;
+import siena.base.test.model.DiscoveryLifeCycle;
+import siena.base.test.model.DiscoveryLifeCycleMulti;
 import siena.base.test.model.DiscoveryNoColumn;
 import siena.base.test.model.DiscoveryNoColumnMultipleKeys;
 import siena.base.test.model.DiscoveryPrivate;
@@ -37,6 +39,8 @@ import siena.base.test.model.PersonStringAutoIncID;
 import siena.base.test.model.PersonStringID;
 import siena.base.test.model.PersonUUID;
 import siena.base.test.model.PolymorphicModel;
+import siena.core.PersistenceManagerLifeCycleWrapper;
+import siena.core.lifecycle.LifeCyclePhase;
 import siena.core.options.QueryOption;
 import siena.core.options.QueryOption.QueryOptionJson;
 import siena.core.options.QueryOptionPage;
@@ -70,6 +74,8 @@ public abstract class BaseTest extends TestCase {
 	
 	public abstract boolean mustFilterToOrder();
 	
+	public static String lifeCyclePhase = "";
+	
 	@Override
 	protected void setUp() throws Exception {
 		super.setUp();
@@ -95,6 +101,8 @@ public abstract class BaseTest extends TestCase {
 		classes.add(ContainerModel.class);
 		classes.add(DiscoveryNoColumn.class);
 		classes.add(DiscoveryNoColumnMultipleKeys.class);
+		classes.add(DiscoveryLifeCycle.class);
+		classes.add(DiscoveryLifeCycleMulti.class);
 		pm = createPersistenceManager(classes);
 		
 		for (Class<?> clazz : classes) {
@@ -5354,5 +5362,78 @@ public abstract class BaseTest extends TestCase {
 		assertEquals(mk1.id2, afterDisc.mk1.id2);
 		assertEquals(mk2.id1, afterDisc.mk2.id1);
 		assertEquals(mk2.id2, afterDisc.mk2.id2);
+	}
+	
+	public void testLifeCycleGet(){
+		PersistenceManagerLifeCycleWrapper pml = new PersistenceManagerLifeCycleWrapper(pm);
+		
+		DiscoveryLifeCycle before = new DiscoveryLifeCycle("Radioactivity", LongAutoID_CURIE);
+		pm.insert(before);
+		
+		lifeCyclePhase = "";
+		DiscoveryLifeCycle after = new DiscoveryLifeCycle();
+		after.id = before.id;
+		pml.get(after);
+		
+		assertEquals(LifeCyclePhase.PRE_FETCH.toString()+" "+LifeCyclePhase.POST_FETCH.toString()+" ", lifeCyclePhase);
+	}
+	
+	public void testLifeCycleGetMultiAndLifeCycleInjection(){
+		PersistenceManagerLifeCycleWrapper pml = new PersistenceManagerLifeCycleWrapper(pm);
+		
+		DiscoveryLifeCycleMulti before = new DiscoveryLifeCycleMulti("Radioactivity", LongAutoID_CURIE);
+		pm.insert(before);
+		
+		lifeCyclePhase = "";
+		DiscoveryLifeCycleMulti after = new DiscoveryLifeCycleMulti();
+		after.id = before.id;
+		pml.get(after);
+		
+		assertEquals(LifeCyclePhase.PRE_FETCH.toString()+" "+LifeCyclePhase.POST_FETCH.toString()+" ", lifeCyclePhase);
+	}
+	
+	public void testLifeCycleInsert(){
+		PersistenceManagerLifeCycleWrapper pml = new PersistenceManagerLifeCycleWrapper(pm);
+		
+		lifeCyclePhase = "";
+		DiscoveryLifeCycle before = new DiscoveryLifeCycle("Radioactivity", LongAutoID_CURIE);
+		pml.insert(before);
+		
+		assertEquals(LifeCyclePhase.PRE_INSERT.toString()+" "+LifeCyclePhase.POST_INSERT.toString()+" ", lifeCyclePhase);
+	}
+	
+	public void testLifeCycleDelete(){
+		PersistenceManagerLifeCycleWrapper pml = new PersistenceManagerLifeCycleWrapper(pm);
+		
+		lifeCyclePhase = "";
+		DiscoveryLifeCycle before = new DiscoveryLifeCycle("Radioactivity", LongAutoID_CURIE);
+		pm.insert(before);
+		
+		pml.delete(before);
+		
+		assertEquals(LifeCyclePhase.PRE_DELETE.toString()+" "+LifeCyclePhase.POST_DELETE.toString()+" ", lifeCyclePhase);
+	}
+	
+	public void testLifeCycleUpdate(){
+		PersistenceManagerLifeCycleWrapper pml = new PersistenceManagerLifeCycleWrapper(pm);
+		
+		DiscoveryLifeCycle before = new DiscoveryLifeCycle("Radioactivity", LongAutoID_CURIE);
+		pm.insert(before);
+		
+		lifeCyclePhase = "";
+		before.name = "Radioactivity_UPD";
+		pml.update(before);
+		
+		assertEquals(LifeCyclePhase.PRE_UPDATE.toString()+" "+LifeCyclePhase.POST_UPDATE.toString()+" ", lifeCyclePhase);
+	}
+	
+	public void testLifeCycleSave(){
+		PersistenceManagerLifeCycleWrapper pml = new PersistenceManagerLifeCycleWrapper(pm);
+		
+		lifeCyclePhase = "";
+		DiscoveryLifeCycle before = new DiscoveryLifeCycle("Radioactivity", LongAutoID_CURIE);
+		pml.save(before);
+		
+		assertEquals(LifeCyclePhase.PRE_SAVE.toString()+" "+LifeCyclePhase.POST_SAVE.toString()+" ", lifeCyclePhase);
 	}
 }

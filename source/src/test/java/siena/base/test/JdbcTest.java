@@ -1532,6 +1532,42 @@ public class JdbcTest extends BaseTest {
 		// TODO Auto-generated method stub
 		super.testNoColumnMultipleKeys();
 	}
+
+	@Override
+	public void testLifeCycleGet() {
+		// TODO Auto-generated method stub
+		super.testLifeCycleGet();
+	}
+
+	@Override
+	public void testLifeCycleGetMultiAndLifeCycleInjection() {
+		// TODO Auto-generated method stub
+		super.testLifeCycleGetMultiAndLifeCycleInjection();
+	}
+
+	@Override
+	public void testLifeCycleInsert() {
+		// TODO Auto-generated method stub
+		super.testLifeCycleInsert();
+	}
+
+	@Override
+	public void testLifeCycleDelete() {
+		// TODO Auto-generated method stub
+		super.testLifeCycleDelete();
+	}
+
+	@Override
+	public void testLifeCycleUpdate() {
+		// TODO Auto-generated method stub
+		super.testLifeCycleUpdate();
+	}
+
+	@Override
+	public void testLifeCycleSave() {
+		// TODO Auto-generated method stub
+		super.testLifeCycleSave();
+	}
 	
 
 	

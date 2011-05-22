@@ -16,14 +16,18 @@
 package siena;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import siena.core.lifecycle.LifeCyclePhase;
+import siena.core.lifecycle.LifeCycleUtils;
 import siena.embed.Embedded;
 
 public class ClassInfo {
@@ -41,6 +45,8 @@ public class ClassInfo {
 	public List<Field> allFields = new ArrayList<Field>();
 	public List<Field> joinFields = new ArrayList<Field>();
 
+	public Map<LifeCyclePhase, List<Method>> lifecycleMethods = new HashMap<LifeCyclePhase, List<Method>>();
+	
 	protected ClassInfo(Class<?> clazz) {
 		this.clazz = clazz;
 		tableName = getTableName(clazz);
@@ -80,6 +86,18 @@ public class ClassInfo {
 				else joinFields.add(field);
 			}
 			allFields.add(field);
+		}
+		
+		for(Method m : clazz.getDeclaredMethods()){
+			List<LifeCyclePhase> lcps = LifeCycleUtils.getMethodLifeCycles(m);
+			for(LifeCyclePhase lcp: lcps){
+				List<Method> methods = lifecycleMethods.get(lcp);
+				if(methods == null){
+					methods = new ArrayList<Method>();
+					lifecycleMethods.put(lcp, methods);
+				}
+				methods.add(m);
+			}
 		}
 	}
 
@@ -252,5 +270,8 @@ public class ClassInfo {
 		return ci;
 	}
 
+	public List<Method> getLifeCycleMethod(LifeCyclePhase lcp){
+		return lifecycleMethods.get(lcp);
+	}
 
 }
