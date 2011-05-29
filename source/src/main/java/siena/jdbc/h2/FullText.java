@@ -108,7 +108,7 @@ public class FullText {
         Statement stat = conn.createStatement();
         stat.execute("CREATE SCHEMA IF NOT EXISTS " + SCHEMA);
         stat.execute("CREATE TABLE IF NOT EXISTS " + SCHEMA
-                        + ".INDEXES(ID INT AUTO_INCREMENT PRIMARY KEY, SCHEMA VARCHAR, TABLE VARCHAR, COLUMNS VARCHAR, UNIQUE(SCHEMA, TABLE))");
+                        + ".FT_INDEXES(ID INT AUTO_INCREMENT PRIMARY KEY, SCHEMA VARCHAR, TABLE VARCHAR, COLUMNS VARCHAR, UNIQUE(SCHEMA, TABLE))");
         stat.execute("CREATE TABLE IF NOT EXISTS " + SCHEMA
                 + ".WORDS(ID INT AUTO_INCREMENT PRIMARY KEY, NAME VARCHAR, UNIQUE(NAME))");
         stat.execute("CREATE TABLE IF NOT EXISTS " + SCHEMA
@@ -153,7 +153,7 @@ public class FullText {
     public static void createIndex(Connection conn, String schema, String table, String columnList) throws SQLException {
         init(conn);
         PreparedStatement prep = conn.prepareStatement("INSERT INTO " + SCHEMA
-                + ".INDEXES(SCHEMA, TABLE, COLUMNS) VALUES(?, ?, ?)");
+                + ".FT_INDEXES(SCHEMA, TABLE, COLUMNS) VALUES(?, ?, ?)");
         prep.setString(1, schema);
         prep.setString(2, table);
         prep.setString(3, columnList);
@@ -177,7 +177,7 @@ public class FullText {
         stat.execute("TRUNCATE TABLE " + SCHEMA + ".WORDS");
         stat.execute("TRUNCATE TABLE " + SCHEMA + ".ROWS");
         stat.execute("TRUNCATE TABLE " + SCHEMA + ".MAP");
-        ResultSet rs = stat.executeQuery("SELECT * FROM " + SCHEMA + ".INDEXES");
+        ResultSet rs = stat.executeQuery("SELECT * FROM " + SCHEMA + ".FT_INDEXES");
         while (rs.next()) {
             String schema = rs.getString("SCHEMA");
             String table = rs.getString("TABLE");
@@ -197,7 +197,7 @@ public class FullText {
     public static void dropIndex(Connection conn, String schema, String table) throws SQLException {
         init(conn);
         PreparedStatement prep = conn.prepareStatement("SELECT ID FROM " + SCHEMA
-                + ".INDEXES WHERE SCHEMA=? AND TABLE=?");
+                + ".FT_INDEXES WHERE SCHEMA=? AND TABLE=?");
         prep.setString(1, schema);
         prep.setString(2, table);
         ResultSet rs = prep.executeQuery();
@@ -206,7 +206,7 @@ public class FullText {
         }
         int indexId = rs.getInt(1);
         prep = conn.prepareStatement("DELETE FROM " + SCHEMA
-                + ".INDEXES WHERE ID=?");
+                + ".FT_INDEXES WHERE ID=?");
         prep.setInt(1, indexId);
         prep.execute();
         createOrDropTrigger(conn, schema, table, false);
@@ -851,7 +851,7 @@ public class FullText {
             }
             ArrayList<String> indexList = New.arrayList();
             PreparedStatement prep = conn.prepareStatement(
-                    "SELECT ID, COLUMNS FROM " + SCHEMA + ".INDEXES WHERE SCHEMA=? AND TABLE=?");
+                    "SELECT ID, COLUMNS FROM " + SCHEMA + ".FT_INDEXES WHERE SCHEMA=? AND TABLE=?");
             prep.setString(1, schemaName);
             prep.setString(2, tableName);
             rs = prep.executeQuery();

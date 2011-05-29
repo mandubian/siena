@@ -24,6 +24,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 import siena.core.lifecycle.LifeCyclePhase;
@@ -53,6 +54,11 @@ public class ClassInfo {
 
 		Field[] fields = clazz.getDeclaredFields();	
 
+		// TODO take into account superclass fields for inheritance!!!!
+		// Class<?> c = entity.getClass();
+        // while (!c.equals(Object.class)) {
+		//  c = c.getSuperclass();
+		// }
 		for (Field field : fields) {
 			
 			Class<?> type = field.getType();
@@ -219,6 +225,7 @@ public class ClassInfo {
 		if(Model.class.isAssignableFrom(type)) /*if(type.getSuperclass() == Model.class)*/
 			return true;
 		// TODO: this needs to be tested
+		// TODO what if type is NULL????
 		if(type.getName().startsWith("java.")) return false;
 		
 		/*if(type == Json.class)*/
@@ -232,6 +239,23 @@ public class ClassInfo {
 	
 	public static boolean isEmbedded(Field field) {
 		return field.getAnnotation(Embedded.class) != null;
+	}
+	
+	public static boolean isGenerated(Field field) {
+		Id id = field.getAnnotation(Id.class);
+		if(id != null) {
+			Class<?> type = field.getType();
+			// ONLY long ID can be auto_incremented
+			if(id.value() == Generator.AUTO_INCREMENT 
+					&& ( Long.TYPE == type || Long.class.isAssignableFrom(type))) {
+				return true;
+			} if(id.value() == Generator.UUID
+					&& (String.class.isAssignableFrom(type)
+					|| UUID.class.isAssignableFrom(type))) {
+				return true;
+			} 
+		} 
+		return false;
 	}
 	
 	/**

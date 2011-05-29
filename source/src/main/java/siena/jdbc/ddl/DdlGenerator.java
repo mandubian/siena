@@ -1,8 +1,6 @@
 package siena.jdbc.ddl;
 
 import java.lang.reflect.Field;
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
 import java.sql.Types;
 import java.util.Date;
 import java.util.HashMap;
@@ -33,10 +31,17 @@ import siena.core.Polymorphic;
 import siena.embed.Embedded;
 
 public class DdlGenerator {
-	public static final String DB = "JDBC";
+	public String DB = "mysql";
 
 	private Map<String, Table> tables = new HashMap<String, Table>();
 	private Database database = new Database();
+	
+	public DdlGenerator(){
+	}
+	
+	public DdlGenerator(String db){
+		this.DB = db;
+	}
 	
 	public Table getTable(String name) {
 		return tables.get(name);
@@ -53,13 +58,16 @@ public class DdlGenerator {
 		table.setName(info.tableName);
 		database.addTable(table);
 		
+		Map<String, UniqueIndex> uniques = new HashMap<String, UniqueIndex>();
+		Map<String, NonUniqueIndex> indexes = new HashMap<String, NonUniqueIndex>();
+		
 		/* columns */
 		for (Field field : info.allFields) {
 			String[] columns = ClassInfo.getColumnNames(field);
 			boolean notNull = field.getAnnotation(NotNull.class) != null;
 			
 			Class<?> type = field.getType();
-			if(!ClassInfo.isModel(type) || ClassInfo.isEmbedded(field)) {
+			if(!ClassInfo.isModel(type) || (ClassInfo.isModel(type) && ClassInfo.isEmbedded(field))) {
 				Column column = createColumn(clazz, field, columns[0]);
 				
 				if(notNull || type.isPrimitive()) {
@@ -79,10 +87,20 @@ public class DdlGenerator {
 					column.setPrimaryKey(true);
 					column.setRequired(true);
 					
-					// auto_increment managed ONLY for long
+					// auto_increments managed ONLY for long
 					if(id.value() == Generator.AUTO_INCREMENT 
 							&& (Long.TYPE == type || Long.class.isAssignableFrom(type)))
 						column.setAutoIncrement(true);
+					
+					// adds index on primary key
+					/*UniqueIndex i = uniques.get(columns[0]);
+					if(i == null) {
+						i = new UniqueIndex();
+						i.setName(columns[0]);
+						uniques.put(columns[0], i);
+						table.addIndex(i);
+					}
+					fillIndex(i, field);*/
 				}
 				
 				table.addColumn(column);
@@ -101,9 +119,6 @@ public class DdlGenerator {
 			}
 		}
 
-		Map<String, UniqueIndex> uniques = new HashMap<String, UniqueIndex>();
-		Map<String, NonUniqueIndex> indexes = new HashMap<String, NonUniqueIndex>();
-		
 		/* indexes */
 		for (Field field : info.updateFields) {
 			Index index = field.getAnnotation(Index.class);
@@ -203,7 +218,12 @@ public class DdlGenerator {
 		else {
 			Embedded embedded = field.getAnnotation(Embedded.class);
 			if(embedded != null) {
-				columnType = Types.LONGVARCHAR;
+				if("h2".equals(DB)){
+					columnType = Types.CLOB;
+				}
+				else {
+					columnType = Types.LONGVARCHAR;
+				}
 			} else if(field.isAnnotationPresent(Polymorphic.class)){
 		        columnType = Types.BLOB;
 		    }else {				
