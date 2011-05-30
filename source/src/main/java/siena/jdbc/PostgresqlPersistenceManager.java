@@ -6,7 +6,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -136,9 +135,53 @@ public class PostgresqlPersistenceManager extends JdbcPersistenceManager {
 		try {
 			for (String field : qf.fields) {
 				Field f = clazz.getDeclaredField(field);
-				String[] columns = ClassInfo.getColumnNames(f, info.tableName);
-				for (String col : columns) {
-					cols.add("coalesce("+col+", '')");
+				
+				Class<?> cl = f.getType();
+				// if a number or date, doesn't try to coalesce
+				if(Number.class.isAssignableFrom(cl) 
+						||
+					Date.class.isAssignableFrom(cl)){
+					String[] columns = ClassInfo.getColumnNames(f, info.tableName);
+					for (String col : columns) {
+						cols.add(col);
+					}
+				}
+				// if is model, gets the key type and does the same as herebefore
+				else if(ClassInfo.isModel(cl)) {
+					ClassInfo ci = ClassInfo.getClassInfo(cl);
+					if(ci.keys.size()==1){
+						Field key = ci.keys.get(0);
+						if(Number.class.isAssignableFrom(key.getType()) 
+								||
+							Date.class.isAssignableFrom(key.getType())){
+							cols.add(f.getName());
+						}else {
+							cols.add("coalesce("+f.getName()+", '')");
+						}
+					}
+					else {
+						for (Field key : ci.keys) {
+							String[] columns = ClassInfo.getColumnNamesWithPrefix(key, f.getName()+"_");
+							if(Number.class.isAssignableFrom(key.getType()) 
+									||
+								Date.class.isAssignableFrom(key.getType())){
+								for (String col : columns) {
+									cols.add(col);
+								}
+							}else {
+								for (String col : columns) {
+									cols.add("coalesce("+col+", '')");
+								}
+							}
+						}
+					}
+					
+				}
+				else {
+					String[] columns = ClassInfo.getColumnNames(f, info.tableName);
+					for (String col : columns) {
+						cols.add("coalesce("+col+", '')");
+					}
 				}
 			}
 			QueryOption opt = qf.option;
