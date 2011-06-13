@@ -1,5 +1,8 @@
 package siena;
 
-public abstract class QueryFilter {
-
+/**
+ * @author mandubian <pascal.voitot@mandubian.org>
+ *
+ */
+public abstract class QueryFilter { 
 }

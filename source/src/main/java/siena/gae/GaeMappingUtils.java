@@ -127,6 +127,9 @@ public class GaeMappingUtils {
 		try {
 			Field idField = info.getIdField();
 			Object value = Util.readField(obj, idField);
+			// TODO verify that returning NULL is not a bad thing
+			if(value == null) return null;
+			
 			Class<?> type = idField.getType();
 			
 			if(idField.isAnnotationPresent(Id.class)){

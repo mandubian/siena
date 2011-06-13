@@ -25,7 +25,7 @@ import siena.core.options.QueryOption;
  * The Siena interface for performing queries.
  *
  * @author gimenete
- * @author mandubian
+ * @author mandubian <pascal.voitot@mandubian.org>
  *
  */
 

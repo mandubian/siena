@@ -15,6 +15,7 @@
  */
 package siena;
 
+import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
 
@@ -22,12 +23,12 @@ import siena.core.options.QueryOption;
 
 /**
  * The Siena interface for storing query data.
+ * it extends Serializable so that all queries are serializable
  *
- * @author mandubian
+ * @author mandubian <pascal.voitot@mandubian.org>
  *
  */
-
-public interface QueryData<T> {
+public interface QueryData<T> extends Serializable{
     /**
      * finds an option from its identifier
      * 

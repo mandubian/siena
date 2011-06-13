@@ -1,6 +1,7 @@
 package siena.jdbc;
 
 import java.sql.PreparedStatement;
+import java.sql.SQLException;
 
 import siena.core.options.QueryOption;
 import siena.embed.EmbeddedMap;
@@ -37,6 +38,24 @@ public class QueryOptionJdbcContext extends QueryOption{
 		this.noMoreDataBefore = option.noMoreDataBefore;
 		this.realOffset = option.realOffset;
 		this.realPageSize = option.realPageSize;
+	}
+	
+	
+	/**
+	 * Checks if the statement is closed or not
+	 * Must use this trick as the isClosed function is not implemented all the time
+	 * @return true/false
+	 */
+	public boolean isClosed(){
+		if(this.statement == null) return true;
+		try {
+			if(this.statement.getConnection()==null) return true;
+			if(this.statement.isClosed()) return true;
+			return false;
+		}
+		catch(SQLException ex){}
+		catch(AbstractMethodError ex){}
+		return true;
 	}
 	
 	@Override

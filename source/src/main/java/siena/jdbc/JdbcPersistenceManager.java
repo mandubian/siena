@@ -562,7 +562,9 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 			return new ArrayList<T>();
 		}
 				
-		if(state.isStateless() || (state.isStateful() && !jdbcCtx.isActive())) {
+		if(state.isStateless() 
+				|| (state.isStateful() && !jdbcCtx.isActive())
+				|| (state.isStateful() && jdbcCtx.isActive() && jdbcCtx.isClosed())) {
 			if(state.isStateless()){
 				if(pag.isPaginating()){
 					if(offsetOpt.isActive()){
