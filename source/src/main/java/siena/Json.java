@@ -21,6 +21,7 @@ import java.io.Reader;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.io.Writer;
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -82,7 +83,19 @@ public class Json implements Iterable<Json> {
 			add((Object[]) object);
 			this.object = null;
 		}		
-
+		else if(Field.class.isAssignableFrom(clazz)){
+			Field f = (Field)object;
+			map = new HashMap<String, Json>();
+			put("fieldName", f.getName());
+			put("parentClass", f.getDeclaringClass().getName());
+			this.object = null;
+		}
+		else if(clazz == Class.class){
+			Class<?> cl = (Class<?>)object;
+			map = new HashMap<String, Json>();
+			put("className", cl.getName());
+			this.object = null;
+		}
 		else {
 			throw new IllegalArgumentException("Unsupported type: " + object.getClass().getName());
 		}

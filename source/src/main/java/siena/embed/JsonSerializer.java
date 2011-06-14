@@ -3,6 +3,7 @@ package siena.embed;
 import static siena.Json.list;
 import static siena.Json.map;
 
+import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
@@ -58,6 +59,22 @@ public class JsonSerializer {
 			return new Json(obj);
 		}
 		
+		if(Field.class.isAssignableFrom(clazz)){
+			return new Json(obj);
+		}
+		
+		if(clazz.isArray()){
+			return new Json(obj);
+		}
+		
+		if(clazz == Class.class){
+			return new Json(obj);
+		}
+		
+		if(JsonDumpable.class.isAssignableFrom(obj.getClass())) {
+			return ((JsonDumpable)obj).dump();
+		}
+
 		try {
 			EmbeddedList list = obj.getClass().getAnnotation(EmbeddedList.class);
 			if(list != null) {
@@ -87,7 +104,7 @@ public class JsonSerializer {
 		return new Json(obj);
 	}
 	
-	private static Json serializeMap(Object obj) throws Exception {
+	public static Json serializeMap(Object obj) throws Exception {
 		Field[] fields = obj.getClass().getDeclaredFields();
 		Json result = map();
 		for (Field f : fields) {
@@ -122,7 +139,7 @@ public class JsonSerializer {
 		return result;
 	}
 	
-	private static Json serializeList(Object obj) throws Exception {
+	public static Json serializeList(Object obj) throws Exception {
 		Field[] fields = obj.getClass().getDeclaredFields();
 		Json result = list();
 		for (Field f : fields) {
@@ -159,6 +176,41 @@ public class JsonSerializer {
 		    return (Class<?>) fieldArgTypes[n];
 		}
 		return null;
+	}
+	
+	public static Object deserializeMap(Class<?> clazz, Json data) {
+		if(!data.isMap()) {
+			throw new SienaException("Error while deserializating class "+clazz
+					+". A Json map is needed but found: "+data);
+		}
+		Object obj = Util.createObjectInstance(clazz);
+		Field[] fields = clazz.getDeclaredFields();
+		for (Field f : fields) {
+			if(mustIgnore(f)) continue;
+			
+			Key key = f.getAnnotation(Key.class);
+			if(key != null)
+				Util.setField(obj, f, deserialize(f, data.get(key.value())));
+			else
+				Util.setField(obj, f, deserialize(f, data.get(f.getName())));
+		}
+		
+		// deserializes super classes
+		Class<?> superclazz = obj.getClass().getSuperclass();
+		while(superclazz!=null){
+			fields = superclazz.getDeclaredFields();
+			for (Field f : fields) {
+				if(mustIgnore(f)) continue;
+				
+				Key key = f.getAnnotation(Key.class);
+				if(key != null)
+					Util.setField(obj, f, deserialize(f, data.get(key.value())));
+				else
+					Util.setField(obj, f, deserialize(f, data.get(f.getName())));
+			}
+			superclazz = superclazz.getSuperclass();
+		}
+		return obj;
 	}
 	
 	public static Object deserialize(Class<?> clazz, Json data) {
@@ -235,6 +287,20 @@ public class JsonSerializer {
 			if(Json.class.isAssignableFrom(clazz)){
 				return data;
 			}
+			JsonDeserializeAs as = clazz.getAnnotation(JsonDeserializeAs.class);
+			if(as != null) {
+				if(as.value() == String.class) {
+					return data.asString();
+				}
+				else {
+					Class<?> asClazz = as.value();
+					Object ret = deserialize(as.value(), data);
+					if(JsonRestorable.class.isAssignableFrom(asClazz)){
+						return ((JsonRestorable<?>)ret).restore();
+					}
+					return ret;
+				}
+			}
 			return deserializePlain(clazz, data);
 		} catch(Exception e) {
 			throw new SienaException(e);
@@ -288,6 +354,38 @@ public class JsonSerializer {
 		else if(Json.class.isAssignableFrom(clazz)){
 			return data;
 		}
+		else if(Field.class.isAssignableFrom(clazz)){
+			String fieldName = data.get("fieldName").asString();
+			String parentClass = data.get("parentClass").asString();
+			try {
+				Class<?> cl = Class.forName(parentClass);
+				Field fi = cl.getField(fieldName);
+				
+				return fi;
+			}catch(ClassNotFoundException ex){
+				throw new SienaException(ex);
+			}catch(NoSuchFieldException ex){
+				throw new SienaException(ex);
+			}
+		}
+		else if(clazz.isArray()){
+			Class<?> arrClazz = clazz.getComponentType();
+			Object arr = Array.newInstance(arrClazz, data.size());
+			int i=0;
+			for (Json value : data) {
+				Array.set(arr, i++, deserialize(arrClazz, value));
+			}
+			
+			return arr;
+		}else if(clazz == Class.class){
+			String className = data.get("className").asString();
+			try {
+				Class<?> cl = Class.forName(className);
+				return cl;
+			}catch(ClassNotFoundException ex){
+				throw new SienaException(ex);
+			}
+		}
 		
 		Format format = f.getAnnotation(Format.class);
 		if(format != null) {
@@ -298,6 +396,16 @@ public class JsonSerializer {
 				} catch (ParseException e) {
 					throw new SienaException(e);
 				}
+			}
+		}
+		
+		JsonDeserializeAs as = f.getAnnotation(JsonDeserializeAs.class);
+		if(as != null) {
+			if(as.value() == String.class) {
+				return data.asString();
+			}
+			else {
+				return deserialize(as.value(), data);
 			}
 		}
 		

@@ -2,7 +2,6 @@ package siena;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -12,6 +11,7 @@ import siena.core.options.QueryOptionFetchType;
 import siena.core.options.QueryOptionOffset;
 import siena.core.options.QueryOptionPage;
 import siena.core.options.QueryOptionState;
+import siena.embed.EmbeddedMap;
 
 /**
  * The base data container of Query<T>/QueryAsync<T> where T is the model being queried (not necessarily inheriting siena.Model)
@@ -20,7 +20,10 @@ import siena.core.options.QueryOptionState;
  *
  * @param <T>
  */
+@EmbeddedMap
 public class BaseQueryData<T> implements QueryData<T> {
+	private static final long serialVersionUID = -5112648712321740542L;
+
 	protected Class<T> clazz;
 	
 	protected List<QueryFilter> filters;
@@ -40,6 +43,13 @@ public class BaseQueryData<T> implements QueryData<T> {
 				//the fetch type is activated by default and set to NORMAL
 				put(QueryOptionFetchType.ID, (new QueryOptionFetchType()).activate());
 			}};	
+	}
+	
+	public BaseQueryData() {
+		filters = new ArrayList<QueryFilter>();
+		orders = new ArrayList<QueryOrder>();
+		searches = new ArrayList<QueryFilterSearch>();
+		joins = new ArrayList<QueryJoin>();
 	}
 	
 	public BaseQueryData(Class<T> clazz) {
@@ -187,7 +197,7 @@ public class BaseQueryData<T> implements QueryData<T> {
 		// sets the pagination
 		QueryOptionPage opt = (QueryOptionPage)(options.get(QueryOptionPage.ID));
 		QueryOptionOffset offOpt = (QueryOptionOffset)options.get(QueryOptionOffset.ID);
-		QueryOptionState stateOpt = (QueryOptionState)(options.get(QueryOptionState.ID)).activate();
+		//QueryOptionState stateOpt = (QueryOptionState)(options.get(QueryOptionState.ID)).activate();
 		// can't change pagination after it has been initialized because it breaks all the cursor mechanism
 		
 		/*if(opt.isActive() && opt.isPaginating()){
@@ -228,7 +238,7 @@ public class BaseQueryData<T> implements QueryData<T> {
 	protected void optionOffset(int offset) {
 		QueryOptionPage pagOpt = (QueryOptionPage)(options.get(QueryOptionPage.ID));
 		QueryOptionOffset offOpt = (QueryOptionOffset)options.get(QueryOptionOffset.ID);
-		QueryOptionState stateOpt = (QueryOptionState)(options.get(QueryOptionState.ID));
+		//QueryOptionState stateOpt = (QueryOptionState)(options.get(QueryOptionState.ID));
 		
 		offOpt.activate();
 		offOpt.offsetType = QueryOptionOffset.OffsetType.MANUAL;

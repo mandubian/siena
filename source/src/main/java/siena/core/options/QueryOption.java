@@ -2,12 +2,15 @@ package siena.core.options;
 
 import siena.Json;
 import siena.SienaException;
+import siena.core.options.QueryOption.QueryOptionJson;
 import siena.embed.EmbeddedMap;
+import siena.embed.JsonDeserializeAs;
+import siena.embed.JsonDumpable;
+import siena.embed.JsonRestorable;
 import siena.embed.JsonSerializer;
 
-
-@EmbeddedMap
-public abstract class QueryOption {
+@JsonDeserializeAs(QueryOptionJson.class)
+public abstract class QueryOption implements JsonDumpable {
     /* the state of an option */
     public enum State {
         ACTIVE, PASSIVE
@@ -87,29 +90,37 @@ public abstract class QueryOption {
 		return this.type == opt.type && this.state.equals(opt.state);
 	}
 	
-	public QueryOptionJson dump() {
+	/* (non-Javadoc)
+	 * @see siena.embed.JsonDumpable#dump()
+	 */
+	public Json dump() {
 		QueryOptionJson jsonOpt = new QueryOptionJson();
 		jsonOpt.type = this.getClass().getName();
-		jsonOpt.value = JsonSerializer.serialize(this); 
-		
-		return jsonOpt;
-	}
-
-	public static QueryOption restore(String jsonStr) {	
 		try {
-			QueryOptionJson optJson = (QueryOptionJson)JsonSerializer.deserialize(QueryOptionJson.class, Json.loads(jsonStr));
-			Class<?> clazz = Class.forName(optJson.type);
-			
-			QueryOption opt = (QueryOption)JsonSerializer.deserialize(clazz, optJson.value);
-			return opt;
-		}catch(Exception ex) {
-			throw new SienaException("Unable to restore QueryOption", ex);
+			jsonOpt.value = JsonSerializer.serializeMap(this);
+		}catch(SienaException e) {
+			throw e;
+		} catch(Exception e) {
+			throw new SienaException(e);
 		}
+		
+		return JsonSerializer.serialize(jsonOpt);
 	}
 
 	@EmbeddedMap
-	public static class QueryOptionJson {
+	public static class QueryOptionJson implements JsonRestorable<QueryOption>{
 		public String type;
 		public Json value;
+		
+		public QueryOption restore() {
+			try {
+				Class<?> clazz = Class.forName(this.type);
+				
+				QueryOption opt = (QueryOption)JsonSerializer.deserializeMap(clazz, this.value);
+				return opt;
+			}catch(Exception ex) {
+				throw new SienaException("Unable to restore QueryOption", ex);
+			}
+		}
 	}
 }

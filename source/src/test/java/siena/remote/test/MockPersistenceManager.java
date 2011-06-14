@@ -15,6 +15,8 @@
  */
 package siena.remote.test;
 
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -321,14 +323,28 @@ public class MockPersistenceManager implements PersistenceManager {
 			return null;
 		}
 
+		
+
 		@Override
-		public String dump() {
+		public String dump(QueryOption... options) {
 			// TODO Auto-generated method stub
 			return null;
 		}
 
 		@Override
-		public Query<T> restore(String dump) {
+		public void dump(OutputStream os, QueryOption... options) {
+			// TODO Auto-generated method stub
+			
+		}
+
+		@Override
+		public Query<T> restore(String dump, QueryOption... options) {
+			// TODO Auto-generated method stub
+			return null;
+		}
+
+		@Override
+		public Query<T> restore(InputStream dump, QueryOption... options) {
 			// TODO Auto-generated method stub
 			return null;
 		}

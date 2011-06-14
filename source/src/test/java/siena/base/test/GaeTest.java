@@ -1625,15 +1625,45 @@ public class GaeTest extends BaseTest {
 	}
 
 	@Override
-	public void testDump() {
+	public void testDumpQueryOption() {
 		// TODO Auto-generated method stub
-		super.testDump();
+		super.testDumpQueryOption();
 	}
 
 	@Override
-	public void testRestore() {
+	public void testRestoreQueryOption() {
 		// TODO Auto-generated method stub
-		super.testRestore();
+		super.testRestoreQueryOption();
+	}
+
+	@Override
+	public void testDumpRestoreQueryFilterSimple() {
+		// TODO Auto-generated method stub
+		super.testDumpRestoreQueryFilterSimple();
+	}
+
+	@Override
+	public void testDumpRestoreQueryFilterSearch() {
+		// TODO Auto-generated method stub
+		super.testDumpRestoreQueryFilterSearch();
+	}
+
+	@Override
+	public void testDumpRestoreQueryOrder() {
+		// TODO Auto-generated method stub
+		super.testDumpRestoreQueryOrder();
+	}
+
+	@Override
+	public void testDumpRestoreQueryJoin() {
+		// TODO Auto-generated method stub
+		super.testDumpRestoreQueryJoin();
+	}
+
+	@Override
+	public void testDumpRestoreQueryData() {
+		// TODO Auto-generated method stub
+		super.testDumpRestoreQueryData();
 	}
 
 	@Override

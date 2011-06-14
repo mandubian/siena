@@ -14,6 +14,10 @@ public class QueryOptionOffset extends QueryOption{
 		PAGINATING
 	}
 	
+	public QueryOptionOffset() {
+		super(ID);
+	}
+	
 	public QueryOptionOffset(int offset) {
 		super(ID);
 		this.offset = offset;

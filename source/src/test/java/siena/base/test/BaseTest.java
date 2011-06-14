@@ -12,8 +12,15 @@ import java.util.Iterator;
 import java.util.List;
 
 import junit.framework.TestCase;
+import siena.BaseQuery;
+import siena.Json;
 import siena.PersistenceManager;
 import siena.Query;
+import siena.QueryFilter;
+import siena.QueryFilterSearch;
+import siena.QueryFilterSimple;
+import siena.QueryJoin;
+import siena.QueryOrder;
 import siena.SienaException;
 import siena.base.test.model.Address;
 import siena.base.test.model.AutoInc;
@@ -4800,25 +4807,101 @@ public abstract class BaseTest extends TestCase {
 		assertEquals(person, l.get(0));
 	}
 	
-	public void testDump() {
+	public void testDumpQueryOption() {
 		Query<PersonLongAutoID> query = pm.createQuery(PersonLongAutoID.class);
 		
 		QueryOption opt = query.option(QueryOptionPage.ID);
-		QueryOptionJson dump = opt.dump();
-		assertEquals(dump.type, QueryOptionPage.class.getName());
-		assertEquals(dump.value.toString(), "{\"pageType\": \"TEMPORARY\", \"state\": \"PASSIVE\", \"pageSize\": 0, \"type\": 1}");
+		Json dump = opt.dump();
 		String str = JsonSerializer.serialize(dump).toString();
 		assertNotNull(str);
+		assertEquals("{\"value\": {\"pageType\": \"TEMPORARY\", \"state\": \"PASSIVE\", \"pageSize\": 0, \"type\": 1}, \"type\": \""+QueryOptionPage.class.getName()+"\"}", str);
 	}
 	
-	public void testRestore() {
-		QueryOption optRestored = QueryOption.restore(
-				"{\"type\":\""+QueryOptionPage.class.getName()+"\", \"value\": {\"pageType\": \"TEMPORARY\", \"state\": \"PASSIVE\", \"pageSize\": 0, \"type\": 1} }");
+	public void testRestoreQueryOption() {
+		QueryOption optRestored = (QueryOption)JsonSerializer.deserialize(QueryOption.class, Json.loads(
+			"{\"type\":\""+QueryOptionPage.class.getName()+"\", \"value\": {\"pageType\": \"TEMPORARY\", \"state\": \"PASSIVE\", \"pageSize\": 0, \"type\": 1} }"
+		));
 		Query<PersonLongAutoID> query = pm.createQuery(PersonLongAutoID.class);
 		
 		QueryOption opt = query.option(QueryOptionPage.ID);
 		
 		assertEquals(opt, optRestored);
+	}
+	
+	public void testDumpRestoreQueryFilterSimple() {
+		Query<PersonLongAutoID> query = pm.createQuery(PersonLongAutoID.class).filter("firstName", "abcde");
+		QueryFilterSimple qf = (QueryFilterSimple)query.getFilters().get(0);
+		String str = JsonSerializer.serialize(qf).toString();
+		assertNotNull(str);
+		
+		QueryFilterSimple qfRes = (QueryFilterSimple)JsonSerializer.deserialize(QueryFilter.class, Json.loads(str));
+		assertNotNull(qfRes);
+		assertEquals(qf.operator, qfRes.operator);
+		assertEquals(qf.value, qfRes.value);
+		assertEquals(qf.field.getName(), qfRes.field.getName());
+	}
+	
+	public void testDumpRestoreQueryFilterSearch() {
+		Query<PersonLongAutoID> query = pm.createQuery(PersonLongAutoID.class).search("test", "firstName", "lastName");
+		QueryFilterSearch qf = (QueryFilterSearch)query.getFilters().get(0);
+		String str = JsonSerializer.serialize(qf).toString();
+		assertNotNull(str);
+		
+		QueryFilterSearch qfRes = (QueryFilterSearch)JsonSerializer.deserialize(QueryFilter.class, Json.loads(str));
+		assertNotNull(qfRes);
+		assertEquals(qf.match, qfRes.match);
+		for(int i=0; i<qfRes.fields.length; i++){
+			assertEquals(qf.fields[i], qfRes.fields[i]);
+		}
+	}
+	
+	public void testDumpRestoreQueryOrder() {
+		Query<PersonLongAutoID> query = pm.createQuery(PersonLongAutoID.class).order("firstName");
+		QueryOrder qo = (QueryOrder)query.getOrders().get(0);
+		String str = JsonSerializer.serialize(qo).toString();
+		assertNotNull(str);
+		
+		QueryOrder qoRes = (QueryOrder)JsonSerializer.deserialize(QueryOrder.class, Json.loads(str));
+		assertNotNull(qoRes);
+		assertEquals(qo.ascending, qoRes.ascending);
+		assertEquals(qo.field.getName(), qoRes.field.getName());
+	}
+	
+	public void testDumpRestoreQueryJoin() {
+		Query<Discovery> query = pm.createQuery(Discovery.class).join("discoverer", "firstName");
+		QueryJoin qj = (QueryJoin)query.getJoins().get(0);
+		String str = JsonSerializer.serialize(qj).toString();
+		assertNotNull(str);
+		
+		QueryJoin qjRes = (QueryJoin)JsonSerializer.deserialize(QueryJoin.class, Json.loads(str));
+		assertNotNull(qjRes);
+		assertEquals(qj.field.getName(), qjRes.field.getName());
+		for(int i=0; i<qjRes.sortFields.length; i++){
+			assertEquals(qj.sortFields[i], qjRes.sortFields[i]);
+		}
+	}
+	
+	public void testDumpRestoreQueryData() {
+		Query<Discovery> query = 
+			pm.createQuery(Discovery.class)
+				.filter("name", "test").order("name").join("discoverer", "firstName");
+		String str = JsonSerializer.serialize(query).toString();
+		assertNotNull(str);
+		
+		Query<Discovery> qjRes = (Query<Discovery>)JsonSerializer.deserialize(BaseQuery.class, Json.loads(str));
+		assertNotNull(qjRes);
+		for(int i=0; i<qjRes.getFilters().size(); i++){
+			assertEquals(query.getFilters().get(i), qjRes.getFilters().get(i));
+		}
+		for(int i=0; i<qjRes.getJoins().size(); i++){
+			assertEquals(query.getJoins().get(i), qjRes.getJoins().get(i));
+		}
+		for(int i=0; i<qjRes.getOrders().size(); i++){
+			assertEquals(query.getOrders().get(i), qjRes.getOrders().get(i));
+		}
+		for(int i=0; i<qjRes.getSearches().size(); i++){
+			assertEquals(query.getSearches().get(i), qjRes.getSearches().get(i));
+		}
 	}
 	
 	public void testIterPerPageStateless(){

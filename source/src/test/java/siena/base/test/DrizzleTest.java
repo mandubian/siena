@@ -1293,15 +1293,15 @@ public class DrizzleTest extends BaseTest {
 	}
 
 	@Override
-	public void testDump() {
+	public void testDumpQueryOption() {
 		// TODO Auto-generated method stub
-		super.testDump();
+		super.testDumpQueryOption();
 	}
 
 	@Override
-	public void testRestore() {
+	public void testRestoreQueryOption() {
 		// TODO Auto-generated method stub
-		super.testRestore();
+		super.testRestoreQueryOption();
 	}
 
 	@Override

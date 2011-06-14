@@ -15,6 +15,8 @@
  */
 package siena;
 
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.List;
 import java.util.Map;
 
@@ -131,14 +133,16 @@ public interface Query<T> extends QueryData<T>{
      * 
      * @return the safe String representation
      */
-    String dump();
+    String dump(QueryOption... options);
+    void dump(OutputStream os, QueryOption... options);
 
     /**
      * restores a query from a safe String
      * 
      * @return the restored Query
      */
-    Query<T> restore(String dump);
+    Query<T> restore(String dump, QueryOption... options);
+    Query<T> restore(InputStream dump, QueryOption... options);
 
     /**
      * accesses the asynchronous mechanism

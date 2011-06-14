@@ -15,6 +15,8 @@
  */
 package siena;
 
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.lang.reflect.Field;
 import java.lang.reflect.ParameterizedType;
 import java.util.List;
@@ -150,6 +152,7 @@ public abstract class Model {
 	}
 
 	class ProxyQuery<T> implements Query<T> {
+		private static final long serialVersionUID = -7726081283511624780L;
 
 		private String filter;
 		private Class<T> clazz;
@@ -350,7 +353,6 @@ public abstract class Model {
 			return createQuery().async();
 		}
 
-		@Override
 		public T getByKey(Object key) {
 			return createQuery().getByKey(key);
 		}
@@ -359,6 +361,21 @@ public abstract class Model {
 			return obj.getPersistenceManager();
 		}
 
+		public String dump(QueryOption... options) {
+			return createQuery().dump(options);
+		}
+
+		public void dump(OutputStream os, QueryOption... options) {
+			createQuery().dump(os, options);
+		}
+
+		public Query<T> restore(String dump, QueryOption... options) {
+			return createQuery().restore(dump, options);
+		}
+
+		public Query<T> restore(InputStream dump, QueryOption... options) {
+			return createQuery().restore(dump, options);
+		}
 
 		
 	}
