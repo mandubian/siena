@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.Map;
 
 import siena.Json;
+import siena.Query;
 import siena.SienaException;
 import siena.Util;
 
@@ -308,10 +309,11 @@ public class JsonSerializer {
 	}
 	
 	private static boolean mustIgnore(Field field) {
+		if(Query.class.isAssignableFrom(field.getType())) return false;
+		if(field.isAnnotationPresent(EmbedIgnore.class)) return false;
 		boolean b = (field.getModifiers() & Modifier.TRANSIENT) == Modifier.TRANSIENT ||
 			(field.getModifiers() & Modifier.STATIC) == Modifier.STATIC || 
 			field.isSynthetic();
-		
 		if(!field.isAccessible())
 			field.setAccessible(true);
 		
