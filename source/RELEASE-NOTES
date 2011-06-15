@@ -2,6 +2,86 @@ Siena release notes:
 We will try to keep tracks of modifications from now.
 The github issues are not traced because  
 
+v1.0.0-b3
+----------------------------------------------------------
+Third draft of v1.0.0 with bug fixes and code optimization
+
+== BUG FIXES ==
+
+* JSonSerializer bug correction: was unable to deserialize a null Enum
+
+* corrected a bug in JsonSerializer: deserializePlain crashed when the
+data was null but the type was a Number. Now returns 0
+
+* fix an issue about @Join : when the field with the @Join is null, the 
+GAE key is not computed and so you don't get an NPE
+
+== ENHANCEMENTS ==
+* added LifeCycle Pre/Post+Fetch/Insert/Update/Delete/Save annotations
+to annotate a Model method : the methods are triggered only for single
+model features (get/insert/update/save/delete) but not query/batch for
+the time being.
+
+* added a new PersistenceManagerLifeCycleWrapper: a PersistenceManager
+proxy adding LifeCycle annotation management on top of a PM.
+
+* changed default column name generation when there is no @column:
+uses the field name by default and if it is a Model with several keys,
+uses "fieldName_keyName1", "fieldName_keyName2"... + unit test.
+
+* added "save" functions to GAE Async + unit tests.
+
+* added embedded model management: if you create an @Embedded relation
+field on an existing model (annotated with @EmbeddedList/Map), the
+model object is serialized into JSON into the field.
+
+* added new @polymorphic annotation to notice a field is a generic
+field. In SQL DB, the field is mapped to a BLOB column and serialized
+using Java object native serialization. In GAE, it is managed
+natively by GAE. ** note that @polymorphic is not required in GAE
+but strongly advised for portability **
+
+* added missing functions to async: getByKey/iterPerPage + some util
+classes for it
+
+* H2 impl : fulltext search in H2 is really tricky and buggy so I
+duplicated the FullText classes in Siena to control exactly what
+happens. This part of H2 impl should be reconsidered later as it
+builds dynamic Index and this is not very robust and optimized.
+
+* MYSQL/Postgres impl: restricted search to one single search per
+query because current code doesn't allow it yet (H2 can do it because
+it's completely different)
+
+* new H2PersistenceManager for H2 Database taking into account its
+specificities (SQL MERGE and search)
+
+* added getByKey function to retrieve an entity by its primary key
+(when the key is not multiple)
+
+* added @entity annotation to make bytecode enhancement easier and
+more compliant to other frameworks
+
+* added save(Object)/save(Object...)/save(Iterable<T>) functions:
+insert or update
+
+* SQL DDL modification: @max with value doesn't generate an exception
+anymore by sets the default value to 255
+
+* Postgres impl is complete
+
+* implemented Batch.update(...) for JDBC/GAE/GAE_ASYNC
+
+* enhanced JDBC join to manage multiple join annotations (on several
+fields) using aliases
+
+* JDBC join is now INNER LEFT JOIN to retrieve even null fields
+
+* JDBC : changed SQL params from "field" to "tablename.field" in
+SQL requests
+
+
+
 v1.0.0-b2
 ----------------------------------------------------------
 Second draft of v1.0.0 with bug fixes and code optimization
