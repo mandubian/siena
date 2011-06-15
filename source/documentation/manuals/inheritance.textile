@@ -54,6 +54,7 @@ public class PersonLongAutoIDExtended extends PersonLongAutoIDModel {
     }
 }
 
+p. 
 
 h2. <a>How inheritance is managed by Siena?</a>
 
@@ -68,6 +69,7 @@ Thus, **Siena implements only the __Table per concrete subclass__ mode** for the
 So for previous code samples, Siena will create 2 tables:
 * Table ==<i>people_long_auto</i>==
 * Table ==<i>people_long_auto_extended</i>==
+
 |_.Table people_long_auto|_.Table people_long_auto_extended|
 |id|id|
 |firstName|firstName|
@@ -111,6 +113,7 @@ p(note). **Note** the ==<code>@Table</code>== annotation is not required as it w
 
 In this case, Siena only creates one table:
 * Table ==<i>people_long_auto_extended</i>==
+
 |_.Table people_long_auto_extended|
 |id|
 |firstName|
