@@ -20,6 +20,7 @@ import siena.QueryJoin;
 import siena.QueryOrder;
 import siena.SienaException;
 import siena.SienaRestrictedApiException;
+import siena.Util;
 import siena.core.options.QueryOptionOffset;
 import siena.core.options.QueryOptionPage;
 import siena.core.options.QueryOptionState;
@@ -152,7 +153,7 @@ public class GaeQueryUtils {
 				if(qf.fields.length>1)
 					throw new SienaException("Search not possible for several fields in GAE: only one field");
 				try {
-					Field field = clazz.getDeclaredField(qf.fields[0]);
+					Field field = Util.getField(clazz, qf.fields[0]);
 					if(field.isAnnotationPresent(Unindexed.class)){
 						throw new SienaException("Cannot search the @Unindexed field "+field.getName());
 					}

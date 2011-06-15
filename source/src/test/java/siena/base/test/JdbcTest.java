@@ -1568,7 +1568,5 @@ public class JdbcTest extends BaseTest {
 		// TODO Auto-generated method stub
 		super.testLifeCycleSave();
 	}
-	
 
-	
 }

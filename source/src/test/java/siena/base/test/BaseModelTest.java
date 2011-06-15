@@ -1,13 +1,21 @@
 package siena.base.test;
 
+import java.lang.reflect.Modifier;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import junit.framework.TestCase;
 import siena.PersistenceManager;
 import siena.PersistenceManagerFactory;
 import siena.Query;
 import siena.base.test.model.DiscoveryModel;
+import siena.base.test.model.PersonLongAutoIDAbstract;
+import siena.base.test.model.PersonLongAutoIDExtended;
+import siena.base.test.model.PersonLongAutoIDExtended2;
+import siena.base.test.model.PersonLongAutoIDExtended2.MyEnum;
+import siena.base.test.model.PersonLongAutoIDExtendedAbstract;
 import siena.base.test.model.PersonLongAutoIDModel;
 import siena.base.test.model.SampleModel;
 import siena.base.test.model.SampleModel2;
@@ -34,11 +42,18 @@ public abstract class BaseModelTest extends TestCase {
 		classes.add(DiscoveryModel.class);
 		classes.add(SampleModel.class);
 		classes.add(SampleModel2.class);
+		classes.add(PersonLongAutoIDExtended.class);
+		classes.add(PersonLongAutoIDExtended2.class);
+		classes.add(PersonLongAutoIDAbstract.class);
+		classes.add(PersonLongAutoIDExtendedAbstract.class);
+
 		pm = createPersistenceManager(classes);
 		PersistenceManagerFactory.install(pm, classes);
 			
 		for (Class<?> clazz : classes) {
-			pm.createQuery(clazz).delete();			
+			if(!Modifier.isAbstract(clazz.getModifiers())){
+				pm.createQuery(clazz).delete();			
+			}
 		}
 		
 		Batch<PersonLongAutoIDModel> batch = PersonLongAutoIDModel.batch();
@@ -726,4 +741,97 @@ public abstract class BaseModelTest extends TestCase {
 			assertEquals(mods[i], res.get(i));
 		}
 	}
+	
+	public void testSimpleInheritance() {
+		PersonLongAutoIDExtended bob = 
+			new PersonLongAutoIDExtended("Bob", "Doe", "Oklahoma", 1, "the_dog1");
+		PersonLongAutoIDExtended ben = 
+			new PersonLongAutoIDExtended("Ben", "Smith", "Wichita", 2, "the_dog2");
+		PersonLongAutoIDExtended john = 
+			new PersonLongAutoIDExtended("John", "Wells", "Buffalo", 3, "the_dog3");
+		
+		final PersonLongAutoIDExtended.Image img1 = new PersonLongAutoIDExtended.Image();
+		img1.filename = "test.file";
+		img1.title = "title";
+		final PersonLongAutoIDExtended.Image img2 = new PersonLongAutoIDExtended.Image();
+		img2.filename = "test.file";
+		img2.title = "title";
+		final PersonLongAutoIDExtended.Image img3 = new PersonLongAutoIDExtended.Image();
+		img3.filename = "test.file";
+		img3.title = "title";
+		
+		List<PersonLongAutoIDExtended.Image> imgList = new ArrayList<PersonLongAutoIDExtended.Image>() 
+		{{
+			add(img1);
+			add(img2);
+			add(img3);			
+		}};
+		
+		Map<String, PersonLongAutoIDExtended.Image> imgMap = 
+			new HashMap<String, PersonLongAutoIDExtended.Image>() 
+		{{
+			put("img1", img1);
+			put("img2", img2);
+			put("img3", img3);			
+		}};
+				
+		bob.boss = john;
+		bob.profileImage = img1;
+		bob.otherImages = imgList;
+		bob.stillImages = imgMap;
+		
+		ben.boss = john;
+		ben.profileImage = img2;
+		ben.otherImages = imgList;
+		ben.stillImages = imgMap;
+		
+		john.profileImage = img3;
+		john.otherImages = imgList;
+		john.stillImages = imgMap;
+		
+		pm.save(john);
+		pm.save(bob);
+		pm.save(ben);
+				
+		PersonLongAutoIDExtended bob1 = 
+			pm.getByKey(PersonLongAutoIDExtended.class, bob.id);
+		PersonLongAutoIDExtended ben1 = 
+			pm.getByKey(PersonLongAutoIDExtended.class, ben.id);
+		PersonLongAutoIDExtended john1 = 
+			pm.getByKey(PersonLongAutoIDExtended.class, john.id);
+		
+		assertEquals(bob, bob1);
+		assertEquals(john.id, bob1.boss.id);
+		assertEquals(ben, ben1);
+		assertEquals(john.id, ben1.boss.id);
+		assertEquals(john, john1);
+		List<PersonLongAutoIDExtended> emps = john1.employees.order("id").fetch();
+		assertEquals(bob, emps.get(0));
+		assertEquals(ben, emps.get(1));
+	}
+
+	public void testDoubleInheritance() {
+		PersonLongAutoIDExtended2 bob = 
+			new PersonLongAutoIDExtended2("Bob", "Doe", "Oklahoma", 1, "the_dog1", MyEnum.VAL1);
+		pm.save(bob);
+		
+		PersonLongAutoIDExtended2 bob1 = 
+			pm.getByKey(PersonLongAutoIDExtended2.class, bob.id);
+		
+		assertEquals(bob, bob1);
+
+	}
+	
+	public void testAbstractInheritance() {
+		PersonLongAutoIDExtendedAbstract bob = 
+			new PersonLongAutoIDExtendedAbstract("Bob", "Doe", "Oklahoma", 1, "the_dog1");
+		pm.save(bob);
+		
+		PersonLongAutoIDExtendedAbstract bob1 = 
+			pm.getByKey(PersonLongAutoIDExtendedAbstract.class, bob.id);
+		
+		assertEquals(bob, bob1);
+
+	}
+
 }

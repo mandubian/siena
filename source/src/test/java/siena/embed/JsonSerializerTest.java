@@ -8,6 +8,7 @@ import java.util.Map;
 
 import junit.framework.TestCase;
 import siena.Json;
+import siena.Util;
 
 public class JsonSerializerTest extends TestCase {
 	
@@ -31,7 +32,7 @@ public class JsonSerializerTest extends TestCase {
 		
 		Json data = JsonSerializer.serialize(contacts);
 		
-		contacts = (Map<String, Contact>) JsonSerializer.deserialize(User.class.getDeclaredField("contacts"), data);
+		contacts = (Map<String, Contact>) JsonSerializer.deserialize(Util.getField(User.class, "contacts"), data);
 		
 		Contact contact = contacts.get("id1");
 		assertEquals("Alberto", contact.firstName);

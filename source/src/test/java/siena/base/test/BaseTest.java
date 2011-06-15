@@ -2,6 +2,7 @@ package siena.base.test;
 
 import static siena.Json.map;
 
+import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -10,6 +11,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 import junit.framework.TestCase;
 import siena.BaseQuery;
@@ -41,6 +43,7 @@ import siena.base.test.model.DiscoveryPrivate;
 import siena.base.test.model.EmbeddedModel;
 import siena.base.test.model.MultipleKeys;
 import siena.base.test.model.PersonLongAutoID;
+import siena.base.test.model.PersonLongAutoIDExtended;
 import siena.base.test.model.PersonLongManualID;
 import siena.base.test.model.PersonStringAutoIncID;
 import siena.base.test.model.PersonStringID;
@@ -49,7 +52,6 @@ import siena.base.test.model.PolymorphicModel;
 import siena.core.PersistenceManagerLifeCycleWrapper;
 import siena.core.lifecycle.LifeCyclePhase;
 import siena.core.options.QueryOption;
-import siena.core.options.QueryOption.QueryOptionJson;
 import siena.core.options.QueryOptionPage;
 import siena.embed.JsonSerializer;
 
@@ -110,10 +112,13 @@ public abstract class BaseTest extends TestCase {
 		classes.add(DiscoveryNoColumnMultipleKeys.class);
 		classes.add(DiscoveryLifeCycle.class);
 		classes.add(DiscoveryLifeCycleMulti.class);
+		
 		pm = createPersistenceManager(classes);
 		
 		for (Class<?> clazz : classes) {
-			pm.createQuery(clazz).delete();			
+			if(!Modifier.isAbstract(clazz.getModifiers())){
+				pm.createQuery(clazz).delete();			
+			}
 		}
 		
 //		pm.insert(UUID_TESLA);
@@ -5519,4 +5524,6 @@ public abstract class BaseTest extends TestCase {
 		
 		assertEquals(LifeCyclePhase.PRE_SAVE.toString()+" "+LifeCyclePhase.POST_SAVE.toString()+" ", lifeCyclePhase);
 	}
+	
+
 }

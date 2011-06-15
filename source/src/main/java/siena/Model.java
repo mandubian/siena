@@ -130,25 +130,27 @@ public abstract class Model {
 	private void init() {
 		// initialize Query<T> types
 		Class<?> clazz = getClass();
-		Field[] fields = clazz.getDeclaredFields();
-		for (Field field : fields) {
-			if(field.getType() != Query.class) { continue; }
-
-			Filter filter = field.getAnnotation(Filter.class);
-			if(filter == null) {
-				throw new SienaException("Found Query<T> field without @Filter annotation at "
-						+clazz.getName()+"."+field.getName());
+        while (clazz!=null) {
+			for (Field field : clazz.getDeclaredFields()) {
+				if(field.getType() != Query.class) { continue; }
+	
+				Filter filter = field.getAnnotation(Filter.class);
+				if(filter == null) {
+					throw new SienaException("Found Query<T> field without @Filter annotation at "
+							+clazz.getName()+"."+field.getName());
+				}
+	
+				ParameterizedType pt = (ParameterizedType) field.getGenericType();
+				Class<?> c = (Class<?>) pt.getActualTypeArguments()[0];
+	
+				try {
+					field.set(this, new ProxyQuery(c, filter.value(), this));
+				} catch (Exception e) {
+					throw new SienaException(e);
+				}
 			}
-
-			ParameterizedType pt = (ParameterizedType) field.getGenericType();
-			Class<?> c = (Class<?>) pt.getActualTypeArguments()[0];
-
-			try {
-				field.set(this, new ProxyQuery(c, filter.value(), this));
-			} catch (Exception e) {
-				throw new SienaException(e);
-			}
-		}
+			clazz = clazz.getSuperclass();
+        }
 	}
 
 	class ProxyQuery<T> implements Query<T> {

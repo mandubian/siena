@@ -191,4 +191,28 @@ public class GaeModelTest extends BaseModelTest{
 		super.testInsertBatchAsync();
 	}
 
+	@Override
+	public void testInsertAutoQueryAsyncFetchAsyncQueryAsync() {
+		// TODO Auto-generated method stub
+		super.testInsertAutoQueryAsyncFetchAsyncQueryAsync();
+	}
+
+	@Override
+	public void testSimpleInheritance() {
+		// TODO Auto-generated method stub
+		super.testSimpleInheritance();
+	}
+
+	@Override
+	public void testDoubleInheritance() {
+		// TODO Auto-generated method stub
+		super.testDoubleInheritance();
+	}
+
+	@Override
+	public void testAbstractInheritance() {
+		// TODO Auto-generated method stub
+		super.testAbstractInheritance();
+	}
+
 }

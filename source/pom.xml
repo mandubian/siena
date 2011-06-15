@@ -334,6 +334,14 @@
 			<scope>compile</scope>
 		</dependency>
 
+
+		<!-- Fusion dependencies -->
+		<dependency>
+		    <groupId>com.google.api.client</groupId>
+		    <artifactId>google-api-client</artifactId>
+		    <version>1.4.1-beta</version>
+		</dependency>
+
 	</dependencies>
 
 	<profiles>
@@ -477,6 +485,32 @@
 							</excludes>
 							<includes>
 								<include>**/H2Test.java</include>
+							</includes>
+						</configuration>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+		<profile>
+			<id>FUSION</id>
+			<build>
+				<plugins>
+					<!-- Test cases -->
+					<plugin>
+						<artifactId>maven-surefire-plugin</artifactId>
+						<configuration>
+							<excludes>
+								<exclude>**/BaseTest.java</exclude>
+								<exclude>**/BaseAsyncTest.java</exclude>
+								<exclude>**/BaseModelTest.java</exclude>
+								<exclude>**/BaseMassTest.java</exclude>
+								<exclude>**/TestAll.java</exclude>
+								<exclude>**/Person.java</exclude>
+								<exclude>**/Message.java</exclude>
+								<exclude>**/Discovery.java</exclude>
+							</excludes>
+							<includes>
+								<include>**/FusionTest.java</include>
 							</includes>
 						</configuration>
 					</plugin>

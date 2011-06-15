@@ -134,7 +134,7 @@ public class BaseQueryData<T> implements QueryData<T> {
 		fieldName = fieldName.trim();
 		
 		try {
-			Field field = clazz.getDeclaredField(fieldName);
+			Field field = Util.getField(clazz, fieldName);
 			filters.add(new QueryFilterSimple(field, op, value));
 		} catch (Exception e) {
 			throw new SienaException(e);
@@ -149,7 +149,7 @@ public class BaseQueryData<T> implements QueryData<T> {
 			ascending = false;
 		}
 		try {
-			Field field = clazz.getDeclaredField(fieldName);
+			Field field = Util.getField(clazz, fieldName);
 			orders.add(new QueryOrder(field, ascending));
 		} catch(Exception e) {
 			throw new SienaException(e);
@@ -170,7 +170,7 @@ public class BaseQueryData<T> implements QueryData<T> {
 	
 	protected void addJoin(String fieldName, String... sortFields) {
 		try {
-			Field field = clazz.getDeclaredField(fieldName);
+			Field field = Util.getField(clazz, fieldName);
 			joins.add(new QueryJoin(field, sortFields));
 			// add immediately orders to keep order of orders 
 			// sets joined field as parent field to manage order on the right joined table for ex

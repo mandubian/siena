@@ -1,6 +1,7 @@
 package siena.jdbc.ddl;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.sql.Types;
 import java.util.Date;
 import java.util.HashMap;
@@ -52,8 +53,10 @@ public class DdlGenerator {
 	}
 	
 	public Table addTable(Class<?> clazz) {
+		if(Modifier.isAbstract(clazz.getModifiers())){
+			return null;
+		}
 		Table table = new Table();
-		
 		ClassInfo info = ClassInfo.getClassInfo(clazz);
 		table.setName(info.tableName);
 		database.addTable(table);

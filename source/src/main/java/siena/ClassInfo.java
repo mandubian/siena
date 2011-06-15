@@ -52,59 +52,62 @@ public class ClassInfo {
 		this.clazz = clazz;
 		tableName = getTableName(clazz);
 
-		Field[] fields = clazz.getDeclaredFields();	
-
-		// TODO take into account superclass fields for inheritance!!!!
-		// Class<?> c = entity.getClass();
-        // while (!c.equals(Object.class)) {
-		//  c = c.getSuperclass();
-		// }
-		for (Field field : fields) {
-			
-			Class<?> type = field.getType();
-			if(type == Class.class || type == Query.class ||
-					(field.getModifiers() & Modifier.TRANSIENT) == Modifier.TRANSIENT ||
-					(field.getModifiers() & Modifier.STATIC) == Modifier.STATIC ||
-					field.isSynthetic()){
-				continue;
-			}
-					
-			Id id = field.getAnnotation(Id.class);
-			if(id != null) {
-				// ONLY long ID can be auto_incremented
-				if(id.value() == Generator.AUTO_INCREMENT 
-						&& ( Long.TYPE == type || Long.class.isAssignableFrom(type))) {
-					generatedKeys.add(field);
-				} else {
+		// Takes into account superclass fields for inheritance!!!!
+		List<Class<?>> classH = new ArrayList<Class<?>>();
+		Class<?> cl = clazz;
+        while (cl!=null) {
+        	classH.add(0, cl);
+        	cl = cl.getSuperclass(); 
+        }
+        
+        for(Class<?> c: classH) {
+			for (Field field : c.getDeclaredFields()) {
+				
+				Class<?> type = field.getType();
+				if(type == Class.class || type == Query.class ||
+						(field.getModifiers() & Modifier.TRANSIENT) == Modifier.TRANSIENT ||
+						(field.getModifiers() & Modifier.STATIC) == Modifier.STATIC ||
+						field.isSynthetic()){
+					continue;
+				}
+						
+				Id id = field.getAnnotation(Id.class);
+				if(id != null) {
+					// ONLY long ID can be auto_incremented
+					if(id.value() == Generator.AUTO_INCREMENT 
+							&& ( Long.TYPE == type || Long.class.isAssignableFrom(type))) {
+						generatedKeys.add(field);
+					} else {
+						insertFields.add(field);
+					}
+					keys.add(field);
+				} 
+				else {
+					updateFields.add(field);
 					insertFields.add(field);
 				}
-				keys.add(field);
-			} 
-			else {
-				updateFields.add(field);
-				insertFields.add(field);
+				
+				if(field.getAnnotation(Join.class) != null){
+					if (!ClassInfo.isModel(field.getType())){
+						throw new SienaException("Join not possible: Field "+field.getName()+" is not a relation field");
+					}
+					else joinFields.add(field);
+				}
+				allFields.add(field);
 			}
 			
-			if(field.getAnnotation(Join.class) != null){
-				if (!ClassInfo.isModel(field.getType())){
-					throw new SienaException("Join not possible: Field "+field.getName()+" is not a relation field");
+			for(Method m : c.getDeclaredMethods()){
+				List<LifeCyclePhase> lcps = LifeCycleUtils.getMethodLifeCycles(m);
+				for(LifeCyclePhase lcp: lcps){
+					List<Method> methods = lifecycleMethods.get(lcp);
+					if(methods == null){
+						methods = new ArrayList<Method>();
+						lifecycleMethods.put(lcp, methods);
+					}
+					methods.add(m);
 				}
-				else joinFields.add(field);
 			}
-			allFields.add(field);
-		}
-		
-		for(Method m : clazz.getDeclaredMethods()){
-			List<LifeCyclePhase> lcps = LifeCycleUtils.getMethodLifeCycles(m);
-			for(LifeCyclePhase lcp: lcps){
-				List<Method> methods = lifecycleMethods.get(lcp);
-				if(methods == null){
-					methods = new ArrayList<Method>();
-					lifecycleMethods.put(lcp, methods);
-				}
-				methods.add(m);
-			}
-		}
+        }
 	}
 
 	private String getTableName(Class<?> clazz) {

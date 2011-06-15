@@ -16,6 +16,7 @@
 package siena;
 
 import java.io.IOException;
+import java.lang.reflect.Modifier;
 import java.net.URL;
 import java.util.Map;
 import java.util.Properties;
@@ -101,12 +102,17 @@ public class PersistenceManagerFactory {
 	}
 
 	public static void install(PersistenceManager pm, Class<?> clazz) {
-		getInstance().put(pm, getPackage(clazz));
+		// if class is abstract, it is not installed
+		if(!Modifier.isAbstract(clazz.getModifiers())){
+			getInstance().put(pm, getPackage(clazz));
+		}
 	}
 
 	public static void install(PersistenceManager pm, Iterable<Class<?>> clazzes) {
 		for(Class<?> clazz: clazzes){
-			getInstance().put(pm, getPackage(clazz));
+			if(!Modifier.isAbstract(clazz.getModifiers())){
+				getInstance().put(pm, getPackage(clazz));
+			}
 		}
 	}
 	

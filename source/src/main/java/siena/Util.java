@@ -272,6 +272,24 @@ public class Util {
 		}
 	}
 	
+	public static Field getField(Class<?> clazz, String fieldName) {
+		Class<?> cl = clazz;
+		
+        while (cl!=null) {
+        	try {
+        		return cl.getDeclaredField(fieldName);
+        	}
+        	catch(NoSuchFieldException e){
+        		cl = cl.getSuperclass();
+        	}
+        	catch (Exception e) {
+    			throw new SienaException(e);
+    		}        	 
+        }
+		
+        return null;
+	}
+	
 	public static Object translateDate(Field f, Date value) {
 		long t = value.getTime();
 

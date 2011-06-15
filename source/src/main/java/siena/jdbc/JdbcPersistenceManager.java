@@ -403,7 +403,7 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 		List<String> cols = new ArrayList<String>();
 		try {
 			for (String field : qf.fields) {
-				Field f = clazz.getDeclaredField(field);
+				Field f = Util.getField(clazz, field);
 				String[] columns = ClassInfo.getColumnNames(f, info.tableName);
 				for (String col : columns) {
 					cols.add(col);
