@@ -139,10 +139,10 @@ h2. <a>Filtering inherited fields</a>
 With Siena, you can also choose the fields from superclass that you want to store in the table of subclass. 
 Naturally, the subclass in the Java scope will inherit all fields from superclass but with this __filtering__ mechanism, some fields from superclass can be removed by Siena from mapping.
 
-For this, use the annotation ==<code>@InheritFilter(removedFields={})</code>==
+For this, use the annotation <code>@InheritFilter(removedFields={})</code>
 the __removedFields__ parameter is a list of strings containing the names of the fields to remove from superclass (or superclasses if your inheritance hierarchy is deeper than 1 level).
 
-h3. ==<code>@InheritFilter</code>== code sample
+h3. @InheritFilter code sample
 
 bc.. @Table("people_long_auto_extended_filter")
 @InheritFilter(removedFields={ "city", "n"})
