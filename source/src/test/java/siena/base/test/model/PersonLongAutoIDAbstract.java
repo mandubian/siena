@@ -19,8 +19,9 @@ import siena.Column;
 import siena.Generator;
 import siena.Id;
 import siena.Max;
+import siena.Model;
 
-public abstract class PersonLongAutoIDAbstract {
+public abstract class PersonLongAutoIDAbstract extends Model {
 
 	@Id(Generator.AUTO_INCREMENT)
 	public Long id;

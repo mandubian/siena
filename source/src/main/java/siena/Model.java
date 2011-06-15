@@ -19,9 +19,13 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.lang.reflect.Field;
 import java.lang.reflect.ParameterizedType;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
+import siena.core.InheritFilter;
 import siena.core.async.ModelAsync;
 import siena.core.async.QueryAsync;
 import siena.core.batch.Batch;
@@ -130,26 +134,44 @@ public abstract class Model {
 	private void init() {
 		// initialize Query<T> types
 		Class<?> clazz = getClass();
-        while (clazz!=null) {
-			for (Field field : clazz.getDeclaredFields()) {
+		
+		// Takes into account superclass fields for inheritance!!!!
+		List<Class<?>> classH = new ArrayList<Class<?>>();
+		Class<?> cl = clazz;
+		Set<String> removedFields = new HashSet<String>();
+        while (cl!=null) {
+        	classH.add(0, cl);
+        	// add exceptFields
+        	InheritFilter iFilter = cl.getAnnotation(InheritFilter.class);
+        	if(iFilter != null){
+        		String[] efs = iFilter.removedFields();
+	        	for(String ef:efs){
+	        		removedFields.add(ef);
+	        	}
+        	}
+        	cl = cl.getSuperclass();        	
+        }
+        
+        for(Class<?> c: classH) {		
+			for (Field field : c.getDeclaredFields()) {
 				if(field.getType() != Query.class) { continue; }
+				if(removedFields.contains(field.getName())) continue;
 	
 				Filter filter = field.getAnnotation(Filter.class);
 				if(filter == null) {
 					throw new SienaException("Found Query<T> field without @Filter annotation at "
-							+clazz.getName()+"."+field.getName());
+							+c.getName()+"."+field.getName());
 				}
 	
 				ParameterizedType pt = (ParameterizedType) field.getGenericType();
-				Class<?> c = (Class<?>) pt.getActualTypeArguments()[0];
+				cl = (Class<?>) pt.getActualTypeArguments()[0];
 	
 				try {
-					field.set(this, new ProxyQuery(c, filter.value(), this));
+					field.set(this, new ProxyQuery(cl, filter.value(), this));
 				} catch (Exception e) {
 					throw new SienaException(e);
 				}
 			}
-			clazz = clazz.getSuperclass();
         }
 	}
 

@@ -16,6 +16,7 @@ import siena.base.test.model.PersonLongAutoIDExtended;
 import siena.base.test.model.PersonLongAutoIDExtended2;
 import siena.base.test.model.PersonLongAutoIDExtended2.MyEnum;
 import siena.base.test.model.PersonLongAutoIDExtendedAbstract;
+import siena.base.test.model.PersonLongAutoIDExtendedFilter;
 import siena.base.test.model.PersonLongAutoIDModel;
 import siena.base.test.model.SampleModel;
 import siena.base.test.model.SampleModel2;
@@ -46,6 +47,7 @@ public abstract class BaseModelTest extends TestCase {
 		classes.add(PersonLongAutoIDExtended2.class);
 		classes.add(PersonLongAutoIDAbstract.class);
 		classes.add(PersonLongAutoIDExtendedAbstract.class);
+		classes.add(PersonLongAutoIDExtendedFilter.class);
 
 		pm = createPersistenceManager(classes);
 		PersistenceManagerFactory.install(pm, classes);
@@ -832,6 +834,26 @@ public abstract class BaseModelTest extends TestCase {
 		
 		assertEquals(bob, bob1);
 
+	}
+	
+	public void testFilterInheritance() {
+		PersonLongAutoIDExtendedFilter bob = 
+			new PersonLongAutoIDExtendedFilter("Bob", "Doe", "Oklahoma", 1, "the_dog1");
+		pm.save(bob);
+		
+		PersonLongAutoIDExtendedFilter bob1 = 
+			pm.getByKey(PersonLongAutoIDExtendedFilter.class, bob.id);
+		
+		assertNotSame(bob, bob1);
+		assertEquals(bob.firstName, bob1.firstName);
+		assertEquals(bob.lastName, bob1.lastName);
+		assertEquals(bob.dogName, bob1.dogName);
+		assertEquals(bob.boss, bob1.boss);
+		assertEquals(bob.profileImage, bob1.profileImage);
+		assertEquals(bob.stillImages, bob1.stillImages);
+		assertEquals(bob.otherImages, bob1.otherImages);
+		assertTrue(bob1.city == null);
+		assertTrue(bob1.n == 0);
 	}
 
 }

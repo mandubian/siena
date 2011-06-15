@@ -22,11 +22,14 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
+import siena.core.InheritFilter;
 import siena.core.lifecycle.LifeCyclePhase;
 import siena.core.lifecycle.LifeCycleUtils;
 import siena.embed.Embedded;
@@ -55,14 +58,24 @@ public class ClassInfo {
 		// Takes into account superclass fields for inheritance!!!!
 		List<Class<?>> classH = new ArrayList<Class<?>>();
 		Class<?> cl = clazz;
+		Set<String> removedFields = new HashSet<String>();
         while (cl!=null) {
         	classH.add(0, cl);
-        	cl = cl.getSuperclass(); 
+        	// add exceptFields
+        	InheritFilter iFilter = cl.getAnnotation(InheritFilter.class);
+        	if(iFilter != null){
+        		String[] efs = iFilter.removedFields();
+	        	for(String ef:efs){
+	        		removedFields.add(ef);
+	        	}
+        	}
+
+        	cl = cl.getSuperclass();
         }
         
         for(Class<?> c: classH) {
 			for (Field field : c.getDeclaredFields()) {
-				
+				if(removedFields.contains(field.getName())) continue;
 				Class<?> type = field.getType();
 				if(type == Class.class || type == Query.class ||
 						(field.getModifiers() & Modifier.TRANSIENT) == Modifier.TRANSIENT ||

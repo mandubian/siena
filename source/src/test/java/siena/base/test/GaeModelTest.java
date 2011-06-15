@@ -215,4 +215,10 @@ public class GaeModelTest extends BaseModelTest{
 		super.testAbstractInheritance();
 	}
 
+	@Override
+	public void testFilterInheritance() {
+		// TODO Auto-generated method stub
+		super.testFilterInheritance();
+	}
+
 }

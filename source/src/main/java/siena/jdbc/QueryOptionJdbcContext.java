@@ -49,8 +49,8 @@ public class QueryOptionJdbcContext extends QueryOption{
 	public boolean isClosed(){
 		if(this.statement == null) return true;
 		try {
-			if(this.statement.getConnection()==null) return true;
 			if(this.statement.isClosed()) return true;
+			if(this.statement.getConnection()==null) return true;
 			return false;
 		}
 		catch(SQLException ex){}

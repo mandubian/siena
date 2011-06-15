@@ -2,6 +2,43 @@ Siena release notes:
 We will try to keep tracks of modifications from now.
 The github issues are not traced because  
 
+v1.0.0-b4
+----------------------------------------------------------
+Third draft of v1.0.0 with bug fixes and code optimization
+
+== BUG FIXES ==
+* GAE: bug correction for GaeMappingUtils.getKey with a NULL key
+value (now returns null)
+
+* JDBC: bug correction in stateful mode, if the statement is
+closed, it is rebuilt from scratch (added QueryOptionJdbcContext.isClosed 
+function)
+
+* correction in Postgres search, don't coalesce number/date fields
+
+
+== ENHANCEMENTS ==
+* added model inheritance management (table per concrete class mode) +
+documentation
+
+* Query is now ignored in Json serialization
+
+* new @EmbedIgnore to ignore a field from Json serialization
+
+* added all stuff for Query JSON dump/restore (might evolve in the
+future) + unit tests
+
+* QueryData extends Serializable to make a Query serializable
+
+* added ClassInfo.isGenerated function
+
+* modified H2 FullText to prevent from having duplicated indexes table
+names.
+
+* modified DDLGenerator to take into account differences between
+H2/MySQL and MySQL
+
+
 v1.0.0-b3
 ----------------------------------------------------------
 Third draft of v1.0.0 with bug fixes and code optimization
