@@ -44,12 +44,13 @@ The biggest part of Siena DB implementations is :
 
 
 
-h3. Siena core is ONE jar and tools around this core library
+h3. Siena core is ONE jar and some tools/modules around this core library
 
 Siena tries to be as simple as possible in its dependencies. For the time being, in order to use Siena with all DB implementations, *you just need the siena.jar and the DB Jar(s)* (JDBC or GAE) but nothing else. There is no hidden or transitive dependencies on other frameworks or Jars. So you can use Siena in a simple Java application or in a simple web app or in a JEE app.
 
 Our purpose is also to provide tools or integrated modules based on this core library to use Siena in given environments.
-The first module developed for Siena is "play-siena":http://www.playframework.org/modules/siena-2.0.0/home: the web framework "Play!":http://www.playframework.org is really great, really fits Siena design and provides a very good test platform.
+
+**The first module developed for Siena is "play-siena":http://www.playframework.org/modules/siena-2.0.0/home**: the web framework "Play!":http://www.playframework.org is really great, really fits Siena design and provides a very good test platform.
 
 
 
