@@ -1,7 +1,32 @@
-h1. Welcome to siena project! 
+h1. Welcome to Siena project! 
 
-Siena is a persitence API for Java inspired on the Google App Engine Python Datastore.
+**Latest tagged version is Siena v1.0.0-b3**
 
-Siena is a single API with many implementations. You can use siena with relational databases, with the Google App Engine's datastore or with Amazon's SimpleDB. There is also an implementation called siena-remote very useful if you want to use the Google App Engine's datastore remotely. Other implmenetations are planned such as: HBase, DBSLayer,...
+Siena is a persitence API for Java inspired on the Google App Engine Python Datastore trying to draw a bridge between SQL and NoSQL worlds. 
+It provides a __Java Object-DB mapping__ designed following the "ActiveRecord pattern":http://en.wikipedia.org/wiki/Active_record_pattern#Java which brings a simple and intuitive approach to manage your Java objects with respect to the database entities.
 
-Siena is Open Source and is released under the Apache License 2.0.
+h2. Siena is a single API with many implementations
+
+* SQL RDBMS (MySQL, Postgres, H2)
+* NoSQL (GAE sync/async for the time being and other implementations are planned such as: MongoDB, SimpleDB, HBase...)
+
+h2. Siena simplifies the transition between NoSQL and SQL
+
+Siena is not meant to mimic a kind of Hibernate for NoSQL+SQL as it would be non-sense. In most cases, a model designed for SQL can be re-used in a NoSQL DB and vis-versa but it might not be optimized for the database. Siena is not meant to modify your model behind your back to optimize it for all the databases because it would be a crazy work. Siena just aims at drawing a bridge between NoSQL/SQL worlds and reduce the effort required when going from one database to the other. It ensures: 
+* You can use the same API for all DB.
+* The model you design for a RDBMS will work with the same code in a NoSQL database and vis versa.
+* Naturally, after migrating, you will optimize your model for the new database based based on its specificity.
+* when you want to use very specific feature of a database, you will naturally use the low-level APIs provided by this DB.
+
+
+h2. Siena has development lifecycle driven by practical use-cases and user experience
+
+Siena doesn't try to fit in force and hide the specific database technical aspects into your Java code. It has certainly been a false and unfulfilled promise of ORM frameworks in general: an object is not really a relational entity and SQL can't be completely hidden behind Java code. Thus, ORM often just moves the problems you had with SQL to problems you have with your ORM framework and unfortunately, you don't control your ORM framework at all while you can modify your SQL.
+
+So Siena tries (at least as a wishful thinking :) ) to go from the technical aspects of SQL/NoSQL databases to the user but the other way: from the user to the databases. As an example, when building a web application, you often need to paginate among hundreds of entities and you don't care how the DB manages its record offsets for SQL or cursors for GAE, you just want a page of 50 entities to display them and then go to the next page and then go back to the previous page etc...
+
+Siena is meant to keep the layer between your code and the low-level database APIs as thin as possible
+Siena is stateless by default but can be stateful for more specific operations.
+
+
+__Siena is Open Source and is released under the Apache License 2.0.__
