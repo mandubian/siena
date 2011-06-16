@@ -42,9 +42,20 @@ The biggest part of Siena DB implementations is :
 
 
 h3. Siena is stateless by default (but can become stateful if required)
-Siena is stateless by default because it really fits the majority of cases and one can use it directly without scratching his head about potential problems of releasing DB resources or committing anything. Moreover, stateless is much easier to use in scalable and distributed infrastructure such as GAE.
 
-Yet, Siena now proposes a new stateful mode to be able to reuse DB resources queries several times, to go through the results keeping last position in memory
+Siena is __stateless by default__ because it really fits the majority of cases and one can use it directly without scratching his head about potential problems of releasing DB resources or committing anything. Moreover, stateless is much easier to use in scalable and distributed infrastructure such as GAE.
 
+Yet, Siena now proposes a new __stateful__ mode to be able to reuse DB resources several times. Thus you can:
+* create a query with filters and orders and use the same query several keeping last context alive.
+* iterate through the results while keeping in memory the last position.
+* etc...
 
+This __stateful__ mode provides some interesting advanced features and we don't know yet all the practices it will bring.
 __Siena is Open Source and is released under the Apache License 2.0.__
+
+
+h3. Siena provides an asynchronous mode (only for GAE for the time being)
+
+This is a really powerful way of retrieving entities from a database. You create a query, you launch it, you do something else and when the result is ready, you get it. Asynchronism is really useful when you run long duration queries and don't want to stop all the current thread while the queries is treated.
+
+Siena provides an easy way to go to asynchronous mode and back to synchronous.
