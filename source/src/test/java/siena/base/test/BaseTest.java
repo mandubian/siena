@@ -41,6 +41,7 @@ import siena.base.test.model.DiscoveryNoColumn;
 import siena.base.test.model.DiscoveryNoColumnMultipleKeys;
 import siena.base.test.model.DiscoveryPrivate;
 import siena.base.test.model.EmbeddedModel;
+import siena.base.test.model.EmbeddedSubModel;
 import siena.base.test.model.MultipleKeys;
 import siena.base.test.model.PersonLongAutoID;
 import siena.base.test.model.PersonLongAutoIDExtended;
@@ -107,6 +108,7 @@ public abstract class BaseTest extends TestCase {
 		classes.add(DataTypes.class);
 		classes.add(PolymorphicModel.class);
 		classes.add(EmbeddedModel.class);
+		classes.add(EmbeddedSubModel.class);
 		classes.add(ContainerModel.class);
 		classes.add(DiscoveryNoColumn.class);
 		classes.add(DiscoveryNoColumnMultipleKeys.class);
@@ -5525,5 +5527,29 @@ public abstract class BaseTest extends TestCase {
 		assertEquals(LifeCyclePhase.PRE_SAVE.toString()+" "+LifeCyclePhase.POST_SAVE.toString()+" ", lifeCyclePhase);
 	}
 	
+	public void testSerializeEmbeddedModel() {
+		EmbeddedModel embed = new EmbeddedModel();
+		embed.id = "embed";
+		embed.alpha = "test";
+		embed.beta = 123;
+		pm.insert(embed);
 
+		EmbeddedSubModel subEmbed = new EmbeddedSubModel();
+		subEmbed.id = "subembed";
+		subEmbed.parent = embed;
+		
+		ContainerModel container = new ContainerModel();
+		container.id = "container";
+		container.embed = embed;
+		pm.insert(container);
+		
+		ContainerModel afterContainer = pm.getByKey(ContainerModel.class, container.id);
+		assertNotNull(afterContainer);
+		assertEquals(container.id, afterContainer.id);
+		assertNotNull(afterContainer.embed);
+		assertEquals(embed.id, afterContainer.embed.id);
+		assertEquals(null, afterContainer.embed.alpha);
+		assertEquals(embed.beta, afterContainer.embed.beta);
+		assertEquals(null, afterContainer.embed.subs);
+	}
 }

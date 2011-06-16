@@ -309,8 +309,8 @@ public class JsonSerializer {
 	}
 	
 	private static boolean mustIgnore(Field field) {
-		if(Query.class.isAssignableFrom(field.getType())) return false;
-		if(field.isAnnotationPresent(EmbedIgnore.class)) return false;
+		if(Query.class.isAssignableFrom(field.getType())) return true;
+		if(field.isAnnotationPresent(EmbedIgnore.class)) return true;
 		boolean b = (field.getModifiers() & Modifier.TRANSIENT) == Modifier.TRANSIENT ||
 			(field.getModifiers() & Modifier.STATIC) == Modifier.STATIC || 
 			field.isSynthetic();

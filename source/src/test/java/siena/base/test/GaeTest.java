@@ -1828,6 +1828,12 @@ public class GaeTest extends BaseTest {
 		super.testLifeCycleSave();
 	}
 
+	@Override
+	public void testSerializeEmbeddedModel() {
+		// TODO Auto-generated method stub
+		super.testSerializeEmbeddedModel();
+	}
+
 
 	
 }
