@@ -49,6 +49,7 @@ p.
 h2. Siena technical design
 
 p. 
+p. 
 
 h3. A thin layer on top of low-level DB API
 
@@ -61,6 +62,7 @@ The biggest part of Siena DB implementations is :
 * Business code to manage high level mechanism such as pagination or stateless/stateful modes
 
 p. 
+p. 
 
 h3. Siena core is ONE jar and some tools/modules around this core library
 
@@ -70,6 +72,7 @@ Our purpose is also to provide tools or integrated modules based on this core li
 
 **The first module developed for Siena is "play-siena":http://www.playframework.org/modules/siena-2.0.0/home**: the web framework "Play!":http://www.playframework.org is really great, really fits Siena design and provides a very good test platform.
 
+p. 
 p. 
 
 h3. Siena is stateless by default (but can become stateful if required)
@@ -84,6 +87,7 @@ Yet, Siena now proposes a new __stateful__ mode to be able to reuse DB resources
 This __stateful__ mode provides some interesting advanced features and we don't know yet all the practices it will bring.
 __Siena is Open Source and is released under the Apache License 2.0.__
 
+p. 
 p. 
 
 h3. Siena provides an asynchronous mode (only for GAE for the time being)
