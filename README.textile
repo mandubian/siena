@@ -12,8 +12,8 @@ h2. Where can you find us also?
 * The main website is http://www.sienaproject.com but the doc is not up-to-date there as it refers to the old version 0.x of Siena.
 
 * We have a IRC channel on freenode:
-**irc.freenode.net:6667
-** channel #siena
+** irc server: @irc.freenode.net:6667@
+** channel: @#siena@
 
 * You can contact the main committer of Siena using "mandubian" profile in Github or this email: pascal.voitot.dev@gmail.com
 
