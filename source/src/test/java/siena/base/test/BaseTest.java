@@ -5384,7 +5384,7 @@ public abstract class BaseTest extends TestCase {
 		assertEquals(container.id, afterContainer.id);
 		assertNotNull(afterContainer.embed);
 		assertEquals(embed.id, afterContainer.embed.id);
-		assertEquals(embed.alpha, afterContainer.embed.alpha);
+		assertEquals(null, afterContainer.embed.alpha);
 		assertEquals(embed.beta, afterContainer.embed.beta);
 	}
 
