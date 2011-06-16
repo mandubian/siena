@@ -174,5 +174,19 @@ public class PersonLongAutoIDExtendedFilter extends PersonLongAutoIDModel {
     ...
 }
 
-p. 
+p. In this case, fields __city__ and __n__ from superclass will be ignored by siena mapping.
+So, the table ==<i>people_long_auto_extended_filter</i>== would look like:
 
+|_.Table people_long_auto_extended_filter|
+|id|
+|firstName|
+|lastName|
+|dogName|
+|boss|
+|profileImage|
+|stillImages|
+|otherImages|
+
+The __PersonLongAutoIDExtendedFilter__ instances in JAVA naturally have those __city__ and __n__ fields but when you retrieve a __PersonLongAutoIDExtendedFilter__ from DB:
+* __city__ will be __null__ (as any Object field filtered)
+* __n__ will be 0 (as any Number field filtered)
