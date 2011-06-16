@@ -28,9 +28,11 @@ So we try to design siena (at least as a wishful thinking because it's not an ea
 As a consequence, Siena is a bit more than just a Object-Mapping API, it's like a toolbox to help you build your application based on a persistence system.
 
 
+
+
 h2. Siena technical design
 
-h3. thin layer on top of low-level DB API
+h3. A thin layer on top of low-level DB API
 
 Siena is meant to keep the layer between your code and the low-level database APIs as thin as possible in order to make it efficient and not to implement to much technical mechanisms on top of already complex and complete database mechanisms:
 * For SQL, it directly uses JDBC
@@ -39,6 +41,8 @@ Siena is meant to keep the layer between your code and the low-level database AP
 The biggest part of Siena DB implementations is :
 * Mapping from Java types to low level DB types
 * Business code to manage high level mechanism such as pagination or stateless/stateful modes
+
+
 
 
 h3. Siena is stateless by default (but can become stateful if required)
@@ -52,6 +56,8 @@ Yet, Siena now proposes a new __stateful__ mode to be able to reuse DB resources
 
 This __stateful__ mode provides some interesting advanced features and we don't know yet all the practices it will bring.
 __Siena is Open Source and is released under the Apache License 2.0.__
+
+
 
 
 h3. Siena provides an asynchronous mode (only for GAE for the time being)
