@@ -2,7 +2,7 @@ h1. Welcome to Siena project!
 
 **Latest tagged version is Siena v1.0.0-b3**
 
-Siena is a persitence API for Java inspired on the Google App Engine Python Datastore trying to draw a bridge between SQL and NoSQL worlds. 
+Siena is a persitence API for Java inspired by the Google App Engine Python Datastore trying to draw a bridge between SQL and NoSQL worlds. 
 It provides a __Java Object-DB mapping__ designed following the "ActiveRecord pattern":http://en.wikipedia.org/wiki/Active_record_pattern#Java which brings a simple and intuitive approach to manage your Java objects with respect to the database entities.
 
 h2. Siena is a single API with many implementations
@@ -19,14 +19,32 @@ Siena is not meant to mimic a kind of Hibernate for NoSQL+SQL as it would be non
 * when you want to use very specific feature of a database, you will naturally use the low-level APIs provided by this DB.
 
 
-h2. Siena has development lifecycle driven by practical use-cases and user experience
+h2. Siena has a development lifecycle driven by practical use-cases and user experience
 
-Siena doesn't try to fit in force and hide the specific database technical aspects into your Java code. It has certainly been a false and unfulfilled promise of ORM frameworks in general: an object is not really a relational entity and SQL can't be completely hidden behind Java code. Thus, ORM often just moves the problems you had with SQL to problems you have with your ORM framework and unfortunately, you don't control your ORM framework at all while you can modify your SQL.
+Siena doesn't try to fit in force and hide all the specific database technical aspects into your Java code. It has certainly been a false and unfulfilled promise of ORM frameworks in general: an object is not really a relational entity and SQL can't be completely hidden behind Java code. Thus, ORM often just moves the problems you had with SQL to problems you have with your ORM framework and unfortunately, you don't control your ORM framework at all as your SQL.
 
-So Siena tries (at least as a wishful thinking :) ) to go from the technical aspects of SQL/NoSQL databases to the user but the other way: from the user to the databases. As an example, when building a web application, you often need to paginate among hundreds of entities and you don't care how the DB manages its record offsets for SQL or cursors for GAE, you just want a page of 50 entities to display them and then go to the next page and then go back to the previous page etc...
+So we try to design siena (at least as a wishful thinking because it's not an easy and exact process :)) through a process going from the user needs to the technical aspects of SQL/NoSQL databases and not the other way. As an example, when building a web application, you often need to paginate among hundreds of entities by pages of 50 for ex. You really don't care how the DB manages its record offsets for SQL or cursors for GAE, you just want a page of 50 entities and then go to the next page and then go back to the previous page etc... So Siena provides a pagination mechanism which allows exactly this without scratching your head and this mechanism has the same behavior in SQL and NoSQL.
 
-Siena is meant to keep the layer between your code and the low-level database APIs as thin as possible
-Siena is stateless by default but can be stateful for more specific operations.
+As a consequence, Siena is a bit more than just a Object-Mapping API, it's like a toolbox to help you build your application based on a persistence system.
+
+
+h2. Siena technical design
+
+h3. thin layer on top of low-level DB API
+
+Siena is meant to keep the layer between your code and the low-level database APIs as thin as possible in order to make it efficient and not to implement to much technical mechanisms on top of already complex and complete database mechanisms:
+* For SQL, it directly uses JDBC
+* For GAE, it directly uses GAE low-level Datastore
+
+The biggest part of Siena DB implementations is :
+* Mapping from Java types to low level DB types
+* Business code to manage high level mechanism such as pagination or stateless/stateful modes
+
+
+h3. Siena is stateless by default (but can become stateful if required)
+Siena is stateless by default because it really fits the majority of cases and one can use it directly without scratching his head about potential problems of releasing DB resources or committing anything. Moreover, stateless is much easier to use in scalable and distributed infrastructure such as GAE.
+
+Yet, Siena now proposes a new stateful mode to be able to reuse DB resources queries several times, to go through the results keeping last position in memory
 
 
 __Siena is Open Source and is released under the Apache License 2.0.__
