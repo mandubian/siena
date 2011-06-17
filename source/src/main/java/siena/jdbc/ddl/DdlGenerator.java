@@ -2,6 +2,7 @@ package siena.jdbc.ddl;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
+import java.math.BigDecimal;
 import java.sql.Types;
 import java.util.Date;
 import java.util.HashMap;
@@ -28,6 +29,7 @@ import siena.SimpleDate;
 import siena.Text;
 import siena.Time;
 import siena.Unique;
+import siena.core.DecimalPrecision;
 import siena.core.Polymorphic;
 import siena.embed.Embedded;
 
@@ -217,7 +219,16 @@ public class DdlGenerator {
 			if(max == null)
 				column.setSize(""+255); // fixes by default to this value in order to prevent alter tables every time
 			else column.setSize(""+max.value());
-		}						
+		} else if(type == BigDecimal.class){
+			columnType = Types.DECIMAL;			
+			DecimalPrecision an = field.getAnnotation(DecimalPrecision.class);
+			if(an == null) {
+				column.setSizeAndScale(19, 2);
+			}
+			else {
+				column.setSizeAndScale(an.size(), an.scale());
+			}
+		}
 		else {
 			Embedded embedded = field.getAnnotation(Embedded.class);
 			if(embedded != null) {
@@ -236,7 +247,6 @@ public class DdlGenerator {
 		}
 
 		column.setTypeCode(columnType);
-		
 		return column;
 	}
 

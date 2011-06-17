@@ -3,6 +3,7 @@ package siena.base.test;
 import static siena.Json.map;
 
 import java.lang.reflect.Modifier;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -11,7 +12,6 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 
 import junit.framework.TestCase;
 import siena.BaseQuery;
@@ -26,6 +26,7 @@ import siena.QueryOrder;
 import siena.SienaException;
 import siena.base.test.model.Address;
 import siena.base.test.model.AutoInc;
+import siena.base.test.model.BigDecimalModel;
 import siena.base.test.model.Contact;
 import siena.base.test.model.ContainerModel;
 import siena.base.test.model.DataTypes;
@@ -44,7 +45,6 @@ import siena.base.test.model.EmbeddedModel;
 import siena.base.test.model.EmbeddedSubModel;
 import siena.base.test.model.MultipleKeys;
 import siena.base.test.model.PersonLongAutoID;
-import siena.base.test.model.PersonLongAutoIDExtended;
 import siena.base.test.model.PersonLongManualID;
 import siena.base.test.model.PersonStringAutoIncID;
 import siena.base.test.model.PersonStringID;
@@ -114,7 +114,8 @@ public abstract class BaseTest extends TestCase {
 		classes.add(DiscoveryNoColumnMultipleKeys.class);
 		classes.add(DiscoveryLifeCycle.class);
 		classes.add(DiscoveryLifeCycleMulti.class);
-		
+		classes.add(BigDecimalModel.class);
+
 		pm = createPersistenceManager(classes);
 		
 		for (Class<?> clazz : classes) {
@@ -5551,5 +5552,30 @@ public abstract class BaseTest extends TestCase {
 		assertEquals(null, afterContainer.embed.alpha);
 		assertEquals(embed.beta, afterContainer.embed.beta);
 		assertEquals(null, afterContainer.embed.subs);
+	}
+	
+	public void testBigDecimal() {
+		BigDecimalModel bigdec = 
+			new BigDecimalModel(new BigDecimal("123456789.0123456890"));
+		pm.insert(bigdec);
+		
+		BigDecimalModel bigdec2 = pm.getByKey(BigDecimalModel.class, bigdec.id);
+		assertEquals(bigdec, bigdec2);
+		
+		bigdec = 
+			new BigDecimalModel(
+					new BigDecimal("999999999.9999999999"));
+		pm.insert(bigdec);
+		
+		bigdec2 = pm.getByKey(BigDecimalModel.class, bigdec.id);
+		assertEquals(bigdec, bigdec2);
+		
+		//-100.5
+		bigdec = 
+			new BigDecimalModel(new BigDecimal("-100.5000000000"));
+		pm.insert(bigdec);
+		
+		bigdec2 = pm.getByKey(BigDecimalModel.class, bigdec.id);
+		assertEquals(bigdec, bigdec2);
 	}
 }

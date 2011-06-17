@@ -1605,4 +1605,10 @@ public class JdbcTest extends BaseTest {
 		super.testSerializeEmbeddedModel();
 	}
 
+	@Override
+	public void testBigDecimal() {
+		// TODO Auto-generated method stub
+		super.testBigDecimal();
+	}
+
 }

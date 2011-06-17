@@ -1,6 +1,7 @@
 package siena.gae;
 
 import java.lang.reflect.Field;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -326,6 +327,9 @@ public class GaeMappingUtils {
 						if (s.length() > 500)
 							value = new Text(s);
 					}
+					else if (field.getType() == BigDecimal.class){
+						value = value.toString();
+					}
 					// enum is after embedded because an enum can be embedded
 					// don't know if anyone will use it but it will work :)
 					else if (Enum.class.isAssignableFrom(field.getType())) {
@@ -404,6 +408,9 @@ public class GaeMappingUtils {
 			value = ((Text) value).getValue();
 		else if(value instanceof Blob && f.getType() == byte[].class) {
 			value = ((Blob) value).getBytes();
+		}
+		else if(f.getType() == BigDecimal.class && value instanceof String){
+			value = new BigDecimal((String)value);
 		}
 		Util.setFromObject(object, f, value);
 	}
