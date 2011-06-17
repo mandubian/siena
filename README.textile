@@ -1,6 +1,6 @@
 h1. Welcome to Siena project! 
 
-**Latest tagged version is Siena v1.0.0-b3**
+**Latest tagged version is Siena v1.0.0-b4**
 
 Siena is a persitence API for Java inspired by the Google App Engine Python Datastore trying to draw a bridge between SQL and NoSQL worlds. 
 It provides a __Java Object-DB mapping__ designed following the "ActiveRecord pattern":http://en.wikipedia.org/wiki/Active_record_pattern#Java which brings a simple and intuitive approach to manage your Java objects with respect to the database entities.
