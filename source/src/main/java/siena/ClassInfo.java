@@ -250,11 +250,11 @@ public class ClassInfo {
 	}
 
 	public static boolean isId(Field field) {
-		return field.getAnnotation(Id.class) != null;
+		return field.isAnnotationPresent(Id.class);
 	}
 	
 	public static boolean isEmbedded(Field field) {
-		return field.getAnnotation(Embedded.class) != null;
+		return field.isAnnotationPresent(Embedded.class);
 	}
 	
 	public static boolean isGenerated(Field field) {

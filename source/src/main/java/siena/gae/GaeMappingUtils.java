@@ -165,6 +165,51 @@ public class GaeMappingUtils {
 		}
 	}
 	
+	protected static Key getKeyFromParent(Object obj, Entity parentEntity) {
+		Class<?> clazz = obj.getClass();
+		ClassInfo info = ClassInfo.getClassInfo(clazz);
+
+		try {
+			Field idField = info.getIdField();
+			Object value = Util.readField(obj, idField);
+			// TODO verify that returning NULL is not a bad thing
+			if(value == null) return null;
+			
+			Class<?> type = idField.getType();
+			
+			if(idField.isAnnotationPresent(Id.class)){
+				Id id = idField.getAnnotation(Id.class);
+				switch(id.value()) {
+				case NONE:
+					// long or string goes toString
+					return KeyFactory.createKey(
+						ClassInfo.getClassInfo(clazz).tableName,
+						value.toString());
+				case AUTO_INCREMENT:
+					// as a string with auto_increment can't exist, it is not cast into long
+					if (Long.TYPE == type || Long.class.isAssignableFrom(type)){
+						return KeyFactory.createKey(
+							ClassInfo.getClassInfo(clazz).tableName,
+							(Long)value);
+					}
+					return KeyFactory.createKey(
+						ClassInfo.getClassInfo(clazz).tableName,
+						value.toString());
+					
+				case UUID:
+					return KeyFactory.createKey(
+						ClassInfo.getClassInfo(clazz).tableName,
+						value.toString());
+				default:
+					throw new SienaException("Id Generator "+id.value()+ " not supported");
+				}
+			}
+			else throw new SienaException("Field " + idField.getName() + " is not an @Id field");
+		} catch (Exception e) {
+			throw new SienaException(e);
+		}
+	}
+	
 	protected static Key makeKey(Class<?> clazz, Object value) {
 		ClassInfo info = ClassInfo.getClassInfo(clazz);
 		
