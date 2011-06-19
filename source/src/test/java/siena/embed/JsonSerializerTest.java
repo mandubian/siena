@@ -14,7 +14,7 @@ public class JsonSerializerTest extends TestCase {
 	
 	public void testSimple() throws Exception {
 		Date date = createDate();
-		Json data = JsonSerializer.serialize(new Contact("Alberto", "Gimeno", Gender.MALE, date));
+		Json data = JsonSerializer.serialize(new Contact("Alberto", "Gimeno", Gender.MALE, date, date));
 		
 		Contact contact = (Contact) JsonSerializer.deserialize(Contact.class, data);
 		assertEquals("Alberto", contact.firstName);
@@ -22,13 +22,14 @@ public class JsonSerializerTest extends TestCase {
 		assertEquals("Gimeno", contact.lastName);
 		assertEquals(Gender.MALE, contact.gender);
 		assertEquals(date, contact.birthday);
+		assertEquals(date, contact.rebirthday);
 	}
 	
 	@SuppressWarnings("unchecked")
 	public void testMultiple() throws Exception {
 		Date date = createDate();
 		Map<String, Contact> contacts = new HashMap<String, Contact>();
-		contacts.put("id1", new Contact("Alberto", "Gimeno", Gender.MALE, date));
+		contacts.put("id1", new Contact("Alberto", "Gimeno", Gender.MALE, date, date));
 		
 		Json data = JsonSerializer.serialize(contacts);
 		
@@ -40,6 +41,7 @@ public class JsonSerializerTest extends TestCase {
 		assertEquals("Gimeno", contact.lastName);
 		assertEquals(Gender.MALE, contact.gender);
 		assertEquals(date, contact.birthday);
+		assertEquals(date, contact.rebirthday);
 	}
 
 	private Date createDate() {
@@ -60,11 +62,15 @@ public class JsonSerializerTest extends TestCase {
 	@At(4) @Format("yyyy/MM/dd")
 	public Date birthday;
 	
-	public Contact(String firstName, String lastName, Gender gender, Date birthday) {
+	@At(5)
+	public Date rebirthday;
+
+	public Contact(String firstName, String lastName, Gender gender, Date birthday, Date rebirthday) {
 		this.firstName = firstName;
 		this.lastName = lastName;
 		this.gender = gender;
 		this.birthday = birthday;
+		this.rebirthday = rebirthday;
 	}
 	
 	public Contact() {

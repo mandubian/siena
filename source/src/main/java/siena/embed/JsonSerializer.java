@@ -445,6 +445,8 @@ public class JsonSerializer {
 				if(str != null) return Enum.valueOf((Class<Enum>) type, data.str());
 			}
 			return null;
+		}else if(type == Date.class){
+			return data!=null ? data.asDate() : null;
 		}
 		return null;
 	}
