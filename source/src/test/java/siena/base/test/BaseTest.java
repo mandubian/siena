@@ -26,11 +26,14 @@ import siena.QueryOrder;
 import siena.SienaException;
 import siena.base.test.model.Address;
 import siena.base.test.model.AutoInc;
+import siena.base.test.model.BigDecimalDoubleModel;
 import siena.base.test.model.BigDecimalModel;
+import siena.base.test.model.BigDecimalStringModel;
 import siena.base.test.model.Contact;
 import siena.base.test.model.ContainerModel;
 import siena.base.test.model.DataTypes;
 import siena.base.test.model.DataTypes.EnumLong;
+import siena.base.test.model.BigDecimalModelNoPrecision;
 import siena.base.test.model.Discovery;
 import siena.base.test.model.Discovery4Join;
 import siena.base.test.model.Discovery4Join2;
@@ -115,6 +118,9 @@ public abstract class BaseTest extends TestCase {
 		classes.add(DiscoveryLifeCycle.class);
 		classes.add(DiscoveryLifeCycleMulti.class);
 		classes.add(BigDecimalModel.class);
+		classes.add(BigDecimalModelNoPrecision.class);
+		classes.add(BigDecimalStringModel.class);
+		classes.add(BigDecimalDoubleModel.class);
 
 		pm = createPersistenceManager(classes);
 		
@@ -5576,6 +5582,81 @@ public abstract class BaseTest extends TestCase {
 		pm.insert(bigdec);
 		
 		bigdec2 = pm.getByKey(BigDecimalModel.class, bigdec.id);
+		assertEquals(bigdec, bigdec2);
+	}
+	
+	public void testBigDecimalNoPrecision() {
+		BigDecimalModelNoPrecision bigdec = 
+			new BigDecimalModelNoPrecision(new BigDecimal("123456789.01"));
+		pm.insert(bigdec);
+		
+		BigDecimalModelNoPrecision bigdec2 = pm.getByKey(BigDecimalModelNoPrecision.class, bigdec.id);
+		assertEquals(bigdec, bigdec2);
+		
+		bigdec = 
+			new BigDecimalModelNoPrecision(
+					new BigDecimal("999999999.99"));
+		pm.insert(bigdec);
+		
+		bigdec2 = pm.getByKey(BigDecimalModelNoPrecision.class, bigdec.id);
+		assertEquals(bigdec, bigdec2);
+		
+		//-100.5
+		bigdec = 
+			new BigDecimalModelNoPrecision(new BigDecimal("-100.50"));
+		pm.insert(bigdec);
+		
+		bigdec2 = pm.getByKey(BigDecimalModelNoPrecision.class, bigdec.id);
+		assertEquals(bigdec, bigdec2);
+	}
+	
+	public void testBigDecimalString() {
+		BigDecimalStringModel bigdec = 
+			new BigDecimalStringModel(new BigDecimal("123456789.0123456890"));
+		pm.insert(bigdec);
+		
+		BigDecimalStringModel bigdec2 = pm.getByKey(BigDecimalStringModel.class, bigdec.id);
+		assertEquals(bigdec, bigdec2);
+		
+		bigdec = 
+			new BigDecimalStringModel(
+					new BigDecimal("999999999.9999999999"));
+		pm.insert(bigdec);
+		
+		bigdec2 = pm.getByKey(BigDecimalStringModel.class, bigdec.id);
+		assertEquals(bigdec, bigdec2);
+		
+		//-100.5
+		bigdec = 
+			new BigDecimalStringModel(new BigDecimal("-100.5000000000"));
+		pm.insert(bigdec);
+		
+		bigdec2 = pm.getByKey(BigDecimalStringModel.class, bigdec.id);
+		assertEquals(bigdec, bigdec2);
+	}
+	
+	public void testBigDecimalDouble() {
+		BigDecimalDoubleModel bigdec = 
+			new BigDecimalDoubleModel(new BigDecimal("123456789.012345"));
+		pm.insert(bigdec);
+		
+		BigDecimalDoubleModel bigdec2 = pm.getByKey(BigDecimalDoubleModel.class, bigdec.id);
+		assertEquals(bigdec, bigdec2);
+		
+		bigdec = 
+			new BigDecimalDoubleModel(
+					new BigDecimal("999999999.9999999999"));
+		pm.insert(bigdec);
+		
+		bigdec2 = pm.getByKey(BigDecimalDoubleModel.class, bigdec.id);
+		assertEquals(bigdec, bigdec2);
+		
+		//-100.5
+		bigdec = 
+			new BigDecimalDoubleModel(new BigDecimal("-100.5000000000"));
+		pm.insert(bigdec);
+		
+		bigdec2 = pm.getByKey(BigDecimalDoubleModel.class, bigdec.id);
 		assertEquals(bigdec, bigdec2);
 	}
 }

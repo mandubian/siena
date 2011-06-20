@@ -219,14 +219,26 @@ public class DdlGenerator {
 			if(max == null)
 				column.setSize(""+255); // fixes by default to this value in order to prevent alter tables every time
 			else column.setSize(""+max.value());
-		} else if(type == BigDecimal.class){
-			columnType = Types.DECIMAL;			
+		} else if(type == BigDecimal.class){						
 			DecimalPrecision an = field.getAnnotation(DecimalPrecision.class);
 			if(an == null) {
+				columnType = Types.DECIMAL;
 				column.setSizeAndScale(19, 2);
 			}
 			else {
-				column.setSizeAndScale(an.size(), an.scale());
+				if(an.storateType() == DecimalPrecision.StorageType.NATIVE){
+					columnType = Types.DECIMAL;
+					column.setSizeAndScale(an.size(), an.scale());
+				}else if(an.storateType() == DecimalPrecision.StorageType.STRING) {
+					columnType = Types.VARCHAR;
+					// should be an.size+"."+sign
+					column.setSize((an.size()+2)+"");
+				}else if(an.storateType() == DecimalPrecision.StorageType.DOUBLE) {
+					columnType = Types.DOUBLE;					
+				}else {
+					columnType = Types.DECIMAL;
+					column.setSizeAndScale(19, 2);
+				}
 			}
 		}
 		else {

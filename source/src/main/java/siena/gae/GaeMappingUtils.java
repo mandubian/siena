@@ -13,6 +13,7 @@ import siena.Json;
 import siena.SienaException;
 import siena.SienaRestrictedApiException;
 import siena.Util;
+import siena.core.DecimalPrecision;
 import siena.embed.Embedded;
 import siena.embed.JsonSerializer;
 
@@ -307,7 +308,7 @@ public class GaeMappingUtils {
 				}
 			} else {
 				if (value != null) {
-					if (field.getType() == Json.class) {
+					if (fieldClass == Json.class) {
 						value = value.toString();
 					} else if (value instanceof String) {
 						String s = (String) value;
@@ -327,8 +328,21 @@ public class GaeMappingUtils {
 						if (s.length() > 500)
 							value = new Text(s);
 					}
-					else if (field.getType() == BigDecimal.class){
-						value = value.toString();
+					else if (fieldClass == BigDecimal.class){
+						DecimalPrecision ann = field.getAnnotation(DecimalPrecision.class);
+						if(ann == null) {
+							value = ((BigDecimal)value).toPlainString();
+						}else {
+							switch(ann.storateType()){
+							case DOUBLE:
+								value = ((BigDecimal)value).doubleValue();
+								break;
+							case STRING:
+							case NATIVE:
+								value = ((BigDecimal)value).toPlainString();
+								break;
+							}
+						}
 					}
 					// enum is after embedded because an enum can be embedded
 					// don't know if anyone will use it but it will work :)
@@ -409,8 +423,21 @@ public class GaeMappingUtils {
 		else if(value instanceof Blob && f.getType() == byte[].class) {
 			value = ((Blob) value).getBytes();
 		}
-		else if(f.getType() == BigDecimal.class && value instanceof String){
-			value = new BigDecimal((String)value);
+		else if(f.getType() == BigDecimal.class){
+			DecimalPrecision ann = f.getAnnotation(DecimalPrecision.class);
+			if(ann == null) {
+				value = new BigDecimal((String)value);
+			}else {
+				switch(ann.storateType()){
+				case DOUBLE:
+					value = BigDecimal.valueOf((Double)value);
+					break;
+				case STRING:
+				case NATIVE:
+					value = new BigDecimal((String)value);
+					break;
+				}
+			}
 		}
 		Util.setFromObject(object, f, value);
 	}

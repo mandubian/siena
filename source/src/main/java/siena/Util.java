@@ -94,6 +94,7 @@ public class Util {
 		if(type == Double.class)  return Double.valueOf(value);
 		if(type == Date.class)    return timestamp(value);
 		if(type == Json.class)    return Json.loads(value);
+		if(type == BigDecimal.class) return new BigDecimal(value);
 		if(Enum.class.isAssignableFrom(type)) return Enum.valueOf((Class<Enum>) type, (String)value);
 		throw new IllegalArgumentException("Unsupported type: "+type.getName());
 	}
@@ -119,6 +120,7 @@ public class Util {
 		if(type == Double.class)  return Double.valueOf(value);
 		if(type == Date.class)    return timestamp(value);
 		if(type == Json.class)    return Json.loads(value);
+		if(type == BigDecimal.class) return new BigDecimal(value);
 		if(Enum.class.isAssignableFrom(type)) return Enum.valueOf((Class<Enum>) type, (String)value);
 		if(!retValueIfNotSupported){
 			throw new IllegalArgumentException("Unsupported type: "+type.getName());
@@ -193,7 +195,7 @@ public class Util {
 				return date((Date) value);
 			else
 				return timestamp((Date) value);
-		}
+		}		
 		return value.toString();
 	}
 	
@@ -213,6 +215,7 @@ public class Util {
 			else if(Float.TYPE==type || Float.class==type)   return number.floatValue();
 			else if(Double.TYPE==type || Double.class==type)  return number.doubleValue();
 			else if(Boolean.TYPE==type || Boolean.class==type) return number!=(Number)0 ? true:false;
+			else if(BigDecimal.class==type) return (BigDecimal)value;
 		} 
 		else if(String.class.isAssignableFrom(value.getClass()) && Json.class.isAssignableFrom(type)) {
 			return Json.loads((String) value);

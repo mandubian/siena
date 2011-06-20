@@ -1614,4 +1614,22 @@ public class H2Test extends BaseTest {
 		super.testBigDecimal();
 	}
 
+	@Override
+	public void testBigDecimalNoPrecision() {
+		// TODO Auto-generated method stub
+		super.testBigDecimalNoPrecision();
+	}
+
+	@Override
+	public void testBigDecimalString() {
+		// TODO Auto-generated method stub
+		super.testBigDecimalString();
+	}
+
+	@Override
+	public void testBigDecimalDouble() {
+		// TODO Auto-generated method stub
+		super.testBigDecimalDouble();
+	}
+
 }

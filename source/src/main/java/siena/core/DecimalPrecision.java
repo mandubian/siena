@@ -23,6 +23,13 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.FIELD)
 public @interface DecimalPrecision {
+	public enum StorageType {
+		NATIVE,	// NATIVE means it uses native DB storage for bigdecimal: for SQL: SQL type DECIMAL - for GAE:String 
+		DOUBLE, // stored as a double
+		STRING	// stored as a string padding on left with 0
+	}
+	
+	StorageType storateType() default StorageType.NATIVE;
 	int size() default 19;
 	int scale() default 2;
 }

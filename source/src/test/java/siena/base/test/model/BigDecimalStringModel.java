@@ -23,19 +23,19 @@ import siena.Table;
 import siena.core.DecimalPrecision;
 import siena.core.DecimalPrecision.StorageType;
 
-@Table("big_decimal")
-public class BigDecimalModel {
+@Table("big_decimal_string")
+public class BigDecimalStringModel {
 
 	@Id(Generator.AUTO_INCREMENT)
 	public Long id;
 	
-	@DecimalPrecision(storateType=StorageType.NATIVE, size=21, scale=10)
+	@DecimalPrecision(storateType=StorageType.STRING, size=21, scale=10)
 	public BigDecimal big;
 
-	public BigDecimalModel() {
+	public BigDecimalStringModel() {
 	}
 
-	public BigDecimalModel(BigDecimal big) {
+	public BigDecimalStringModel(BigDecimal big) {
 		this.big = big;
 	}
 
@@ -59,7 +59,7 @@ public class BigDecimalModel {
 			return false;
 		if (getClass() != obj.getClass())
 			return false;
-		BigDecimalModel other = (BigDecimalModel) obj;
+		BigDecimalStringModel other = (BigDecimalStringModel) obj;
 		if (big == null) {
 			if (other.big != null)
 				return false;
