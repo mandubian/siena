@@ -1,5 +1,4 @@
-h1. Using java.math.BigDecimal in Siean
-
+h1. Using java.math.BigDecimal in Siena
 h2. <a>Code sample</a>
 
 Here is a superclass:
