@@ -1,6 +1,6 @@
-h1(#maintitle). Using __java.math.BigDecimal__ in Siena
+h1(#head). Using __java.math.BigDecimal__ in Siena
 
-h2. <a>Code sample</a>
+h2(#codesample). Code sample
 
 Here is a superclass:
 
@@ -31,7 +31,7 @@ p.
 
 ==<br/>==
 
-h2. <a>@DecimalPrecision Annotation</a>
+h2(#annotation). @DecimalPrecision Annotation
 
 Here is the definition of @DecimalPrecision:
 
@@ -50,7 +50,7 @@ bc.. public @interface DecimalPrecision {
 p. 
 ==<br/>==
 
-h3. <a>Size & Scale</a>
+h3(#sizescale). Size & Scale
 
 * **size** is the total of digits in the BigDecimal
 
@@ -66,7 +66,7 @@ p(note). **Note** Be careful when setting couple (size, scale) because you can't
 
 ==<br/>==
 
-h3. <a>Storage Type</a>
+h3(#storagetype). Storage Type
 
 BigDecimal in Siena can be stored into DB using 3 storage types:
 * **Native** uses the native type proposed by the underlying DB:
