@@ -1,4 +1,4 @@
-h1(#head). Using __java.math.BigDecimal__ in Siena
+h1. <a href="#title">Using __java.math.BigDecimal__ in Siena</a>
 
 h2(#codesample). Code sample
 
