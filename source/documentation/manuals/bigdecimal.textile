@@ -19,7 +19,7 @@ public class BigDecimalModel {
 	
 	// stores as double
 	@DecimalPrecision(storateType=StorageType.DOUBLE)
-	public BigDecimal big4;
+	public BigDecimal big3;
 	
 	// stores as plain string
 	@DecimalPrecision(storateType=StorageType.STRING)
