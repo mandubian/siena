@@ -60,9 +60,9 @@ bc. 123456.789 -> size = 9
 
 bc. 123456.789 -> scale = 3
 
-p(note). **Note** Default (size, scale) is (19, 2) for the reason that this is the default precision used by Oracle and that I found it on several web sites but this is quite arbitrary 
+p(note). **Note** Default (size, scale) is (19, 2) for the reason that this is the default precision used by Oracle and that I found it on several web sites but this is quite arbitrary.
 
-p(note). **Note** Be careful when setting (size, scale) because you can't set bigger numbers than the range authorized by this couple. 
+p(note). **Note** Be careful when setting couple (size, scale) because you can't assign bigger numbers than the range authorised by it.
 
 ==<br/>==
 
