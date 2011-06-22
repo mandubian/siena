@@ -39,9 +39,7 @@ public class JdbcDBUtils {
 			throw new SienaException(e);
 		}
 	}
-	
-
-	
+		
 	public static <T> StringBuilder buildSqlSelect(Query<T> query) {
 		Class<T> clazz = query.getQueriedClass();
 		JdbcClassInfo info = JdbcClassInfo.getClassInfo(clazz);

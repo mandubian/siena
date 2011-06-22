@@ -4,6 +4,7 @@ import static siena.Json.map;
 
 import java.lang.reflect.Modifier;
 import java.math.BigDecimal;
+import java.sql.Connection;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -28,12 +29,12 @@ import siena.base.test.model.Address;
 import siena.base.test.model.AutoInc;
 import siena.base.test.model.BigDecimalDoubleModel;
 import siena.base.test.model.BigDecimalModel;
+import siena.base.test.model.BigDecimalModelNoPrecision;
 import siena.base.test.model.BigDecimalStringModel;
 import siena.base.test.model.Contact;
 import siena.base.test.model.ContainerModel;
 import siena.base.test.model.DataTypes;
 import siena.base.test.model.DataTypes.EnumLong;
-import siena.base.test.model.BigDecimalModelNoPrecision;
 import siena.base.test.model.Discovery;
 import siena.base.test.model.Discovery4Join;
 import siena.base.test.model.Discovery4Join2;
@@ -53,6 +54,8 @@ import siena.base.test.model.PersonStringAutoIncID;
 import siena.base.test.model.PersonStringID;
 import siena.base.test.model.PersonUUID;
 import siena.base.test.model.PolymorphicModel;
+import siena.base.test.model.TransactionAccountFrom;
+import siena.base.test.model.TransactionAccountTo;
 import siena.core.PersistenceManagerLifeCycleWrapper;
 import siena.core.lifecycle.LifeCyclePhase;
 import siena.core.options.QueryOption;
@@ -121,6 +124,8 @@ public abstract class BaseTest extends TestCase {
 		classes.add(BigDecimalModelNoPrecision.class);
 		classes.add(BigDecimalStringModel.class);
 		classes.add(BigDecimalDoubleModel.class);
+		classes.add(TransactionAccountFrom.class);
+		classes.add(TransactionAccountTo.class);
 
 		pm = createPersistenceManager(classes);
 		
@@ -5658,5 +5663,54 @@ public abstract class BaseTest extends TestCase {
 		
 		bigdec2 = pm.getByKey(BigDecimalDoubleModel.class, bigdec.id);
 		assertEquals(bigdec, bigdec2);
+	}
+	
+	public void testTransaction() {
+		TransactionAccountFrom accFrom = new TransactionAccountFrom(1000L);
+		TransactionAccountTo accTo = new TransactionAccountTo(1000L);
+		pm.insert(accFrom, accTo);
+	
+		try {
+			pm.beginTransaction(Connection.TRANSACTION_READ_COMMITTED);
+			accFrom.amount-=100L;
+			pm.update(accFrom);
+			accTo.amount+=100L;
+			pm.update(accTo);
+			pm.commitTransaction();
+		}catch(SienaException e){
+			pm.rollbackTransaction();
+			fail();
+		}finally{
+			pm.closeConnection();
+		}
+		
+		TransactionAccountFrom accFromAfter = pm.getByKey(TransactionAccountFrom.class, accFrom.id);
+		assertTrue(900L == accFromAfter.amount);
+		TransactionAccountTo accToAfter = pm.getByKey(TransactionAccountTo.class, accTo.id);
+		assertTrue(1100L == accToAfter.amount);
+	}
+	
+	public void testTransactionFailure() {
+		TransactionAccountFrom accFrom = new TransactionAccountFrom(1000L);
+		TransactionAccountTo accTo = new TransactionAccountTo(1000L);
+		pm.insert(accFrom, accTo);
+	
+		try {
+			pm.beginTransaction(Connection.TRANSACTION_READ_COMMITTED);
+			accFrom.amount-=100L;
+			pm.update(accFrom);
+			accTo.amount+=100L;
+			pm.update(accTo);
+			throw new SienaException("test");
+		}catch(SienaException e){
+			pm.rollbackTransaction();
+		}finally{
+			pm.closeConnection();
+		}
+		
+		TransactionAccountFrom accFromAfter = pm.getByKey(TransactionAccountFrom.class, accFrom.id);
+		assertTrue(1000L == accFromAfter.amount);
+		TransactionAccountTo accToAfter = pm.getByKey(TransactionAccountTo.class, accTo.id);
+		assertTrue(1000L == accToAfter.amount);
 	}
 }

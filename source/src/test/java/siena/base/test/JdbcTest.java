@@ -52,7 +52,7 @@ public class JdbcTest extends BaseTest {
 			Database database = generator.getDatabase();
 	
 			Platform platform = PlatformFactory.createNewPlatformInstance("mysql");
-			Class.forName("com.mysql.jdbc.Driver");
+			Class.forName("com.mysql.jdbc.Driver").newInstance();
 			Connection connection = DriverManager.getConnection(url, username, password);
 			
 			System.out.println(platform.getAlterTablesSql(connection, database));
@@ -1627,6 +1627,18 @@ public class JdbcTest extends BaseTest {
 	public void testBigDecimalDouble() {
 		// TODO Auto-generated method stub
 		super.testBigDecimalDouble();
+	}
+
+	@Override
+	public void testTransaction() {
+		// TODO Auto-generated method stub
+		super.testTransaction();
+	}
+
+	@Override
+	public void testTransactionFailure() {
+		// TODO Auto-generated method stub
+		super.testTransactionFailure();
 	}
 
 }

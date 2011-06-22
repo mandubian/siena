@@ -1722,7 +1722,7 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 		} catch (Exception e) {
 			throw new SienaException(e);
 		} finally {
-			JdbcDBUtils.closeStatement(ps);
+			//JdbcDBUtils.closeStatement(ps);
 		}
 	}
 
