@@ -676,6 +676,7 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 				// keeps realOffset
 			}
 			
+			ResultSet rs = null;
 			try {
 				// when paginating, should update limit and offset
 				//if(pag.isActive()){
@@ -686,7 +687,7 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 				jdbcCtx.statement.setObject(jdbcCtx.offsetParamIdx, jdbcCtx.realOffset);
 				//}
 				
-				ResultSet rs = jdbcCtx.statement.executeQuery();
+				rs = jdbcCtx.statement.executeQuery();
 				List<T> result = JdbcMappingUtils.mapList(clazz, rs, ClassInfo.getClassInfo(clazz).tableName, 
 					JdbcMappingUtils.getJoinFields(query), jdbcCtx.realPageSize);
 				// increases offset
@@ -703,6 +704,7 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 				}
 				return result;
 			}catch(SQLException ex){
+				JdbcDBUtils.closeResultSet(rs);
 				JdbcDBUtils.closeStatement(jdbcCtx.statement);
 				throw new SienaException(ex);
 			} 
@@ -903,6 +905,7 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 				// keeps realOffset
 			}
 			
+			ResultSet rs = null;
 			try {
 				// when paginating, should update limit and offset
 				//if(pag.isActive()){
@@ -913,7 +916,7 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 				jdbcCtx.statement.setObject(jdbcCtx.offsetParamIdx, jdbcCtx.realOffset);
 				//}
 				
-				ResultSet rs = jdbcCtx.statement.executeQuery();
+				rs = jdbcCtx.statement.executeQuery();
 				List<T> result = JdbcMappingUtils.mapListKeys(clazz, rs, ClassInfo.getClassInfo(clazz).tableName, 
 					JdbcMappingUtils.getJoinFields(query), jdbcCtx.realPageSize);
 				
@@ -929,6 +932,7 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 				}
 				return result;
 			}catch(SQLException ex){
+				JdbcDBUtils.closeResultSet(rs);
 				JdbcDBUtils.closeStatement(jdbcCtx.statement);
 				throw new SienaException(ex);
 			} 
