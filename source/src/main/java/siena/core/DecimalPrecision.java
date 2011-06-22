@@ -26,7 +26,7 @@ public @interface DecimalPrecision {
 	public enum StorageType {
 		NATIVE,	// NATIVE means it uses native DB storage for bigdecimal: for SQL: SQL type DECIMAL - for GAE:String 
 		DOUBLE, // stored as a double
-		STRING	// stored as a string padding on left with 0
+		STRING	// stored as a string (not padded with 0 yet)
 	}
 	
 	StorageType storateType() default StorageType.NATIVE;
