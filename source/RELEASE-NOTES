@@ -2,6 +2,35 @@ Siena release notes:
 We will try to keep tracks of modifications from now.
 The github issues are not traced because  
 
+v1.0.0-b5
+----------------------------------------------------------
+Third draft of v1.0.0 with bug fixes and code optimization
+
+== BUG FIXES ==
+
+* Json bug correction: Date field without format was not managed at all
+
+== ENHANCEMENTS ==
+
+* added PersistenceManager.beginTransaction() without isolationLevel
+because default parameter the right one.
+
+* created transaction.textile doc
+
+* minor modification to close all resultsets+statements in doFetchXXX
+
+* modified BigDecimal impl by allowing
+@DecimalPrecision(storateType=NATIVE/DOUBLE/STRING, size=23, scale=4)
+
+* added support for BigDecimal (stored as Decimal in SQL
+and String in GAE) + @DecimalPrecision annotation for SQL since it is
+required to create the right table mapping.
+
+* Embedding bug correction: for Query and @EmbedIgnore, it returned
+exactly the opposite boolean in mustIgnore.
+
+* @EmbedIgnore correction: removed the unneeded value()
+
 v1.0.0-b4
 ----------------------------------------------------------
 Third draft of v1.0.0 with bug fixes and code optimization
