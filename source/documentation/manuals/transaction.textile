@@ -107,7 +107,7 @@ h3. <a name="commit">Function commitTransaction</a>
 
 Simple and direct, it commits the transaction you initiated with <a href="#begin">beginTransaction</a>.
 
-Be aware, if you don't call commitTransaction, nothing will be committed without your consent. If the connection is closed before commit, in SQL, it will even generate an ILLEGAL_STATE exception.
+p(note). **Be aware**, if you don't call commitTransaction, nothing will be committed without your consent. If the connection is closed before commit, in SQL, it will even generate an ILLEGAL_STATE exception.
 
 ==<br/>==
 
