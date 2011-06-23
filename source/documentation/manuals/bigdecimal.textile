@@ -2,7 +2,7 @@ h1. <a name="title">Using __java.math.BigDecimal__ in Siena</a>
 
 h2. <a name="codesample">Code sample</a>
 
-Here is a superclass:
+Here is a class with a BigDecimal:
 
 bc.. @Table("big_decimal")
 public class BigDecimalModel {

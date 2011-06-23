@@ -123,6 +123,20 @@ public class GaePersistenceManagerAsync extends AbstractPersistenceManagerAsync 
 		
 		return new SienaFutureContainer<Void>(wrapped);
 	}
+	
+	public SienaFuture<Void> beginTransaction() {
+		Future<Transaction> future = ds.beginTransaction();
+		
+		Future<Void> wrapped = new SienaFutureWrapper<Transaction, Void>(future) {
+            @Override
+            protected Void wrap(Transaction transaction) throws Exception
+            {
+            	return null;
+            }
+		};
+		
+		return new SienaFutureContainer<Void>(wrapped);
+	}
 
 	public SienaFuture<Void> closeConnection() {
 		// does nothing

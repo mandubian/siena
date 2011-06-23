@@ -1,6 +1,7 @@
 package siena.base.test;
 
 import java.lang.reflect.Modifier;
+import java.sql.Connection;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -10,6 +11,7 @@ import junit.framework.TestCase;
 import siena.PersistenceManager;
 import siena.PersistenceManagerFactory;
 import siena.Query;
+import siena.SienaException;
 import siena.base.test.model.DiscoveryModel;
 import siena.base.test.model.PersonLongAutoIDAbstract;
 import siena.base.test.model.PersonLongAutoIDExtended;
@@ -20,6 +22,10 @@ import siena.base.test.model.PersonLongAutoIDExtendedFilter;
 import siena.base.test.model.PersonLongAutoIDModel;
 import siena.base.test.model.SampleModel;
 import siena.base.test.model.SampleModel2;
+import siena.base.test.model.TransactionAccountFrom;
+import siena.base.test.model.TransactionAccountFromModel;
+import siena.base.test.model.TransactionAccountTo;
+import siena.base.test.model.TransactionAccountToModel;
 import siena.core.async.QueryAsync;
 import siena.core.async.SienaFuture;
 import siena.core.batch.Batch;
@@ -48,6 +54,8 @@ public abstract class BaseModelTest extends TestCase {
 		classes.add(PersonLongAutoIDAbstract.class);
 		classes.add(PersonLongAutoIDExtendedAbstract.class);
 		classes.add(PersonLongAutoIDExtendedFilter.class);
+		classes.add(TransactionAccountFromModel.class);
+		classes.add(TransactionAccountToModel.class);
 
 		pm = createPersistenceManager(classes);
 		PersistenceManagerFactory.install(pm, classes);
@@ -856,4 +864,55 @@ public abstract class BaseModelTest extends TestCase {
 		assertTrue(bob1.n == 0);
 	}
 
+	public void testTransactionSave() {
+		TransactionAccountFromModel accFrom = new TransactionAccountFromModel(1000L);
+		TransactionAccountToModel accTo = new TransactionAccountToModel(1000L);
+		
+		accFrom.insert();
+		accTo.insert();
+	
+		try {
+			accFrom.getPersistenceManager().beginTransaction();
+			accFrom.amount-=100L;
+			accFrom.save();
+			accTo.amount+=100L;
+			accTo.save();
+			accFrom.getPersistenceManager().commitTransaction();
+		}catch(SienaException e){
+			accFrom.getPersistenceManager().rollbackTransaction();
+			fail();
+		}finally{
+			accFrom.getPersistenceManager().closeConnection();
+		}
+		
+		TransactionAccountFrom accFromAfter = pm.getByKey(TransactionAccountFrom.class, accFrom.id);
+		assertTrue(900L == accFromAfter.amount);
+		TransactionAccountTo accToAfter = pm.getByKey(TransactionAccountTo.class, accTo.id);
+		assertTrue(1100L == accToAfter.amount);
+	}
+	
+	public void testTransactionSaveFailure() {
+		TransactionAccountFromModel accFrom = new TransactionAccountFromModel(1000L);
+		TransactionAccountToModel accTo = new TransactionAccountToModel(1000L);
+		accFrom.insert();
+		accTo.insert();
+	
+		try {
+			accFrom.getPersistenceManager().beginTransaction();
+			accFrom.amount-=100L;
+			accFrom.save();
+			accTo.amount+=100L;
+			accTo.save();
+			throw new SienaException("test");
+		}catch(SienaException e){
+			accFrom.getPersistenceManager().rollbackTransaction();
+		}finally{
+			accFrom.getPersistenceManager().closeConnection();
+		}
+		
+		TransactionAccountFrom accFromAfter = pm.getByKey(TransactionAccountFrom.class, accFrom.id);
+		assertTrue(1000L == accFromAfter.amount);
+		TransactionAccountTo accToAfter = pm.getByKey(TransactionAccountTo.class, accTo.id);
+		assertTrue(1000L == accToAfter.amount);
+	}
 }

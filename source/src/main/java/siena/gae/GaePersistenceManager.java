@@ -41,6 +41,7 @@ import com.google.appengine.api.datastore.Cursor;
 import com.google.appengine.api.datastore.DatastoreService;
 import com.google.appengine.api.datastore.DatastoreServiceFactory;
 import com.google.appengine.api.datastore.Entity;
+import com.google.appengine.api.datastore.EntityNotFoundException;
 import com.google.appengine.api.datastore.FetchOptions;
 import com.google.appengine.api.datastore.Key;
 import com.google.appengine.api.datastore.PreparedQuery;
@@ -76,6 +77,10 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 	public void beginTransaction(int isolationLevel) {
 		ds.beginTransaction();
 	}
+	
+	public void beginTransaction() {
+		ds.beginTransaction();
+	}
 
 	public void closeConnection() {
 		// does nothing
@@ -100,7 +105,8 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 		try {
 			Entity entity = ds.get(key);
 			GaeMappingUtils.fillModel(obj, entity);
-		} catch (Exception e) {
+		} 
+		catch (Exception e) {
 			throw new SienaException(e);
 		}
 	}
@@ -113,7 +119,11 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 			GaeMappingUtils.fillModelAndKey(obj, entity);
 			
 			return obj;
-		} catch (Exception e) {
+		} 
+		catch(EntityNotFoundException e){
+			return null;
+		}
+		catch (Exception e) {
 			throw new SienaException(e);
 		}
 	}

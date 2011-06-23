@@ -9,7 +9,9 @@ import org.apache.commons.dbcp.BasicDataSource;
 import org.apache.ddlutils.Platform;
 import org.apache.ddlutils.PlatformFactory;
 import org.apache.ddlutils.model.Database;
+import org.apache.ddlutils.platform.CreationParameters;
 
+import siena.ClassInfo;
 import siena.PersistenceManager;
 import siena.Query;
 import siena.SienaRestrictedApiException;
@@ -58,7 +60,13 @@ public class JdbcTest extends BaseTest {
 			System.out.println(platform.getAlterTablesSql(connection, database));
 			
 			// this will perform the database changes
-			platform.alterTables(connection, database, true);
+			CreationParameters cp = new CreationParameters();
+			// to search, it requires MyISAM
+			cp.addParameter(database.findTable("discoveries_search"), "ENGINE", "MyISAM");
+			cp.addParameter(database.findTable("discoveries_search2"), "ENGINE", "MyISAM");
+
+			platform.alterTables(connection, database, cp, true);
+			
 	
 			connection.close();
 			
@@ -1630,15 +1638,99 @@ public class JdbcTest extends BaseTest {
 	}
 
 	@Override
-	public void testTransaction() {
+	public void testTransactionUpdate() {
 		// TODO Auto-generated method stub
-		super.testTransaction();
+		super.testTransactionUpdate();
 	}
 
 	@Override
-	public void testTransactionFailure() {
+	public void testTransactionUpdateFailure() {
 		// TODO Auto-generated method stub
-		super.testTransactionFailure();
+		super.testTransactionUpdateFailure();
+	}
+
+	@Override
+	public void testTransactionInsert() {
+		// TODO Auto-generated method stub
+		super.testTransactionInsert();
+	}
+
+	@Override
+	public void testTransactionInsertFailure() {
+		// TODO Auto-generated method stub
+		super.testTransactionInsertFailure();
+	}
+
+	@Override
+	public void testTransactionSave() {
+		// TODO Auto-generated method stub
+		super.testTransactionSave();
+	}
+
+	@Override
+	public void testTransactionSaveFailure() {
+		// TODO Auto-generated method stub
+		super.testTransactionSaveFailure();
+	}
+
+	@Override
+	public void testTransactionDelete() {
+		// TODO Auto-generated method stub
+		super.testTransactionDelete();
+	}
+
+	@Override
+	public void testTransactionDeleteFailure() {
+		// TODO Auto-generated method stub
+		super.testTransactionDeleteFailure();
+	}
+
+	@Override
+	public void testTransactionInsertBatch() {
+		// TODO Auto-generated method stub
+		super.testTransactionInsertBatch();
+	}
+
+	@Override
+	public void testTransactionInsertBatchFailure() {
+		// TODO Auto-generated method stub
+		super.testTransactionInsertBatchFailure();
+	}
+
+	@Override
+	public void testTransactionDeleteBatch() {
+		// TODO Auto-generated method stub
+		super.testTransactionDeleteBatch();
+	}
+
+	@Override
+	public void testTransactionDeleteBatchFailure() {
+		// TODO Auto-generated method stub
+		super.testTransactionDeleteBatchFailure();
+	}
+
+	@Override
+	public void testTransactionUpdateBatch() {
+		// TODO Auto-generated method stub
+		super.testTransactionUpdateBatch();
+	}
+
+	@Override
+	public void testTransactionUpdateBatchFailure() {
+		// TODO Auto-generated method stub
+		super.testTransactionUpdateBatchFailure();
+	}
+
+	@Override
+	public void testTransactionSaveBatch() {
+		// TODO Auto-generated method stub
+		super.testTransactionSaveBatch();
+	}
+
+	@Override
+	public void testTransactionSaveBatchFailure() {
+		// TODO Auto-generated method stub
+		super.testTransactionSaveBatchFailure();
 	}
 
 }

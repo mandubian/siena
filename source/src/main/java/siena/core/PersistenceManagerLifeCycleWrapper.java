@@ -234,6 +234,11 @@ public class PersistenceManagerLifeCycleWrapper implements PersistenceManager{
 	}
 
 	@Override
+	public void beginTransaction() {
+		pm.beginTransaction();
+	}
+	
+	@Override
 	public void commitTransaction() {
 		pm.commitTransaction();
 	}

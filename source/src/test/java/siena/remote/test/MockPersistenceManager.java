@@ -46,6 +46,9 @@ public class MockPersistenceManager implements PersistenceManager {
 
 	public void beginTransaction(int isolationLevel) {
 	}
+	
+	public void beginTransaction() {
+	}
 
 	public void closeConnection() {
 	}

@@ -247,6 +247,10 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 		connectionManager.beginTransaction(isolationLevel);
 	}
 
+	public void beginTransaction() {
+		connectionManager.beginTransaction();
+	}
+	
 	public void commitTransaction() {
 		connectionManager.commitTransaction();
 	}

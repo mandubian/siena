@@ -3,6 +3,11 @@ package siena.base.test;
 import java.util.List;
 
 import siena.PersistenceManager;
+import siena.SienaException;
+import siena.base.test.model.TransactionAccountFrom;
+import siena.base.test.model.TransactionAccountFromModel;
+import siena.base.test.model.TransactionAccountTo;
+import siena.base.test.model.TransactionAccountToModel;
 import siena.gae.GaePersistenceManager;
 
 import com.google.appengine.tools.development.testing.LocalDatastoreServiceTestConfig;
@@ -219,6 +224,48 @@ public class GaeModelTest extends BaseModelTest{
 	public void testFilterInheritance() {
 		// TODO Auto-generated method stub
 		super.testFilterInheritance();
+	}
+
+	// SPECIFIC TESTS FOR GAE (transaction on one entity in a given group)
+	public void testTransactionSave() {
+		TransactionAccountFromModel accFrom = new TransactionAccountFromModel(1000L);
+		
+		accFrom.insert();
+	
+		try {
+			accFrom.getPersistenceManager().beginTransaction();
+			accFrom.amount-=100L;
+			accFrom.save();
+			accFrom.getPersistenceManager().commitTransaction();
+		}catch(SienaException e){
+			accFrom.getPersistenceManager().rollbackTransaction();
+			fail();
+		}finally{
+			accFrom.getPersistenceManager().closeConnection();
+		}
+		
+		TransactionAccountFrom accFromAfter = pm.getByKey(TransactionAccountFrom.class, accFrom.id);
+		assertTrue(900L == accFromAfter.amount);
+
+	}
+	
+	public void testTransactionSaveFailure() {
+		TransactionAccountFromModel accFrom = new TransactionAccountFromModel(1000L);
+		accFrom.insert();
+	
+		try {
+			accFrom.getPersistenceManager().beginTransaction();
+			accFrom.amount-=100L;
+			accFrom.save();
+			throw new SienaException("test");
+		}catch(SienaException e){
+			accFrom.getPersistenceManager().rollbackTransaction();
+		}finally{
+			accFrom.getPersistenceManager().closeConnection();
+		}
+		
+		TransactionAccountFrom accFromAfter = pm.getByKey(TransactionAccountFrom.class, accFrom.id);
+		assertTrue(1000L == accFromAfter.amount);
 	}
 
 }

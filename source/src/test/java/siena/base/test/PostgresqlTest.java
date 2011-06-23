@@ -1646,4 +1646,100 @@ public class PostgresqlTest extends BaseTest {
 		super.testBigDecimalDouble();
 	}
 
+	@Override
+	public void testTransactionUpdate() {
+		// TODO Auto-generated method stub
+		super.testTransactionUpdate();
+	}
+
+	@Override
+	public void testTransactionUpdateFailure() {
+		// TODO Auto-generated method stub
+		super.testTransactionUpdateFailure();
+	}
+
+	@Override
+	public void testTransactionInsert() {
+		// TODO Auto-generated method stub
+		super.testTransactionInsert();
+	}
+
+	@Override
+	public void testTransactionInsertFailure() {
+		// TODO Auto-generated method stub
+		super.testTransactionInsertFailure();
+	}
+
+	@Override
+	public void testTransactionSave() {
+		// TODO Auto-generated method stub
+		super.testTransactionSave();
+	}
+
+	@Override
+	public void testTransactionSaveFailure() {
+		// TODO Auto-generated method stub
+		super.testTransactionSaveFailure();
+	}
+
+	@Override
+	public void testTransactionDelete() {
+		// TODO Auto-generated method stub
+		super.testTransactionDelete();
+	}
+
+	@Override
+	public void testTransactionDeleteFailure() {
+		// TODO Auto-generated method stub
+		super.testTransactionDeleteFailure();
+	}
+
+	@Override
+	public void testTransactionInsertBatch() {
+		// TODO Auto-generated method stub
+		super.testTransactionInsertBatch();
+	}
+
+	@Override
+	public void testTransactionInsertBatchFailure() {
+		// TODO Auto-generated method stub
+		super.testTransactionInsertBatchFailure();
+	}
+
+	@Override
+	public void testTransactionDeleteBatch() {
+		// TODO Auto-generated method stub
+		super.testTransactionDeleteBatch();
+	}
+
+	@Override
+	public void testTransactionDeleteBatchFailure() {
+		// TODO Auto-generated method stub
+		super.testTransactionDeleteBatchFailure();
+	}
+
+	@Override
+	public void testTransactionUpdateBatch() {
+		// TODO Auto-generated method stub
+		super.testTransactionUpdateBatch();
+	}
+
+	@Override
+	public void testTransactionUpdateBatchFailure() {
+		// TODO Auto-generated method stub
+		super.testTransactionUpdateBatchFailure();
+	}
+
+	@Override
+	public void testTransactionSaveBatch() {
+		// TODO Auto-generated method stub
+		super.testTransactionSaveBatch();
+	}
+
+	@Override
+	public void testTransactionSaveBatchFailure() {
+		// TODO Auto-generated method stub
+		super.testTransactionSaveBatchFailure();
+	}
+
 }

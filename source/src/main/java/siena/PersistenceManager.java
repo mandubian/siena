@@ -175,6 +175,7 @@ public interface PersistenceManager {
 
 	
 	void beginTransaction(int isolationLevel);
+	void beginTransaction();
 
 	void commitTransaction();
 

@@ -136,6 +136,9 @@ public class RemotePersistenceManager extends AbstractPersistenceManager {
 	public void beginTransaction(int isolationLevel) {
 	}
 
+	public void beginTransaction() {
+	}
+	
 	public void closeConnection() {
 	}
 

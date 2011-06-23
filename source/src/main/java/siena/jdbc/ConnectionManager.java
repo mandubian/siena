@@ -25,6 +25,7 @@ public interface ConnectionManager {
 	public Connection getConnection();
 
 	public void beginTransaction(int isolationLevel);
+	public void beginTransaction();
 
 	public void commitTransaction();
 

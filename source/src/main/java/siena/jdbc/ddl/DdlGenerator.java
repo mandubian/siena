@@ -61,6 +61,7 @@ public class DdlGenerator {
 		Table table = new Table();
 		ClassInfo info = ClassInfo.getClassInfo(clazz);
 		table.setName(info.tableName);
+		table.setType("MyISAM");
 		database.addTable(table);
 		
 		Map<String, UniqueIndex> uniques = new HashMap<String, UniqueIndex>();

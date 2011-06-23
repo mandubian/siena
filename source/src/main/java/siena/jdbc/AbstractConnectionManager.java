@@ -40,6 +40,17 @@ public abstract class AbstractConnectionManager implements ConnectionManager {
 			throw new SienaException(e);
 		}
 	}
+	
+	public void beginTransaction() {
+		try {
+			Connection c = getConnection();
+			c.setAutoCommit(false);
+		} catch (SQLException e) {
+			
+			logger.severe(e, e);
+			throw new SienaException(e);
+		}
+	}
 
 	public void commitTransaction() {
 		try {

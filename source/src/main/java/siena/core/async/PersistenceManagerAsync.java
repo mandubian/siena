@@ -209,6 +209,7 @@ public interface PersistenceManagerAsync {
 	 * 
 	 */
 	SienaFuture<Void> beginTransaction(int isolationLevel);
+	SienaFuture<Void> beginTransaction();
 
 	/**
 	 * commits a transaction

@@ -5665,7 +5665,7 @@ public abstract class BaseTest extends TestCase {
 		assertEquals(bigdec, bigdec2);
 	}
 	
-	public void testTransaction() {
+	public void testTransactionUpdate() {
 		TransactionAccountFrom accFrom = new TransactionAccountFrom(1000L);
 		TransactionAccountTo accTo = new TransactionAccountTo(1000L);
 		pm.insert(accFrom, accTo);
@@ -5690,7 +5690,7 @@ public abstract class BaseTest extends TestCase {
 		assertTrue(1100L == accToAfter.amount);
 	}
 	
-	public void testTransactionFailure() {
+	public void testTransactionUpdateFailure() {
 		TransactionAccountFrom accFrom = new TransactionAccountFrom(1000L);
 		TransactionAccountTo accTo = new TransactionAccountTo(1000L);
 		pm.insert(accFrom, accTo);
@@ -5701,6 +5701,328 @@ public abstract class BaseTest extends TestCase {
 			pm.update(accFrom);
 			accTo.amount+=100L;
 			pm.update(accTo);
+			throw new SienaException("test");
+		}catch(SienaException e){
+			pm.rollbackTransaction();
+		}finally{
+			pm.closeConnection();
+		}
+		
+		TransactionAccountFrom accFromAfter = pm.getByKey(TransactionAccountFrom.class, accFrom.id);
+		assertTrue(1000L == accFromAfter.amount);
+		TransactionAccountTo accToAfter = pm.getByKey(TransactionAccountTo.class, accTo.id);
+		assertTrue(1000L == accToAfter.amount);
+	}
+	
+	public void testTransactionInsert() {
+		TransactionAccountFrom accFrom = new TransactionAccountFrom(1000L);
+		TransactionAccountTo accTo = new TransactionAccountTo(1000L);
+	
+		try {
+			pm.beginTransaction(Connection.TRANSACTION_READ_COMMITTED);
+			accFrom.amount=1000L;
+			accTo.amount=100L;
+			pm.insert(accFrom);
+			pm.insert(accTo);
+			pm.commitTransaction();
+		}catch(SienaException e){
+			pm.rollbackTransaction();
+			fail();
+		}finally{
+			pm.closeConnection();
+		}
+		
+		TransactionAccountFrom accFromAfter = pm.getByKey(TransactionAccountFrom.class, accFrom.id);
+		assertTrue(1000L == accFromAfter.amount);
+		TransactionAccountTo accToAfter = pm.getByKey(TransactionAccountTo.class, accTo.id);
+		assertTrue(100L == accToAfter.amount);
+	}
+	
+	public void testTransactionInsertFailure() {
+		TransactionAccountFrom accFrom = new TransactionAccountFrom(1000L);
+		TransactionAccountTo accTo = new TransactionAccountTo(1000L);
+	
+		try {
+			pm.beginTransaction(Connection.TRANSACTION_READ_COMMITTED);
+			accFrom.amount=1000L;
+			accTo.amount=100L;
+			pm.insert(accFrom, accTo);
+			throw new SienaException("test");
+		}catch(SienaException e){
+			pm.rollbackTransaction();
+		}finally{
+			pm.closeConnection();
+		}
+		
+		TransactionAccountFrom accFromAfter = pm.getByKey(TransactionAccountFrom.class, accFrom.id);
+		assertNull(accFromAfter);
+		TransactionAccountTo accToAfter = pm.getByKey(TransactionAccountTo.class, accTo.id);
+		assertNull(accToAfter);
+	}
+	
+	public void testTransactionSave() {
+		TransactionAccountFrom accFrom = new TransactionAccountFrom(1000L);
+		TransactionAccountTo accTo = new TransactionAccountTo(1000L);
+		pm.insert(accFrom, accTo);
+	
+		try {
+			pm.beginTransaction(Connection.TRANSACTION_READ_COMMITTED);
+			accFrom.amount-=100L;
+			pm.save(accFrom);
+			accTo.amount+=100L;
+			pm.save(accTo);
+			pm.commitTransaction();
+		}catch(SienaException e){
+			pm.rollbackTransaction();
+			fail();
+		}finally{
+			pm.closeConnection();
+		}
+		
+		TransactionAccountFrom accFromAfter = pm.getByKey(TransactionAccountFrom.class, accFrom.id);
+		assertTrue(900L == accFromAfter.amount);
+		TransactionAccountTo accToAfter = pm.getByKey(TransactionAccountTo.class, accTo.id);
+		assertTrue(1100L == accToAfter.amount);
+	}
+	
+	public void testTransactionSaveFailure() {
+		TransactionAccountFrom accFrom = new TransactionAccountFrom(1000L);
+		TransactionAccountTo accTo = new TransactionAccountTo(1000L);
+		pm.insert(accFrom, accTo);
+	
+		try {
+			pm.beginTransaction(Connection.TRANSACTION_READ_COMMITTED);
+			accFrom.amount-=100L;
+			pm.save(accFrom);
+			accTo.amount+=100L;
+			pm.save(accTo);
+			throw new SienaException("test");
+		}catch(SienaException e){
+			pm.rollbackTransaction();
+		}finally{
+			pm.closeConnection();
+		}
+		
+		TransactionAccountFrom accFromAfter = pm.getByKey(TransactionAccountFrom.class, accFrom.id);
+		assertTrue(1000L == accFromAfter.amount);
+		TransactionAccountTo accToAfter = pm.getByKey(TransactionAccountTo.class, accTo.id);
+		assertTrue(1000L == accToAfter.amount);
+	}
+	
+	public void testTransactionDelete() {
+		TransactionAccountFrom accFrom = new TransactionAccountFrom(1000L);
+		TransactionAccountTo accTo = new TransactionAccountTo(1000L);
+		pm.insert(accFrom, accTo);
+	
+		try {
+			pm.beginTransaction(Connection.TRANSACTION_READ_COMMITTED);
+			pm.delete(accFrom);
+			pm.delete(accTo);
+			pm.commitTransaction();
+		}catch(SienaException e){
+			pm.rollbackTransaction();
+			fail();
+		}finally{
+			pm.closeConnection();
+		}
+		
+		TransactionAccountFrom accFromAfter = pm.getByKey(TransactionAccountFrom.class, accFrom.id);
+		assertNull(accFromAfter);
+		TransactionAccountTo accToAfter = pm.getByKey(TransactionAccountTo.class, accTo.id);
+		assertNull(accToAfter);
+	}
+	
+	public void testTransactionDeleteFailure() {
+		TransactionAccountFrom accFrom = new TransactionAccountFrom(1000L);
+		TransactionAccountTo accTo = new TransactionAccountTo(100L);
+		pm.insert(accFrom, accTo);
+	
+		try {
+			pm.beginTransaction(Connection.TRANSACTION_READ_COMMITTED);
+			pm.delete(accFrom);
+			pm.delete(accTo);
+			throw new SienaException("test");
+		}catch(SienaException e){
+			pm.rollbackTransaction();
+		}finally{
+			pm.closeConnection();
+		}
+		
+		TransactionAccountFrom accFromAfter = pm.getByKey(TransactionAccountFrom.class, accFrom.id);
+		assertTrue(1000L == accFromAfter.amount);
+		TransactionAccountTo accToAfter = pm.getByKey(TransactionAccountTo.class, accTo.id);
+		assertTrue(100L == accToAfter.amount);
+	}
+	
+	public void testTransactionInsertBatch() {
+		TransactionAccountFrom accFrom = new TransactionAccountFrom(1000L);
+		TransactionAccountTo accTo = new TransactionAccountTo(1000L);
+	
+		try {
+			pm.beginTransaction(Connection.TRANSACTION_READ_COMMITTED);
+			accFrom.amount=1000L;
+			accTo.amount=100L;
+			pm.insert(accFrom, accTo);
+			pm.commitTransaction();
+		}catch(SienaException e){
+			pm.rollbackTransaction();
+			fail();
+		}finally{
+			pm.closeConnection();
+		}
+		
+		TransactionAccountFrom accFromAfter = pm.getByKey(TransactionAccountFrom.class, accFrom.id);
+		assertTrue(1000L == accFromAfter.amount);
+		TransactionAccountTo accToAfter = pm.getByKey(TransactionAccountTo.class, accTo.id);
+		assertTrue(100L == accToAfter.amount);
+	}
+	
+	public void testTransactionInsertBatchFailure() {
+		TransactionAccountFrom accFrom = new TransactionAccountFrom(1000L);
+		TransactionAccountTo accTo = new TransactionAccountTo(1000L);
+	
+		try {
+			pm.beginTransaction(Connection.TRANSACTION_READ_COMMITTED);
+			accFrom.amount=1000L;
+			accTo.amount=100L;
+			pm.insert(accFrom, accTo);
+			throw new SienaException("test");
+		}catch(SienaException e){
+			pm.rollbackTransaction();
+		}finally{
+			pm.closeConnection();
+		}
+		
+		TransactionAccountFrom accFromAfter = pm.getByKey(TransactionAccountFrom.class, accFrom.id);
+		assertNull(accFromAfter);
+		TransactionAccountTo accToAfter = pm.getByKey(TransactionAccountTo.class, accTo.id);
+		assertNull(accToAfter);
+	}
+	
+	public void testTransactionDeleteBatch() {
+		TransactionAccountFrom accFrom = new TransactionAccountFrom(1000L);
+		TransactionAccountTo accTo = new TransactionAccountTo(1000L);
+		pm.insert(accFrom, accTo);
+
+		try {
+			pm.beginTransaction(Connection.TRANSACTION_READ_COMMITTED);
+			pm.delete(accFrom, accTo);
+			pm.commitTransaction();
+		}catch(SienaException e){
+			pm.rollbackTransaction();
+			fail();
+		}finally{
+			pm.closeConnection();
+		}
+		
+		TransactionAccountFrom accFromAfter = pm.getByKey(TransactionAccountFrom.class, accFrom.id);
+		assertNull(accFromAfter);
+		TransactionAccountTo accToAfter = pm.getByKey(TransactionAccountTo.class, accTo.id);
+		assertNull(accToAfter);
+	}
+	
+	public void testTransactionDeleteBatchFailure() {
+		TransactionAccountFrom accFrom = new TransactionAccountFrom(1000L);
+		TransactionAccountTo accTo = new TransactionAccountTo(100L);
+		pm.insert(accFrom, accTo);
+	
+		try {
+			pm.beginTransaction(Connection.TRANSACTION_READ_COMMITTED);
+			pm.delete(accFrom, accTo);
+			throw new SienaException("test");
+		}catch(SienaException e){
+			pm.rollbackTransaction();
+		}finally{
+			pm.closeConnection();
+		}
+		
+		TransactionAccountFrom accFromAfter = pm.getByKey(TransactionAccountFrom.class, accFrom.id);
+		assertTrue(1000L == accFromAfter.amount);
+		TransactionAccountTo accToAfter = pm.getByKey(TransactionAccountTo.class, accTo.id);
+		assertTrue(100L == accToAfter.amount);
+	}
+	
+	public void testTransactionUpdateBatch() {
+		TransactionAccountFrom accFrom = new TransactionAccountFrom(1000L);
+		TransactionAccountTo accTo = new TransactionAccountTo(1000L);
+		pm.insert(accFrom, accTo);
+	
+		try {
+			pm.beginTransaction(Connection.TRANSACTION_READ_COMMITTED);
+			accFrom.amount-=100L;
+			accTo.amount+=100L;
+			pm.update(accFrom, accTo);
+			pm.commitTransaction();
+		}catch(SienaException e){
+			pm.rollbackTransaction();
+			fail();
+		}finally{
+			pm.closeConnection();
+		}
+		
+		TransactionAccountFrom accFromAfter = pm.getByKey(TransactionAccountFrom.class, accFrom.id);
+		assertTrue(900L == accFromAfter.amount);
+		TransactionAccountTo accToAfter = pm.getByKey(TransactionAccountTo.class, accTo.id);
+		assertTrue(1100L == accToAfter.amount);
+	}
+	
+	public void testTransactionUpdateBatchFailure() {
+		TransactionAccountFrom accFrom = new TransactionAccountFrom(1000L);
+		TransactionAccountTo accTo = new TransactionAccountTo(1000L);
+		pm.insert(accFrom, accTo);
+	
+		try {
+			pm.beginTransaction(Connection.TRANSACTION_READ_COMMITTED);
+			accFrom.amount-=100L;
+			accTo.amount+=100L;
+			pm.update(accFrom, accTo);
+			throw new SienaException("test");
+		}catch(SienaException e){
+			pm.rollbackTransaction();
+		}finally{
+			pm.closeConnection();
+		}
+		
+		TransactionAccountFrom accFromAfter = pm.getByKey(TransactionAccountFrom.class, accFrom.id);
+		assertTrue(1000L == accFromAfter.amount);
+		TransactionAccountTo accToAfter = pm.getByKey(TransactionAccountTo.class, accTo.id);
+		assertTrue(1000L == accToAfter.amount);
+	}
+	
+	public void testTransactionSaveBatch() {
+		TransactionAccountFrom accFrom = new TransactionAccountFrom(1000L);
+		TransactionAccountTo accTo = new TransactionAccountTo(1000L);
+		pm.insert(accFrom, accTo);
+	
+		try {
+			pm.beginTransaction(Connection.TRANSACTION_READ_COMMITTED);
+			accFrom.amount-=100L;
+			accTo.amount+=100L;
+			pm.save(accFrom, accTo);
+			pm.commitTransaction();
+		}catch(SienaException e){
+			pm.rollbackTransaction();
+			fail();
+		}finally{
+			pm.closeConnection();
+		}
+		
+		TransactionAccountFrom accFromAfter = pm.getByKey(TransactionAccountFrom.class, accFrom.id);
+		assertTrue(900L == accFromAfter.amount);
+		TransactionAccountTo accToAfter = pm.getByKey(TransactionAccountTo.class, accTo.id);
+		assertTrue(1100L == accToAfter.amount);
+	}
+	
+	public void testTransactionSaveBatchFailure() {
+		TransactionAccountFrom accFrom = new TransactionAccountFrom(1000L);
+		TransactionAccountTo accTo = new TransactionAccountTo(1000L);
+		pm.insert(accFrom, accTo);
+	
+		try {
+			pm.beginTransaction(Connection.TRANSACTION_READ_COMMITTED);
+			accFrom.amount-=100L;
+			accTo.amount+=100L;
+			pm.save(accFrom, accTo);
 			throw new SienaException("test");
 		}catch(SienaException e){
 			pm.rollbackTransaction();

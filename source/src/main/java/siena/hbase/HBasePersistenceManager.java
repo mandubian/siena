@@ -45,6 +45,11 @@ public class HBasePersistenceManager implements PersistenceManager {
 		// TODO Auto-generated method stub
 		
 	}
+	
+	public void beginTransaction() {
+		// TODO Auto-generated method stub
+		
+	}
 
 	public void closeConnection() {
 		// TODO Auto-generated method stub
