@@ -17,6 +17,8 @@ because default parameter the right one.
 
 * created transaction.textile doc
 
+* tested transaction management for SQL + GAE
+
 * minor modification to close all resultsets+statements in doFetchXXX
 
 * modified BigDecimal impl by allowing
