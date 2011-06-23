@@ -11,6 +11,7 @@ Third draft of v1.0.0 with bug fixes and code optimization
 * Json bug correction: Date field without format was not managed at all
 
 == ENHANCEMENTS ==
+* added Model.getByKey(Class<R> clazz, Object key) because it's really practical :)
 
 * added PersistenceManager.beginTransaction() without isolationLevel
 because default parameter the right one.

@@ -90,6 +90,10 @@ public abstract class Model {
 		return PersistenceManagerFactory.getPersistenceManager(clazz).createBatch(clazz);
 	}
 
+	public static <R> R getByKey(Class<R> clazz, Object key) {
+		return PersistenceManagerFactory.getPersistenceManager(clazz).getByKey(clazz, key);
+	}
+	
 	public ModelAsync async() {
 		return new ModelAsync(this);
 	}
