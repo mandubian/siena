@@ -48,6 +48,7 @@ public class ClassInfo {
 	public List<Field> generatedKeys = new ArrayList<Field>();
 	public List<Field> allFields = new ArrayList<Field>();
 	public List<Field> joinFields = new ArrayList<Field>();
+	public List<Field> queryAndAllFields = new ArrayList<Field>();
 
 	public Map<LifeCyclePhase, List<Method>> lifecycleMethods = new HashMap<LifeCyclePhase, List<Method>>();
 	
@@ -77,10 +78,14 @@ public class ClassInfo {
 			for (Field field : c.getDeclaredFields()) {
 				if(removedFields.contains(field.getName())) continue;
 				Class<?> type = field.getType();
-				if(type == Class.class || type == Query.class ||
-						(field.getModifiers() & Modifier.TRANSIENT) == Modifier.TRANSIENT ||
+				if((field.getModifiers() & Modifier.TRANSIENT) == Modifier.TRANSIENT ||
 						(field.getModifiers() & Modifier.STATIC) == Modifier.STATIC ||
 						field.isSynthetic()){
+					continue;
+				}
+				
+				if(type == Class.class || type == Query.class){
+					queryAndAllFields.add(field);
 					continue;
 				}
 						
@@ -107,6 +112,7 @@ public class ClassInfo {
 					else joinFields.add(field);
 				}
 				allFields.add(field);
+				queryAndAllFields.add(field);
 			}
 			
 			for(Method m : c.getDeclaredMethods()){
