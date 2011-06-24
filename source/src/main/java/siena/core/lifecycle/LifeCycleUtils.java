@@ -47,6 +47,11 @@ public class LifeCycleUtils {
 			for(Method m: methods){
 				// injects lifeCyclePhase if it is the FIRST param
 				Class<?> params[] = m.getParameterTypes();
+				boolean wasAccessible = true;
+				if(!m.isAccessible()){
+					wasAccessible = false;
+					m.setAccessible(true);
+				}
 				if(params != null && params.length != 0){
 					if(LifeCyclePhase.class.isAssignableFrom(params[0])){
 						m.invoke(obj, lcp);
@@ -54,6 +59,9 @@ public class LifeCycleUtils {
 				}
 				else {
 					m.invoke(obj);
+				}
+				if(!wasAccessible){
+					m.setAccessible(false);
 				}
 			} 			
 		}catch (IllegalArgumentException e) {
