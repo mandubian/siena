@@ -39,7 +39,12 @@ public class PersistenceManagerLifeCycleWrapper implements PersistenceManager{
 	public <T> Batch<T> createBatch(Class<T> clazz) {
 		return pm.createBatch(clazz);
 	}
-
+	
+	@Override
+	public <T> ListQuery<T> createListQuery(Class<T> clazz) {
+			return pm.createListQuery(clazz);
+	}
+	
 	@Override
 	public void get(Object obj) {
 		ClassInfo ci = ClassInfo.getClassInfo(obj.getClass());

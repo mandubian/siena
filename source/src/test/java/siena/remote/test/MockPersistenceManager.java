@@ -30,6 +30,7 @@ import siena.QueryFilter;
 import siena.QueryFilterSearch;
 import siena.QueryJoin;
 import siena.QueryOrder;
+import siena.core.ListQuery;
 import siena.core.async.PersistenceManagerAsync;
 import siena.core.async.QueryAsync;
 import siena.core.batch.Batch;
@@ -388,6 +389,12 @@ public class MockPersistenceManager implements PersistenceManager {
 			return null;
 		}
 
+		@Override
+		public Query<T> copy() {
+			// TODO Auto-generated method stub
+			return null;
+		}
+
 
 
 
@@ -639,5 +646,12 @@ public class MockPersistenceManager implements PersistenceManager {
 		// TODO Auto-generated method stub
 		return 0;
 	}
+
+	@Override
+	public <T> ListQuery<T> createListQuery(Class<T> clazz) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
 
 }

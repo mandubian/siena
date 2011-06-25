@@ -1,8 +1,8 @@
 package siena.base.test;
 
 import java.lang.reflect.Modifier;
-import java.sql.Connection;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -12,6 +12,8 @@ import siena.PersistenceManager;
 import siena.PersistenceManagerFactory;
 import siena.Query;
 import siena.SienaException;
+import siena.base.test.model.AggregateChildModel;
+import siena.base.test.model.AggregateParentModel;
 import siena.base.test.model.DiscoveryModel;
 import siena.base.test.model.PersonLongAutoIDAbstract;
 import siena.base.test.model.PersonLongAutoIDExtended;
@@ -56,6 +58,8 @@ public abstract class BaseModelTest extends TestCase {
 		classes.add(PersonLongAutoIDExtendedFilter.class);
 		classes.add(TransactionAccountFromModel.class);
 		classes.add(TransactionAccountToModel.class);
+		classes.add(AggregateChildModel.class);
+		classes.add(AggregateParentModel.class);
 
 		pm = createPersistenceManager(classes);
 		PersistenceManagerFactory.install(pm, classes);
@@ -914,5 +918,41 @@ public abstract class BaseModelTest extends TestCase {
 		assertTrue(1000L == accFromAfter.amount);
 		TransactionAccountTo accToAfter = pm.getByKey(TransactionAccountTo.class, accTo.id);
 		assertTrue(1000L == accToAfter.amount);
+	}
+	
+	public void testAggregate() {
+		AggregateChildModel adam1 = new AggregateChildModel();
+		adam1.name = "adam1";
+		AggregateChildModel adam2 = new AggregateChildModel();
+		adam1.name = "adam2";
+		
+		AggregateChildModel eve = new AggregateChildModel();
+		eve.name = "eve";
+
+		AggregateChildModel bob = new AggregateChildModel();
+		bob.name = "bob";
+
+		AggregateParentModel parent = new AggregateParentModel();
+		parent.name = "god";
+		parent.child = adam1;
+		//parent.children.elements().addAll(Arrays.asList(adam2, eve, bob));
+				
+		parent.insert();
+		
+		assertNotNull(parent.id);
+		assertNotNull(parent.child.id);
+		
+		AggregateParentModel god1 = 
+			pm.getByKey(AggregateParentModel.class, parent.id);
+		
+		assertNotNull(god1);
+		assertEquals(adam1, god1.child);
+		//List<AggregateChildModel> children = god1.children.fetch();
+		
+		AggregateChildModel adamAfter = AggregateParentModel.all().filter("name", "god").get().child;
+		assertEquals(adam1, adamAfter);
+		// can't work with aggregated in GAE because there is no join
+		//AggregateParentModel.all().filter("child.name", "adam");
+		//AggregateChildModel.all().aggregated("child", parent.id).fetch();
 	}
 }

@@ -72,6 +72,46 @@ public class GaeMappingUtils {
 		return entity;
 	}
 	
+	public static Entity createEntityInstanceFromParent(Field idField, ClassInfo info, Object obj, Key parentKey, Field parentField){
+		Entity entity = null;
+		Id id = idField.getAnnotation(Id.class);
+		Class<?> type = idField.getType();
+
+		if(id != null){
+			switch(id.value()) {
+			case NONE:
+				Object idVal = null;
+				idVal = Util.readField(obj, idField);
+				if(idVal == null)
+					throw new SienaException("Id Field " + idField.getName() + " value null");
+				String keyVal = Util.toString(idField, idVal);				
+				entity = new Entity(parentField.getName()+"."+info.tableName, keyVal, parentKey);
+				break;
+			case AUTO_INCREMENT:
+				// manages String ID as not long!!!
+				if(Long.TYPE == type || Long.class.isAssignableFrom(type)){
+					entity = new Entity(parentField.getName()+"."+info.tableName, parentKey);
+				}else {
+					Object idStringVal = null;
+					idStringVal = Util.readField(obj, idField);
+					if(idStringVal == null)
+						throw new SienaException("Id Field " + idField.getName() + " value null");
+					String keyStringVal = Util.toString(idField, idStringVal);				
+					entity = new Entity(parentField.getName()+"."+info.tableName, keyStringVal, parentKey);
+				}
+				break;
+			case UUID:
+				entity = new Entity(parentField.getName()+"."+info.tableName, UUID.randomUUID().toString(), parentKey);
+				break;
+			default:
+				throw new SienaRestrictedApiException("DB", "createEntityInstance", "Id Generator "+id.value()+ " not supported");
+			}
+		}
+		else throw new SienaException("Field " + idField.getName() + " is not an @Id field");
+		
+		return entity;
+	}
+	
 	public static void setIdFromKey(Field idField, Object obj, Key key) {
 		Id id = idField.getAnnotation(Id.class);
 		Class<?> type = idField.getType();
@@ -291,7 +331,50 @@ public class GaeMappingUtils {
 		}
 	}
 
-
+	protected static Key makeKeyFromParent(Field field, ClassInfo info, Object object, Key parentKey) {
+		try {
+			Field idField = info.getIdField();
+			Object idVal = Util.readField(object, idField);
+			if(idVal == null)
+				throw new SienaException("Id Field " + idField.getName() + " value null");
+			
+			if(idField.isAnnotationPresent(Id.class)){
+				Id id = idField.getAnnotation(Id.class);
+				switch(id.value()) {
+				case NONE:
+					// long or string goes toString
+					return KeyFactory.createKey(
+							parentKey,
+							info.tableName,
+							idVal.toString());
+				case AUTO_INCREMENT:
+					Class<?> type = idField.getType();
+					// as a string with auto_increment can't exist, it is not cast into long
+					if (Long.TYPE==type || Long.class.isAssignableFrom(type)){
+						return KeyFactory.createKey(
+							parentKey,
+							info.tableName,
+							(Long)idVal);
+					}
+					return KeyFactory.createKey(
+							parentKey,
+							info.tableName,
+							idVal.toString());
+				case UUID:
+					return KeyFactory.createKey(
+							parentKey,
+							info.tableName,
+							idVal.toString());
+				default:
+					throw new SienaException("Id Generator "+id.value()+ " not supported");
+				}
+			}
+			else throw new SienaException("Field " + idField.getName() + " is not an @Id field");
+		} catch (Exception e) {
+			throw new SienaException(e);
+		}
+	}
+	
 	public static void fillEntity(Object obj, Entity entity) {
 		Class<?> clazz = obj.getClass();
 
@@ -299,7 +382,9 @@ public class GaeMappingUtils {
 			String property = ClassInfo.getColumnNames(field)[0];
 			Object value = Util.readField(obj, field);
 			Class<?> fieldClass = field.getType();
-			if (ClassInfo.isModel(fieldClass) && !ClassInfo.isEmbedded(field)) {
+			if (ClassInfo.isModel(fieldClass) 
+					&& !ClassInfo.isEmbedded(field)
+					&& !ClassInfo.isAggregated(field)) {
 				if (value == null) {
 					entity.setProperty(property, null);
 				} else {
@@ -322,11 +407,16 @@ public class GaeMappingUtils {
 						else
 							value = new Blob(Arrays.copyOf(arr, 1000000));
 					}
-					else if (field.getAnnotation(Embedded.class) != null) {
+					else if (ClassInfo.isEmbedded(field)) {
 						value = JsonSerializer.serialize(value).toString();
 						String s = (String) value;
 						if (s.length() > 500)
 							value = new Text(s);
+					}
+					else if (ClassInfo.isAggregated(field)){
+						// can't save it now as it requires its parent key to be mapped
+						// so don't do anything for the time being
+						continue;
 					}
 					else if (fieldClass == BigDecimal.class){
 						DecimalPrecision ann = field.getAnnotation(DecimalPrecision.class);
@@ -399,13 +489,16 @@ public class GaeMappingUtils {
 			String property = ClassInfo.getColumnNames(field)[0];
 			try {
 				fieldClass = field.getType();
-				if (ClassInfo.isModel(fieldClass) && !ClassInfo.isEmbedded(field)) {
-					key = (Key) entity.getProperty(property);
-					if (key != null) {
-						Object value = Util.createObjectInstance(fieldClass);
-						id = ClassInfo.getIdField(fieldClass);
-						setIdFromKey(id, value, key);
-						Util.setField(obj, field, value);
+				if (ClassInfo.isModel(fieldClass) 
+						&& !ClassInfo.isEmbedded(field)) {
+					if(!ClassInfo.isAggregated(field)){
+						key = (Key) entity.getProperty(property);
+						if (key != null) {
+							Object value = Util.createObjectInstance(fieldClass);
+							id = ClassInfo.getIdField(fieldClass);
+							setIdFromKey(id, value, key);
+							Util.setField(obj, field, value);
+						}
 					}
 				} else {
 					setFromObject(obj, field, entity.getProperty(property));

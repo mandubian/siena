@@ -248,6 +248,12 @@ public class JdbcModelTest extends BaseModelTest {
 		// TODO Auto-generated method stub
 		super.testTransactionSaveFailure();
 	}
+
+	@Override
+	public void testAggregate() {
+		// TODO Auto-generated method stub
+		//super.testAggregate();
+	}
 	
 	
 }

@@ -18,10 +18,20 @@ public class EmbeddedModel{
     
     public short	beta;
     
+    private boolean isGamma;
+    
     @Filter("parent")
     public siena.Query<EmbeddedSubModel> subs;           
     
+    public boolean isGamma() {
+    	return isGamma;
+    }
+    
+    public void setGamma(boolean isGamma){
+    	this.isGamma = isGamma;
+    }
+    
     public String toString() {
-    	return id + " " + alpha + " " + beta;
+    	return "id:"+id + " - alpha:" + alpha + " - beta:" + beta + " - isGamma:"+isGamma;
     }
 }

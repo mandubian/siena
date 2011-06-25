@@ -22,10 +22,10 @@ import siena.embed.JsonSerializer;
 public class BaseQuery<T> extends BaseQueryData<T> implements Query<T> {
 	private static final long serialVersionUID = 3533080111146350262L;
 
-	transient private PersistenceManager pm;
+	transient protected PersistenceManager pm;
 
 	@Deprecated
-	private Object nextOffset;
+	transient protected Object nextOffset;
 
 	
 	public BaseQuery() {
@@ -151,7 +151,7 @@ public class BaseQuery<T> extends BaseQueryData<T> implements Query<T> {
 	}
 	
 	
-	public Query<T> clone() {
+	public Query<T> copy() {
 		// TODO code a real deep clone function
 		return new BaseQuery<T>(this);
 	}

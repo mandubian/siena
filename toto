@@ -1,0 +1,2666 @@
+Only in source/documentation/manuals: bigdecimal.textile
+Only in source/documentation/manuals: transaction.textile
+diff -r source/pom.xml /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/pom.xml
+8c8
+< 	<version>1.0.0-b5</version>
+---
+> 	<version>1.0.0-b4</version>
+diff -r source/RELEASE-NOTES /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/RELEASE-NOTES
+5,41d4
+< v1.0.0-b5
+< ----------------------------------------------------------
+< Third draft of v1.0.0 with bug fixes and code optimization
+< 
+< == BUG FIXES ==
+< * correction in LifecyclePhase to be able to call private functions.
+< 
+< * Json bug correction: Date field without format was not managed at all
+< 
+< == ENHANCEMENTS ==
+< * added ClassInfo.queryAndAllFields containing the allFields
+< (insert/update/keys) + the autoquery fields + inherited fields -
+< filtered inherited fields
+< 
+< * added Model.getByKey(Class<R> clazz, Object key) because it's really practical :)
+< 
+< * added PersistenceManager.beginTransaction() without isolationLevel
+< because default parameter the right one.
+< 
+< * created transaction.textile doc
+< 
+< * tested transaction management for SQL + GAE
+< 
+< * minor modification to close all resultsets+statements in doFetchXXX
+< 
+< * modified BigDecimal impl by allowing
+< @DecimalPrecision(storateType=NATIVE/DOUBLE/STRING, size=23, scale=4)
+< 
+< * added support for BigDecimal (stored as Decimal in SQL
+< and String in GAE) + @DecimalPrecision annotation for SQL since it is
+< required to create the right table mapping.
+< 
+< * Embedding bug correction: for Query and @EmbedIgnore, it returned
+< exactly the opposite boolean in mustIgnore.
+< 
+< * @EmbedIgnore correction: removed the unneeded value()
+< 
+Only in source/.settings: org.maven.ide.eclipse.prefs
+diff -r source/src/main/java/siena/AbstractPersistenceManager.java /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/src/main/java/siena/AbstractPersistenceManager.java
+4a5,6
+> import siena.core.ListQuery;
+> import siena.core.BaseListQuery;
+26a29,33
+> 	@Override
+> 	public <T> ListQuery<T> createListQuery(Class<T> clazz) {
+> 		return new BaseListQuery<T>(this, clazz);
+> 	}
+> 
+diff -r source/src/main/java/siena/BaseQuery.java /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/src/main/java/siena/BaseQuery.java
+25c25
+< 	transient private PersistenceManager pm;
+---
+> 	transient protected PersistenceManager pm;
+28c28
+< 	private Object nextOffset;
+---
+> 	transient private Object nextOffset;
+154c154
+< 	public Query<T> clone() {
+---
+> 	public Query<T> copy() {
+diff -r source/src/main/java/siena/ClassInfo.java /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/src/main/java/siena/ClassInfo.java
+31a32
+> import siena.core.Aggregated;
+32a34
+> import siena.core.ListQuery;
+51c53
+< 	public List<Field> queryAndAllFields = new ArrayList<Field>();
+---
+> 	public List<Field> aggregatedFields = new ArrayList<Field>();
+78c80
+< 			for (Field field : c.getDeclaredFields()) {
+---
+> 			for(Field field : c.getDeclaredFields()) {
+81c83,84
+< 				if((field.getModifiers() & Modifier.TRANSIENT) == Modifier.TRANSIENT ||
+---
+> 				if(type == Class.class || Query.class == type ||
+> 						(field.getModifiers() & Modifier.TRANSIENT) == Modifier.TRANSIENT ||
+86,90d88
+< 				
+< 				if(type == Class.class || type == Query.class){
+< 					queryAndAllFields.add(field);
+< 					continue;
+< 				}
+108,109c106,107
+< 				if(field.getAnnotation(Join.class) != null){
+< 					if (!ClassInfo.isModel(field.getType())){
+---
+> 				if(isJoined(field)){
+> 					if (!isModel(field.getType())){
+113a112,119
+> 				
+> 				if(isAggregated(field)){
+> 					if (!isModel(field.getType()) && !ListQuery.class.isAssignableFrom(type)){
+> 						throw new SienaException("Aggregation not possible: Field "+field.getName()+" is not a model neither a ListQuery");
+> 					}
+> 					else aggregatedFields.add(field);
+> 				}
+> 				
+115d120
+< 				queryAndAllFields.add(field);
+201c206
+< 				return new String[] { field.getName() };
+---
+> 				return new String[] { prefix+field.getName() };
+233c238,242
+< 				return new String[] { field.getName() };
+---
+> 				if(tableName!=null && !("".equals(tableName))){
+> 					return new String[] { tableName+"."+field.getName() };
+> 				}else {
+> 					return new String[] { field.getName() };
+> 				}
+236c245,249
+< 				keys.addAll(Arrays.asList(getColumnNamesWithPrefix(key, field.getName()+"_")));
+---
+> 				if(tableName!=null && !("".equals(tableName))){
+> 					keys.addAll(Arrays.asList(getColumnNamesWithPrefix(key, tableName+"."+field.getName()+"_")));
+> 				}else {
+> 					keys.addAll(Arrays.asList(getColumnNamesWithPrefix(key, field.getName()+"_")));
+> 				}
+265a279,290
+> 	public static boolean isAggregated(Field field) {
+> 		return field.isAnnotationPresent(Aggregated.class);
+> 	}
+> 	
+> 	public static boolean isJoined(Field field) {
+> 		return field.isAnnotationPresent(Join.class);
+> 	}	
+> 	
+> 	public static boolean isListQuery(Field field) {
+> 		return ListQuery.class.isAssignableFrom(field.getType());
+> 	}	
+> 	
+Only in /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/src/main/java/siena/core: Aggregated.java
+diff -r source/src/main/java/siena/core/async/PersistenceManagerAsync.java /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/src/main/java/siena/core/async/PersistenceManagerAsync.java
+212d211
+< 	SienaFuture<Void> beginTransaction();
+Only in /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/src/main/java/siena/core: BaseListQuery.java
+diff -r source/src/main/java/siena/core/DecimalPrecision.java /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/src/main/java/siena/core/DecimalPrecision.java
+26,32d25
+< 	public enum StorageType {
+< 		NATIVE,	// NATIVE means it uses native DB storage for bigdecimal: for SQL: SQL type DECIMAL - for GAE:String 
+< 		DOUBLE, // stored as a double
+< 		STRING	// stored as a string (not padded with 0 yet)
+< 	}
+< 	
+< 	StorageType storateType() default StorageType.NATIVE;
+diff -r source/src/main/java/siena/core/lifecycle/LifeCycleUtils.java /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/src/main/java/siena/core/lifecycle/LifeCycleUtils.java
+50,54d49
+< 				boolean wasAccessible = true;
+< 				if(!m.isAccessible()){
+< 					wasAccessible = false;
+< 					m.setAccessible(true);
+< 				}
+63,65d57
+< 				if(!wasAccessible){
+< 					m.setAccessible(false);
+< 				}
+Only in /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/src/main/java/siena/core: ListQuery.java
+diff -r source/src/main/java/siena/core/PersistenceManagerLifeCycleWrapper.java /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/src/main/java/siena/core/PersistenceManagerLifeCycleWrapper.java
+38a39,43
+> 	public <T> ListQuery<T> createListQuery(Class<T> clazz) {
+> 		return pm.createListQuery(clazz);
+> 	}
+> 
+> 	@Override
+237,241d241
+< 	public void beginTransaction() {
+< 		pm.beginTransaction();
+< 	}
+< 	
+< 	@Override
+diff -r source/src/main/java/siena/gae/GaeMappingUtils.java /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/src/main/java/siena/gae/GaeMappingUtils.java
+16d15
+< import siena.core.DecimalPrecision;
+74a74,113
+> 	public static Entity createEntityInstanceFromParent(Field idField, ClassInfo info, Object obj, Key parentKey, Field parentField){
+> 		Entity entity = null;
+> 		Id id = idField.getAnnotation(Id.class);
+> 		Class<?> type = idField.getType();
+> 
+> 		if(id != null){
+> 			switch(id.value()) {
+> 			case NONE:
+> 				Object idVal = null;
+> 				idVal = Util.readField(obj, idField);
+> 				if(idVal == null)
+> 					throw new SienaException("Id Field " + idField.getName() + " value null");
+> 				String keyVal = Util.toString(idField, idVal);				
+> 				entity = new Entity(parentField.getName()+"."+info.tableName, keyVal, parentKey);
+> 				break;
+> 			case AUTO_INCREMENT:
+> 				// manages String ID as not long!!!
+> 				if(Long.TYPE == type || Long.class.isAssignableFrom(type)){
+> 					entity = new Entity(parentField.getName()+"."+info.tableName, parentKey);
+> 				}else {
+> 					Object idStringVal = null;
+> 					idStringVal = Util.readField(obj, idField);
+> 					if(idStringVal == null)
+> 						throw new SienaException("Id Field " + idField.getName() + " value null");
+> 					String keyStringVal = Util.toString(idField, idStringVal);				
+> 					entity = new Entity(parentField.getName()+"."+info.tableName, keyStringVal, parentKey);
+> 				}
+> 				break;
+> 			case UUID:
+> 				entity = new Entity(parentField.getName()+"."+info.tableName, UUID.randomUUID().toString(), parentKey);
+> 				break;
+> 			default:
+> 				throw new SienaRestrictedApiException("DB", "createEntityInstance", "Id Generator "+id.value()+ " not supported");
+> 			}
+> 		}
+> 		else throw new SienaException("Field " + idField.getName() + " is not an @Id field");
+> 		
+> 		return entity;
+> 	}
+> 	
+293a333,375
+> 	protected static Key makeKeyFromParent(Field field, ClassInfo info, Object object, Key parentKey) {
+> 		try {
+> 			Field idField = info.getIdField();
+> 			Object idVal = Util.readField(object, idField);
+> 			if(idVal == null)
+> 				throw new SienaException("Id Field " + idField.getName() + " value null");
+> 			
+> 			if(idField.isAnnotationPresent(Id.class)){
+> 				Id id = idField.getAnnotation(Id.class);
+> 				switch(id.value()) {
+> 				case NONE:
+> 					// long or string goes toString
+> 					return KeyFactory.createKey(
+> 							parentKey,
+> 							info.tableName,
+> 							idVal.toString());
+> 				case AUTO_INCREMENT:
+> 					Class<?> type = idField.getType();
+> 					// as a string with auto_increment can't exist, it is not cast into long
+> 					if (Long.TYPE==type || Long.class.isAssignableFrom(type)){
+> 						return KeyFactory.createKey(
+> 							parentKey,
+> 							info.tableName,
+> 							(Long)idVal);
+> 					}
+> 					return KeyFactory.createKey(
+> 							parentKey,
+> 							info.tableName,
+> 							idVal.toString());
+> 				case UUID:
+> 					return KeyFactory.createKey(
+> 							parentKey,
+> 							info.tableName,
+> 							idVal.toString());
+> 				default:
+> 					throw new SienaException("Id Generator "+id.value()+ " not supported");
+> 				}
+> 			}
+> 			else throw new SienaException("Field " + idField.getName() + " is not an @Id field");
+> 		} catch (Exception e) {
+> 			throw new SienaException(e);
+> 		}
+> 	}
+302c384,386
+< 			if (ClassInfo.isModel(fieldClass) && !ClassInfo.isEmbedded(field)) {
+---
+> 			if (ClassInfo.isModel(fieldClass) 
+> 					&& !ClassInfo.isEmbedded(field)
+> 					&& !ClassInfo.isAggregated(field)) {
+311c395
+< 					if (fieldClass == Json.class) {
+---
+> 					if (field.getType() == Json.class) {
+325c409
+< 					else if (field.getAnnotation(Embedded.class) != null) {
+---
+> 					else if (ClassInfo.isEmbedded(field)) {
+331,345c415,421
+< 					else if (fieldClass == BigDecimal.class){
+< 						DecimalPrecision ann = field.getAnnotation(DecimalPrecision.class);
+< 						if(ann == null) {
+< 							value = ((BigDecimal)value).toPlainString();
+< 						}else {
+< 							switch(ann.storateType()){
+< 							case DOUBLE:
+< 								value = ((BigDecimal)value).doubleValue();
+< 								break;
+< 							case STRING:
+< 							case NATIVE:
+< 								value = ((BigDecimal)value).toPlainString();
+< 								break;
+< 							}
+< 						}
+---
+> 					else if (ClassInfo.isAggregated(field)){
+> 						// can't save it now as it requires its parent key to be mapped
+> 						// so don't do anything for the time being
+> 						continue;
+> 					}
+> 					else if (field.getType() == BigDecimal.class){
+> 						value = value.toString();
+402,408c478,487
+< 				if (ClassInfo.isModel(fieldClass) && !ClassInfo.isEmbedded(field)) {
+< 					key = (Key) entity.getProperty(property);
+< 					if (key != null) {
+< 						Object value = Util.createObjectInstance(fieldClass);
+< 						id = ClassInfo.getIdField(fieldClass);
+< 						setIdFromKey(id, value, key);
+< 						Util.setField(obj, field, value);
+---
+> 				if (ClassInfo.isModel(fieldClass) 
+> 						&& !ClassInfo.isEmbedded(field)) {
+> 					if(!ClassInfo.isAggregated(field)){
+> 						key = (Key) entity.getProperty(property);
+> 						if (key != null) {
+> 							Object value = Util.createObjectInstance(fieldClass);
+> 							id = ClassInfo.getIdField(fieldClass);
+> 							setIdFromKey(id, value, key);
+> 							Util.setField(obj, field, value);
+> 						}
+410c489,490
+< 				} else {
+---
+> 				}
+> 				else {
+426,440c506,507
+< 		else if(f.getType() == BigDecimal.class){
+< 			DecimalPrecision ann = f.getAnnotation(DecimalPrecision.class);
+< 			if(ann == null) {
+< 				value = new BigDecimal((String)value);
+< 			}else {
+< 				switch(ann.storateType()){
+< 				case DOUBLE:
+< 					value = BigDecimal.valueOf((Double)value);
+< 					break;
+< 				case STRING:
+< 				case NATIVE:
+< 					value = new BigDecimal((String)value);
+< 					break;
+< 				}
+< 			}
+---
+> 		else if(f.getType() == BigDecimal.class && value instanceof String){
+> 			value = new BigDecimal((String)value);
+diff -r source/src/main/java/siena/gae/GaePersistenceManagerAsync.java /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/src/main/java/siena/gae/GaePersistenceManagerAsync.java
+126,139d125
+< 	
+< 	public SienaFuture<Void> beginTransaction() {
+< 		Future<Transaction> future = ds.beginTransaction();
+< 		
+< 		Future<Void> wrapped = new SienaFutureWrapper<Transaction, Void>(future) {
+<             @Override
+<             protected Void wrap(Transaction transaction) throws Exception
+<             {
+<             	return null;
+<             }
+< 		};
+< 		
+< 		return new SienaFutureContainer<Void>(wrapped);
+< 	}
+diff -r source/src/main/java/siena/gae/GaePersistenceManager.java /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/src/main/java/siena/gae/GaePersistenceManager.java
+21a22
+> import java.util.Arrays;
+33a35
+> import siena.core.ListQuery;
+44d45
+< import com.google.appengine.api.datastore.EntityNotFoundException;
+80,83d80
+< 	
+< 	public void beginTransaction() {
+< 		ds.beginTransaction();
+< 	}
+108,109c105
+< 		} 
+< 		catch (Exception e) {
+---
+> 		} catch (Exception e) {
+115c111,112
+< 		Key gkey = GaeMappingUtils.makeKey(clazz, key);
+---
+> 		Key gKey = GaeMappingUtils.makeKey(clazz, key);
+> 		ClassInfo info = ClassInfo.getClassInfo(clazz);
+117c114
+< 			Entity entity = ds.get(gkey);
+---
+> 			Entity entity = ds.get(gKey);
+120a118,135
+> 			// now gets aggregated one2one (one2many are retrieved by ListQuery except with @Join)
+> 			for(Field f:info.aggregatedFields){
+> 				Class<?> cClazz = f.getType();
+> 				ClassInfo cInfo = ClassInfo.getClassInfo(cClazz);
+> 				if(ClassInfo.isModel(cClazz)){
+> 					// creates a query for fieldname.child_tablename
+> 					com.google.appengine.api.datastore.Query q = 
+> 						new com.google.appengine.api.datastore.Query(f.getName()+"."+cInfo.tableName);
+> 
+> 					PreparedQuery pq = ds.prepare(q.setAncestor(gKey));
+> 					Entity cEntity = pq.asSingleEntity();
+> 					Object cObj = Util.createObjectInstance(cClazz);
+> 					GaeMappingUtils.fillModelAndKey(cObj, cEntity);
+> 					Util.setField(obj, f, cObj);
+> 				}
+> 				// todo manage joined one2many listquery
+> 			}
+> 			
+122,126c137
+< 		} 
+< 		catch(EntityNotFoundException e){
+< 			return null;
+< 		}
+< 		catch (Exception e) {
+---
+> 		} catch (Exception e) {
+132c143
+< 		Class<?> clazz = obj.getClass();
+---
+> 		/*Class<?> clazz = obj.getClass();
+138c149,150
+< 		GaeMappingUtils.setIdFromKey(idField, obj, entity.getKey());
+---
+> 		GaeMappingUtils.setIdFromKey(idField, obj, entity.getKey());*/
+> 		_insertSingle(obj, null, null);
+140a153,242
+> 	private void _insertSingle(Object obj, final Entity parent, Field field) {
+> 		Class<?> clazz = obj.getClass();
+> 		ClassInfo info = ClassInfo.getClassInfo(clazz);
+> 		Field idField = info.getIdField();
+> 		final Entity entity;
+> 		
+> 		if(parent==null){
+> 			entity = GaeMappingUtils.createEntityInstance(idField, info, obj);
+> 			GaeMappingUtils.fillEntity(obj, entity);
+> 			ds.put(entity);
+> 			GaeMappingUtils.setIdFromKey(idField, obj, entity.getKey());
+> 		}else {
+> 			entity = GaeMappingUtils.createEntityInstanceFromParent(idField, info, obj, parent.getKey(), field);
+> 			GaeMappingUtils.fillEntity(obj, entity);
+> 			// fills the parent entity field with the key in the case of the One2One aggregated relation.
+> 			// put them together in the db
+> 			//String property = ClassInfo.getColumnNames(field)[0];
+> 			//parent.setProperty(property, entity.getKey());
+> 			//ds.put(new ArrayList<Entity>() {{ add(entity); add(parent); }});
+> 			ds.put(entity);
+> 			GaeMappingUtils.setIdFromKey(idField, obj, entity.getKey());
+> 		}
+> 		
+> 		for(Field f: info.aggregatedFields){
+> 			if(ClassInfo.isModel(f.getType())){
+> 				Object aggObj = Util.readField(obj, f);
+> 				_insertSingle(aggObj, entity, f);
+> 			}
+> 			else if(ClassInfo.isListQuery(f)){
+> 				ListQuery<?> lq = (ListQuery<?>)Util.readField(obj, f);
+> 				if(!lq.elements().isEmpty()){
+> 					_insertMultiple(lq.elements(), entity, f);
+> 				}
+> 			}
+> 		}
+> 	}
+> 	
+> 	private int _insertMultiple(Object[] objects, final Entity parent, Field field) {
+> 		return _insertMultiple(Arrays.asList(objects), parent, field);
+> 	}
+> 	
+> 	private int _insertMultiple(Iterable<?> objects, final Entity parent, Field field) {
+> 		List<Entity> entities = new ArrayList<Entity>();
+> 		if(parent==null){
+> 			for(Object obj:objects){
+> 				Class<?> clazz = obj.getClass();
+> 				ClassInfo info = ClassInfo.getClassInfo(clazz);
+> 				Field idField = info.getIdField();
+> 				Entity entity = GaeMappingUtils.createEntityInstance(idField, info, obj);
+> 				GaeMappingUtils.fillEntity(obj, entity);
+> 				entities.add(entity);
+> 			}			
+> 		}else {
+> 			for(Object obj:objects){
+> 				Class<?> clazz = obj.getClass();
+> 				ClassInfo info = ClassInfo.getClassInfo(clazz);
+> 				Field idField = info.getIdField();
+> 				Entity entity = GaeMappingUtils.createEntityInstanceFromParent(idField, info, obj, parent.getKey(), field);
+> 				GaeMappingUtils.fillEntity(obj, entity);
+> 				entities.add(entity);
+> 			}
+> 		}
+> 		
+> 		List<Key> generatedKeys = ds.put(entities);
+> 		
+> 		int i=0;
+> 		for(Object obj:objects){
+> 			Class<?> clazz = obj.getClass();
+> 			ClassInfo info = ClassInfo.getClassInfo(clazz);
+> 			Field idField = info.getIdField();
+> 			GaeMappingUtils.setIdFromKey(idField, obj, generatedKeys.get(i));
+> 			
+> 			for(Field f: info.aggregatedFields){
+> 				if(ClassInfo.isModel(f.getType())){
+> 					Object aggObj = Util.readField(obj, f);
+> 					_insertSingle(aggObj, entities.get(i), f);
+> 				}
+> 				else if(ClassInfo.isListQuery(f)){
+> 					ListQuery<?> lq = (ListQuery<?>)Util.readField(obj, f);
+> 					if(!lq.elements().isEmpty()){
+> 						_insertMultiple(lq.elements(), entities.get(i), f);
+> 					}
+> 				}
+> 			}
+> 			
+> 			i++;
+> 		}
+> 		return generatedKeys.size();
+> 	}
+> 	
+315a418,462
+> 	protected <T> List<T> mapAggregated(Query<T> query, List<T> models) {
+> 		Class<?> clazz = query.getQueriedClass();
+> 		ClassInfo info = ClassInfo.getClassInfo(clazz);
+> 		
+> 		for (final T model : models) {
+> 			// creates a kindless query to retrieve all subentities at once.
+> 			com.google.appengine.api.datastore.Query q = 
+> 				new com.google.appengine.api.datastore.Query();
+> 			Key parentKey = GaeMappingUtils.getKey(model);
+> 			
+> 			q.setAncestor(parentKey);
+> 			// this removes the parent from query
+> 			q.addFilter(Entity.KEY_RESERVED_PROPERTY, 
+> 					com.google.appengine.api.datastore.Query.FilterOperator.GREATER_THAN,
+> 				    parentKey);
+> 			
+> 			PreparedQuery pq = ds.prepare(q);
+> 			List<Entity> childEntities = pq.asList(FetchOptions.Builder.withDefaults());
+> 			
+> 			for(Field f: info.aggregatedFields){
+> 				Class<?> fClazz = f.getType();
+> 				ClassInfo fInfo = ClassInfo.getClassInfo(fClazz);
+> 				
+> 				// one2one
+> 				if(ClassInfo.isModel(fClazz)){
+> 					Entity found = null;
+> 					for(Entity e: childEntities){
+> 						if((f.getName()+"."+fInfo.tableName).equals(e.getKind())){
+> 							found = e;
+> 							childEntities.remove(e);
+> 							break;
+> 						}
+> 					}
+> 					
+> 					if(found != null){
+> 						Object fObj = GaeMappingUtils.mapEntity(found, fClazz);
+> 						Util.setField(model, f, fObj);
+> 					}
+> 				}
+> 			}
+> 		}
+> 		
+> 		return models;
+> 	}
+> 
+401a549,553
+> 		// aggregated management
+> 		if(ClassInfo.getClassInfo(clazz).aggregatedFields.size() != 0){
+> 			return mapAggregated(query, result);
+> 		}
+> 		
+403c555
+< 		if(!query.getJoins().isEmpty() || ClassInfo.getClassInfo(clazz).joinFields.size() != 0)
+---
+> 		if(!query.getJoins().isEmpty() || ClassInfo.getClassInfo(clazz).joinFields.size() != 0){
+404a557
+> 		}
+1280c1433
+< 		List<Entity> entities = new ArrayList<Entity>(objects.length);
+---
+> 		/*ist<Entity> entities = new ArrayList<Entity>(objects.length);
+1300c1453,1455
+< 		return generatedKeys.size();
+---
+> 		return generatedKeys.size();*/
+> 		
+> 		return _insertMultiple(objects, null, null);
+1304c1459
+< 		List<Entity> entities = new ArrayList<Entity>();
+---
+> 		/*List<Entity> entities = new ArrayList<Entity>();
+1323,1324c1478,1481
+< 		return generatedKeys.size();
+< 
+---
+> 		return generatedKeys.size();*/
+> 		
+> 		
+> 		return _insertMultiple(objects, null, null);
+diff -r source/src/main/java/siena/hbase/HBasePersistenceManager.java /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/src/main/java/siena/hbase/HBasePersistenceManager.java
+30a31
+> import siena.core.ListQuery;
+48,52d48
+< 	
+< 	public void beginTransaction() {
+< 		// TODO Auto-generated method stub
+< 		
+< 	}
+284c280
+< 		public HBaseQuery<T> clone() {
+---
+> 		public HBaseQuery<T> copy() {
+751a748,753
+> 	@Override
+> 	public <T> ListQuery<T> createListQuery(Class<T> clazz) {
+> 		// TODO Auto-generated method stub
+> 		return null;
+> 	}
+> 
+diff -r source/src/main/java/siena/jdbc/AbstractConnectionManager.java /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/src/main/java/siena/jdbc/AbstractConnectionManager.java
+43,53d42
+< 	
+< 	public void beginTransaction() {
+< 		try {
+< 			Connection c = getConnection();
+< 			c.setAutoCommit(false);
+< 		} catch (SQLException e) {
+< 			
+< 			logger.severe(e, e);
+< 			throw new SienaException(e);
+< 		}
+< 	}
+diff -r source/src/main/java/siena/jdbc/ConnectionManager.java /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/src/main/java/siena/jdbc/ConnectionManager.java
+28d27
+< 	public void beginTransaction();
+diff -r source/src/main/java/siena/jdbc/ddl/DdlGenerator.java /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/src/main/java/siena/jdbc/ddl/DdlGenerator.java
+64d63
+< 		table.setType("MyISAM");
+223c222,223
+< 		} else if(type == BigDecimal.class){						
+---
+> 		} else if(type == BigDecimal.class){
+> 			columnType = Types.DECIMAL;			
+226d225
+< 				columnType = Types.DECIMAL;
+230,242c229
+< 				if(an.storateType() == DecimalPrecision.StorageType.NATIVE){
+< 					columnType = Types.DECIMAL;
+< 					column.setSizeAndScale(an.size(), an.scale());
+< 				}else if(an.storateType() == DecimalPrecision.StorageType.STRING) {
+< 					columnType = Types.VARCHAR;
+< 					// should be an.size+"."+sign
+< 					column.setSize((an.size()+2)+"");
+< 				}else if(an.storateType() == DecimalPrecision.StorageType.DOUBLE) {
+< 					columnType = Types.DOUBLE;					
+< 				}else {
+< 					columnType = Types.DECIMAL;
+< 					column.setSizeAndScale(19, 2);
+< 				}
+---
+> 				column.setSizeAndScale(an.size(), an.scale());
+diff -r source/src/main/java/siena/jdbc/JdbcDBUtils.java /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/src/main/java/siena/jdbc/JdbcDBUtils.java
+42c42,44
+< 		
+---
+> 	
+> 
+> 	
+diff -r source/src/main/java/siena/jdbc/JdbcMappingUtils.java /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/src/main/java/siena/jdbc/JdbcMappingUtils.java
+8d7
+< import java.math.BigDecimal;
+20d18
+< import siena.core.DecimalPrecision;
+260,274c258
+< 		if(BigDecimal.class == type){
+< 			DecimalPrecision ann = field.getAnnotation(DecimalPrecision.class);
+< 			if(ann==null){
+< 				return (BigDecimal)value;
+< 			}else {
+< 				switch(ann.storateType()){
+< 				case DOUBLE:
+< 					return BigDecimal.valueOf((Double)value);
+< 				case STRING:
+< 					return new BigDecimal((String)value);
+< 				case NATIVE:
+< 					return (BigDecimal)value;
+< 				}
+< 			}
+< 		}
+---
+> 		
+diff -r source/src/main/java/siena/jdbc/JdbcPersistenceManager.java /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/src/main/java/siena/jdbc/JdbcPersistenceManager.java
+23d22
+< import java.math.BigDecimal;
+56d54
+< import siena.core.DecimalPrecision;
+250,253d247
+< 	public void beginTransaction() {
+< 		connectionManager.beginTransaction();
+< 	}
+< 	
+374c368
+< 					if(Json.class.isAssignableFrom(type)){
+---
+> 					if(Json.class.isAssignableFrom(field.getType())){
+393c387
+< 					else if(Enum.class.isAssignableFrom(type)){
+---
+> 					else if(Enum.class.isAssignableFrom(field.getType())){
+396,413d389
+< 					else if(BigDecimal.class == type){
+< 						DecimalPrecision ann = field.getAnnotation(DecimalPrecision.class);
+< 						if(ann == null) {
+< 							value = (BigDecimal)value;
+< 						}else {
+< 							switch(ann.storateType()){
+< 							case DOUBLE:
+< 								value = ((BigDecimal)value).doubleValue();
+< 								break;
+< 							case STRING:
+< 								value = ((BigDecimal)value).toPlainString();
+< 								break;
+< 							case NATIVE:
+< 								value = (BigDecimal)value;
+< 								break;
+< 							}
+< 						}
+< 					}
+683d658
+< 			ResultSet rs = null;
+694c669
+< 				rs = jdbcCtx.statement.executeQuery();
+---
+> 				ResultSet rs = jdbcCtx.statement.executeQuery();
+711d685
+< 				JdbcDBUtils.closeResultSet(rs);
+912d885
+< 			ResultSet rs = null;
+923c896
+< 				rs = jdbcCtx.statement.executeQuery();
+---
+> 				ResultSet rs = jdbcCtx.statement.executeQuery();
+939d911
+< 				JdbcDBUtils.closeResultSet(rs);
+1733c1705
+< 			//JdbcDBUtils.closeStatement(ps);
+---
+> 			JdbcDBUtils.closeStatement(ps);
+diff -r source/src/main/java/siena/Model.java /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/src/main/java/siena/Model.java
+23a24
+> import java.util.Iterator;
+27a29
+> import siena.core.Aggregated;
+28a31
+> import siena.core.ListQuery;
+32a36
+> import siena.core.options.QueryOptionState;
+93,96d96
+< 	public static <R> R getByKey(Class<R> clazz, Object key) {
+< 		return PersistenceManagerFactory.getPersistenceManager(clazz).getByKey(clazz, key);
+< 	}
+< 	
+161d160
+< 				if(field.getType() != Query.class) { continue; }
+163,176c162,201
+< 	
+< 				Filter filter = field.getAnnotation(Filter.class);
+< 				if(filter == null) {
+< 					throw new SienaException("Found Query<T> field without @Filter annotation at "
+< 							+c.getName()+"."+field.getName());
+< 				}
+< 	
+< 				ParameterizedType pt = (ParameterizedType) field.getGenericType();
+< 				cl = (Class<?>) pt.getActualTypeArguments()[0];
+< 	
+< 				try {
+< 					field.set(this, new ProxyQuery(cl, filter.value(), this));
+< 				} catch (Exception e) {
+< 					throw new SienaException(e);
+---
+> 				if(field.getType() == Query.class) { 
+> 					Filter filter = field.getAnnotation(Filter.class);
+> 					if(filter == null) {
+> 						throw new SienaException("Found Query<T> field without @Filter annotation at "
+> 								+c.getName()+"."+field.getName());
+> 					}
+> 		
+> 					ParameterizedType pt = (ParameterizedType) field.getGenericType();
+> 					cl = (Class<?>) pt.getActualTypeArguments()[0];
+> 		
+> 					try {
+> 						field.set(this, new ProxyQuery(cl, filter.value(), this));
+> 					} catch (Exception e) {
+> 						throw new SienaException(e);
+> 					}
+> 					
+> 				}else if(field.getType() == ListQuery.class){
+> 					ParameterizedType pt = (ParameterizedType) field.getGenericType();
+> 					cl = (Class<?>) pt.getActualTypeArguments()[0];
+> 					
+> 					Aggregated agg = field.getAnnotation(Aggregated.class);
+> 					Filter filter = field.getAnnotation(Filter.class);
+> 					if(agg!=null && filter!=null){
+> 						throw new SienaException("Found ListQuery<T> field "
+> 								+ c.getName()+"."+field.getName() 
+> 								+ "with @Filter + @Aggregated: this is not authorized");
+> 					}
+> 					if(agg != null){
+> 						try {
+> 							field.set(this, new ProxyListQuery(cl, this, ProxyMode.AGGREGATION, field));
+> 						} catch (Exception e) {
+> 							throw new SienaException(e);
+> 						}
+> 					}else if(filter != null){
+> 						try {
+> 							field.set(this, new ProxyQuery(cl, filter.value(), this));
+> 						} catch (Exception e) {
+> 							throw new SienaException(e);
+> 						}
+> 					}
+187a213
+> 		private Query<T> query;
+196c222,232
+< 			return getPersistenceManager().createQuery(clazz).filter(filter, obj);
+---
+> 			//return getPersistenceManager().createQuery(clazz).filter(filter, obj);
+> 			
+> 			// initializes once the query and reuses it
+> 			// it is not initialized in the constructor because the persistencemanager might not be
+> 			// initialized correctly with the Model
+> 			if(this.query == null){
+> 				this.query = obj.getPersistenceManager().createQuery(clazz);				
+> 			}
+> 			else if(((QueryOptionState)this.query.option(QueryOptionState.ID)).isStateless())
+> 				this.query.release();
+> 			return this.query.filter(filter, obj);
+262c298
+< 		public ProxyQuery<T> clone() {
+---
+> 		public ProxyQuery<T> copy() {
+410a447,699
+> 	enum ProxyMode {
+> 		FILTER,
+> 		AGGREGATION
+> 	}
+> 	
+> 	class ProxyListQuery<T> implements ListQuery<T> {
+> 		private static final long serialVersionUID = -4540064249546783019L;
+> 		
+> 		private Class<T> 		clazz;
+> 		private Model 			obj;
+> 		private ListQuery<T> 	listQuery;
+> 		private ProxyMode 		mode;
+> 		private Field			field;	
+> 
+> 		public ProxyListQuery(Class<T> clazz, Model obj, ProxyMode mode, Field field) {
+> 			this.clazz = clazz;
+> 			this.obj = obj;
+> 			this.mode = mode;
+> 		}
+> 
+> 		private ListQuery<T> createQuery() {
+> 			if(this.listQuery == null){
+> 				this.listQuery = obj.getPersistenceManager().createListQuery(clazz);				
+> 			}
+> 			else if(((QueryOptionState)this.listQuery.option(QueryOptionState.ID)).isStateless())
+> 				this.listQuery.release();
+> 			if(mode == ProxyMode.AGGREGATION){
+> 				return this.listQuery.aggregate(obj, field);
+> 			}
+> 		}
+> 		
+> 		@Override
+> 		public Iterator<T> iterator() {
+> 			return createQuery().iterator();
+> 		}
+> 
+> 		@Override
+> 		public PersistenceManager getPersistenceManager() {
+> 			return obj.getPersistenceManager();
+> 		}
+> 
+> 		@Override
+> 		public List<T> elements() {
+> 			return createQuery().elements();
+> 		}
+> 
+> 		public int count() {
+> 			return createQuery().count();
+> 		}
+> 
+> 		@Deprecated
+> 		public int count(int limit) {
+> 			return createQuery().count(limit);
+> 		}
+> 
+> 		@Deprecated
+> 		public int count(int limit, Object offset) {
+> 			return createQuery().count(limit, offset);
+> 		}
+> 
+> 		public List<T> fetch() {
+> 			return createQuery().fetch();
+> 		}
+> 
+> 		public List<T> fetch(int limit) {
+> 			return createQuery().fetch(limit);
+> 		}
+> 
+> 		public List<T> fetch(int limit, Object offset) {
+> 			return createQuery().fetch(limit, offset);
+> 		}
+> 
+> 		public Query<T> filter(String fieldName, Object value) {
+> 			return createQuery().filter(fieldName, value);
+> 		}
+> 
+> 		public Query<T> order(String fieldName) {
+> 			return createQuery().order(fieldName);
+> 		}
+> 
+> 		@Deprecated
+> 		public Query<T> search(String match, boolean inBooleanMode, String index) {
+> 			return createQuery().search(match, inBooleanMode, index);
+> 		}
+> 		
+> 		public Query<T> join(String field, String... sortFields) {
+> 			return createQuery().join(field, sortFields);
+> 		}
+> 
+> 		public T get() {
+> 			return createQuery().get();
+> 		}
+> 
+> 		public Iterable<T> iter() {
+> 			return createQuery().iter();
+> 		}
+> 		
+> 		public Iterable<T> iter(int limit) {
+> 			return createQuery().iter(limit);
+> 		}
+> 		
+> 		public Iterable<T> iter(int limit, Object offset) {
+> 			return createQuery().iter(limit, offset);
+> 		}
+> 		
+> 		public Iterable<T> iterPerPage(int limit) {
+> 			return createQuery().iterPerPage(limit);
+> 		}	
+> 		
+> 		public ProxyListQuery<T> copy() {
+> 			return new ProxyListQuery<T>(clazz, obj);
+> 		}
+> 
+> 		@Deprecated
+> 		public Object nextOffset() {
+> 			return createQuery().nextOffset();
+> 		}
+> 
+> 		public int delete() {
+> 			return createQuery().delete();
+> 		}
+> 
+> 		public List<T> fetchKeys() {
+> 			return createQuery().fetchKeys();
+> 		}
+> 
+> 		public List<T> fetchKeys(int limit) {
+> 			return createQuery().fetchKeys(limit);
+> 		}
+> 
+> 		public List<T> fetchKeys(int limit, Object offset) {
+> 			return createQuery().fetchKeys(limit, offset);
+> 		}
+> 
+> 		public List<QueryFilter> getFilters() {
+> 			return createQuery().getFilters();
+> 		}
+> 
+> 		public List<QueryOrder> getOrders() {
+> 			return createQuery().getOrders();
+> 		}
+> 
+> 		public List<QueryFilterSearch> getSearches() {
+> 			return createQuery().getSearches();
+> 		}
+> 
+> 		public List<QueryJoin> getJoins() {
+> 			return createQuery().getJoins();
+> 		}
+> 
+> 		@Deprecated
+> 		public void setNextOffset(Object nextOffset) {
+> 			createQuery().setNextOffset(nextOffset);
+> 		}
+> 
+> 		public Class<T> getQueriedClass() {
+> 			return clazz;
+> 		}
+> 
+> 		public Query<T> paginate(int limit) {
+> 			return createQuery().paginate(limit);
+> 		}
+> 
+> 		public Query<T> limit(int limit) {
+> 			return createQuery().limit(limit);
+> 		}
+> 
+> 		public Query<T> offset(Object offset) {
+> 			return createQuery().offset(offset);
+> 		}
+> 
+> 		public Query<T> customize(QueryOption... options) {
+> 			return createQuery().customize(options);
+> 		}
+> 
+> 		public QueryOption option(int option) {
+> 			return createQuery().option(option);
+> 		}
+> 
+> 		public Map<Integer, QueryOption> options() {
+> 			return createQuery().options();
+> 		}
+> 
+> 		public Query<T> stateful() {
+> 			return createQuery().stateful();
+> 		}
+> 
+> 		public Query<T> stateless() {
+> 			return createQuery().stateless();
+> 		}
+> 
+> 		public Query<T> release() {
+> 			return createQuery().release();
+> 		}
+> 
+> 		public Query<T> resetData() {
+> 			return createQuery().resetData();
+> 		}
+> 
+> 		public Query<T> search(String match, String... fields) {
+> 			return createQuery().search(match, fields);
+> 		}
+> 
+> 		public Query<T> search(String match, QueryOption opt, String... fields) {
+> 			return createQuery().search(match, opt, fields);
+> 		}
+> 
+> 		public int update(Map<String, ?> fieldValues) {
+> 			return createQuery().update(fieldValues);
+> 		}
+> 
+> 		public Query<T> nextPage() {
+> 			return createQuery().nextPage();
+> 		}
+> 
+> 		public Query<T> previousPage() {
+> 			return createQuery().previousPage();
+> 		}
+> 
+> 		public String dump() {
+> 			return createQuery().dump();
+> 		}
+> 
+> 		public Query<T> restore(String dump) {
+> 			return createQuery().restore(dump);
+> 		}
+> 
+> 		public QueryAsync<T> async() {
+> 			return createQuery().async();
+> 		}
+> 
+> 		public T getByKey(Object key) {
+> 			return createQuery().getByKey(key);
+> 		}
+> 
+> 		public String dump(QueryOption... options) {
+> 			return createQuery().dump(options);
+> 		}
+> 
+> 		public void dump(OutputStream os, QueryOption... options) {
+> 			createQuery().dump(os, options);
+> 		}
+> 
+> 		public Query<T> restore(String dump, QueryOption... options) {
+> 			return createQuery().restore(dump, options);
+> 		}
+> 
+> 		public Query<T> restore(InputStream dump, QueryOption... options) {
+> 			return createQuery().restore(dump, options);
+> 		}
+> 
+> 		
+> 	}
+diff -r source/src/main/java/siena/PersistenceManager.java /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/src/main/java/siena/PersistenceManager.java
+21a22
+> import siena.core.ListQuery;
+70c71,79
+<  
+---
+> 
+> 	/**
+> 	 * Method for obtaining <code>AggregatorQuery</code> implementations.
+> 	 * 
+> 	 * @return A <code>AggregatorQuery</code> object that lets make batch operations
+> 	 */
+> 	<T> ListQuery<T> createListQuery(Class<T> clazz);
+> 
+> 	
+178d186
+< 	void beginTransaction();
+diff -r source/src/main/java/siena/Query.java /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/src/main/java/siena/Query.java
+62c62
+< 	Query<T> clone();
+---
+> 	Query<T> copy();
+diff -r source/src/main/java/siena/remote/RemotePersistenceManager.java /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/src/main/java/siena/remote/RemotePersistenceManager.java
+139,141d138
+< 	public void beginTransaction() {
+< 	}
+< 	
+diff -r source/src/main/java/siena/sdb/SdbPersistenceManager.java /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/src/main/java/siena/sdb/SdbPersistenceManager.java
+196,198d195
+< 	public void beginTransaction() {
+< 	}
+< 	
+diff -r source/src/main/java/siena/Util.java /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/src/main/java/siena/Util.java
+97d96
+< 		if(type == BigDecimal.class) return new BigDecimal(value);
+123d121
+< 		if(type == BigDecimal.class) return new BigDecimal(value);
+198c196
+< 		}		
+---
+> 		}
+218d215
+< 			else if(BigDecimal.class==type) return (BigDecimal)value;
+diff -r source/src/test/java/siena/base/test/BaseModelTest.java /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/src/test/java/siena/base/test/BaseModelTest.java
+4d3
+< import java.sql.Connection;
+5a5
+> import java.util.Arrays;
+14c14,15
+< import siena.SienaException;
+---
+> import siena.base.test.model.AggregateChildModel;
+> import siena.base.test.model.AggregateParentModel;
+25,28d25
+< import siena.base.test.model.TransactionAccountFrom;
+< import siena.base.test.model.TransactionAccountFromModel;
+< import siena.base.test.model.TransactionAccountTo;
+< import siena.base.test.model.TransactionAccountToModel;
+57,58c54,55
+< 		classes.add(TransactionAccountFromModel.class);
+< 		classes.add(TransactionAccountToModel.class);
+---
+> 		classes.add(AggregateChildModel.class);
+> 		classes.add(AggregateParentModel.class);
+867,916c864,897
+< 	public void testTransactionSave() {
+< 		TransactionAccountFromModel accFrom = new TransactionAccountFromModel(1000L);
+< 		TransactionAccountToModel accTo = new TransactionAccountToModel(1000L);
+< 		
+< 		accFrom.insert();
+< 		accTo.insert();
+< 	
+< 		try {
+< 			accFrom.getPersistenceManager().beginTransaction();
+< 			accFrom.amount-=100L;
+< 			accFrom.save();
+< 			accTo.amount+=100L;
+< 			accTo.save();
+< 			accFrom.getPersistenceManager().commitTransaction();
+< 		}catch(SienaException e){
+< 			accFrom.getPersistenceManager().rollbackTransaction();
+< 			fail();
+< 		}finally{
+< 			accFrom.getPersistenceManager().closeConnection();
+< 		}
+< 		
+< 		TransactionAccountFrom accFromAfter = pm.getByKey(TransactionAccountFrom.class, accFrom.id);
+< 		assertTrue(900L == accFromAfter.amount);
+< 		TransactionAccountTo accToAfter = pm.getByKey(TransactionAccountTo.class, accTo.id);
+< 		assertTrue(1100L == accToAfter.amount);
+< 	}
+< 	
+< 	public void testTransactionSaveFailure() {
+< 		TransactionAccountFromModel accFrom = new TransactionAccountFromModel(1000L);
+< 		TransactionAccountToModel accTo = new TransactionAccountToModel(1000L);
+< 		accFrom.insert();
+< 		accTo.insert();
+< 	
+< 		try {
+< 			accFrom.getPersistenceManager().beginTransaction();
+< 			accFrom.amount-=100L;
+< 			accFrom.save();
+< 			accTo.amount+=100L;
+< 			accTo.save();
+< 			throw new SienaException("test");
+< 		}catch(SienaException e){
+< 			accFrom.getPersistenceManager().rollbackTransaction();
+< 		}finally{
+< 			accFrom.getPersistenceManager().closeConnection();
+< 		}
+< 		
+< 		TransactionAccountFrom accFromAfter = pm.getByKey(TransactionAccountFrom.class, accFrom.id);
+< 		assertTrue(1000L == accFromAfter.amount);
+< 		TransactionAccountTo accToAfter = pm.getByKey(TransactionAccountTo.class, accTo.id);
+< 		assertTrue(1000L == accToAfter.amount);
+---
+> 	public void testAggregate() {
+> 		AggregateChildModel adam1 = new AggregateChildModel();
+> 		adam1.name = "adam1";
+> 		AggregateChildModel adam2 = new AggregateChildModel();
+> 		adam1.name = "adam2";
+> 		
+> 		AggregateChildModel eve = new AggregateChildModel();
+> 		eve.name = "eve";
+> 
+> 		AggregateChildModel bob = new AggregateChildModel();
+> 		bob.name = "bob";
+> 
+> 		AggregateParentModel parent = new AggregateParentModel();
+> 		parent.name = "god";
+> 		parent.child = adam1;
+> 		parent.children.elements().addAll(Arrays.asList(adam2, eve, bob));
+> 				
+> 		parent.insert();
+> 		
+> 		assertNotNull(parent.id);
+> 		assertNotNull(parent.child.id);
+> 		
+> 		AggregateParentModel god1 = 
+> 			pm.getByKey(AggregateParentModel.class, parent.id);
+> 		
+> 		assertNotNull(god1);
+> 		assertEquals(adam1, god1.child);
+> 		List<AggregateChildModel> children = god1.children.fetch();
+> 		
+> 		AggregateChildModel adamAfter = AggregateParentModel.all().filter("name", "god").get().child;
+> 		assertEquals(adam1, adamAfter);
+> 		// can't work with aggregated in GAE because there is no join
+> 		//AggregateParentModel.all().filter("child.name", "adam");
+> 		//AggregateChildModel.all().aggregated("child", parent.id).fetch();
+918a900
+> 
+diff -r source/src/test/java/siena/base/test/BaseTest.java /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/src/test/java/siena/base/test/BaseTest.java
+7d6
+< import java.sql.Connection;
+30d28
+< import siena.base.test.model.BigDecimalDoubleModel;
+32,33d29
+< import siena.base.test.model.BigDecimalModelNoPrecision;
+< import siena.base.test.model.BigDecimalStringModel;
+57,58d52
+< import siena.base.test.model.TransactionAccountFrom;
+< import siena.base.test.model.TransactionAccountTo;
+124,128d117
+< 		classes.add(BigDecimalModelNoPrecision.class);
+< 		classes.add(BigDecimalStringModel.class);
+< 		classes.add(BigDecimalDoubleModel.class);
+< 		classes.add(TransactionAccountFrom.class);
+< 		classes.add(TransactionAccountTo.class);
+5386a5376
+> 		embed.setGamma(true);
+5388c5378,5385
+< 		
+---
+> 
+> 		EmbeddedModel embed2 = new EmbeddedModel();
+> 		embed2.id = "embed2";
+> 		embed2.alpha = "test2";
+> 		embed2.beta = 1234;
+> 		embed2.setGamma(true);
+> 		pm.insert(embed2);
+> 
+5391a5389,5391
+> 		container.embeds = new ArrayList<EmbeddedModel>();
+> 		container.embeds.add(embed);
+> 		container.embeds.add(embed2);
+5400a5401,5406
+> 		assertEquals(embed.isGamma(), afterContainer.embed.isGamma());
+> 		int i=0;
+> 		for(EmbeddedModel mod: afterContainer.embeds){
+> 			assertEquals(container.embeds.get(i++).id, mod.id);
+> 		}
+> 		assertEquals(embed.isGamma(), afterContainer.embed.isGamma());
+5592,6037d5597
+< 	
+< 	public void testBigDecimalNoPrecision() {
+< 		BigDecimalModelNoPrecision bigdec = 
+< 			new BigDecimalModelNoPrecision(new BigDecimal("123456789.01"));
+< 		pm.insert(bigdec);
+< 		
+< 		BigDecimalModelNoPrecision bigdec2 = pm.getByKey(BigDecimalModelNoPrecision.class, bigdec.id);
+< 		assertEquals(bigdec, bigdec2);
+< 		
+< 		bigdec = 
+< 			new BigDecimalModelNoPrecision(
+< 					new BigDecimal("999999999.99"));
+< 		pm.insert(bigdec);
+< 		
+< 		bigdec2 = pm.getByKey(BigDecimalModelNoPrecision.class, bigdec.id);
+< 		assertEquals(bigdec, bigdec2);
+< 		
+< 		//-100.5
+< 		bigdec = 
+< 			new BigDecimalModelNoPrecision(new BigDecimal("-100.50"));
+< 		pm.insert(bigdec);
+< 		
+< 		bigdec2 = pm.getByKey(BigDecimalModelNoPrecision.class, bigdec.id);
+< 		assertEquals(bigdec, bigdec2);
+< 	}
+< 	
+< 	public void testBigDecimalString() {
+< 		BigDecimalStringModel bigdec = 
+< 			new BigDecimalStringModel(new BigDecimal("123456789.0123456890"));
+< 		pm.insert(bigdec);
+< 		
+< 		BigDecimalStringModel bigdec2 = pm.getByKey(BigDecimalStringModel.class, bigdec.id);
+< 		assertEquals(bigdec, bigdec2);
+< 		
+< 		bigdec = 
+< 			new BigDecimalStringModel(
+< 					new BigDecimal("999999999.9999999999"));
+< 		pm.insert(bigdec);
+< 		
+< 		bigdec2 = pm.getByKey(BigDecimalStringModel.class, bigdec.id);
+< 		assertEquals(bigdec, bigdec2);
+< 		
+< 		//-100.5
+< 		bigdec = 
+< 			new BigDecimalStringModel(new BigDecimal("-100.5000000000"));
+< 		pm.insert(bigdec);
+< 		
+< 		bigdec2 = pm.getByKey(BigDecimalStringModel.class, bigdec.id);
+< 		assertEquals(bigdec, bigdec2);
+< 	}
+< 	
+< 	public void testBigDecimalDouble() {
+< 		BigDecimalDoubleModel bigdec = 
+< 			new BigDecimalDoubleModel(new BigDecimal("123456789.012345"));
+< 		pm.insert(bigdec);
+< 		
+< 		BigDecimalDoubleModel bigdec2 = pm.getByKey(BigDecimalDoubleModel.class, bigdec.id);
+< 		assertEquals(bigdec, bigdec2);
+< 		
+< 		bigdec = 
+< 			new BigDecimalDoubleModel(
+< 					new BigDecimal("999999999.9999999999"));
+< 		pm.insert(bigdec);
+< 		
+< 		bigdec2 = pm.getByKey(BigDecimalDoubleModel.class, bigdec.id);
+< 		assertEquals(bigdec, bigdec2);
+< 		
+< 		//-100.5
+< 		bigdec = 
+< 			new BigDecimalDoubleModel(new BigDecimal("-100.5000000000"));
+< 		pm.insert(bigdec);
+< 		
+< 		bigdec2 = pm.getByKey(BigDecimalDoubleModel.class, bigdec.id);
+< 		assertEquals(bigdec, bigdec2);
+< 	}
+< 	
+< 	public void testTransactionUpdate() {
+< 		TransactionAccountFrom accFrom = new TransactionAccountFrom(1000L);
+< 		TransactionAccountTo accTo = new TransactionAccountTo(1000L);
+< 		pm.insert(accFrom, accTo);
+< 	
+< 		try {
+< 			pm.beginTransaction(Connection.TRANSACTION_READ_COMMITTED);
+< 			accFrom.amount-=100L;
+< 			pm.update(accFrom);
+< 			accTo.amount+=100L;
+< 			pm.update(accTo);
+< 			pm.commitTransaction();
+< 		}catch(SienaException e){
+< 			pm.rollbackTransaction();
+< 			fail();
+< 		}finally{
+< 			pm.closeConnection();
+< 		}
+< 		
+< 		TransactionAccountFrom accFromAfter = pm.getByKey(TransactionAccountFrom.class, accFrom.id);
+< 		assertTrue(900L == accFromAfter.amount);
+< 		TransactionAccountTo accToAfter = pm.getByKey(TransactionAccountTo.class, accTo.id);
+< 		assertTrue(1100L == accToAfter.amount);
+< 	}
+< 	
+< 	public void testTransactionUpdateFailure() {
+< 		TransactionAccountFrom accFrom = new TransactionAccountFrom(1000L);
+< 		TransactionAccountTo accTo = new TransactionAccountTo(1000L);
+< 		pm.insert(accFrom, accTo);
+< 	
+< 		try {
+< 			pm.beginTransaction(Connection.TRANSACTION_READ_COMMITTED);
+< 			accFrom.amount-=100L;
+< 			pm.update(accFrom);
+< 			accTo.amount+=100L;
+< 			pm.update(accTo);
+< 			throw new SienaException("test");
+< 		}catch(SienaException e){
+< 			pm.rollbackTransaction();
+< 		}finally{
+< 			pm.closeConnection();
+< 		}
+< 		
+< 		TransactionAccountFrom accFromAfter = pm.getByKey(TransactionAccountFrom.class, accFrom.id);
+< 		assertTrue(1000L == accFromAfter.amount);
+< 		TransactionAccountTo accToAfter = pm.getByKey(TransactionAccountTo.class, accTo.id);
+< 		assertTrue(1000L == accToAfter.amount);
+< 	}
+< 	
+< 	public void testTransactionInsert() {
+< 		TransactionAccountFrom accFrom = new TransactionAccountFrom(1000L);
+< 		TransactionAccountTo accTo = new TransactionAccountTo(1000L);
+< 	
+< 		try {
+< 			pm.beginTransaction(Connection.TRANSACTION_READ_COMMITTED);
+< 			accFrom.amount=1000L;
+< 			accTo.amount=100L;
+< 			pm.insert(accFrom);
+< 			pm.insert(accTo);
+< 			pm.commitTransaction();
+< 		}catch(SienaException e){
+< 			pm.rollbackTransaction();
+< 			fail();
+< 		}finally{
+< 			pm.closeConnection();
+< 		}
+< 		
+< 		TransactionAccountFrom accFromAfter = pm.getByKey(TransactionAccountFrom.class, accFrom.id);
+< 		assertTrue(1000L == accFromAfter.amount);
+< 		TransactionAccountTo accToAfter = pm.getByKey(TransactionAccountTo.class, accTo.id);
+< 		assertTrue(100L == accToAfter.amount);
+< 	}
+< 	
+< 	public void testTransactionInsertFailure() {
+< 		TransactionAccountFrom accFrom = new TransactionAccountFrom(1000L);
+< 		TransactionAccountTo accTo = new TransactionAccountTo(1000L);
+< 	
+< 		try {
+< 			pm.beginTransaction(Connection.TRANSACTION_READ_COMMITTED);
+< 			accFrom.amount=1000L;
+< 			accTo.amount=100L;
+< 			pm.insert(accFrom, accTo);
+< 			throw new SienaException("test");
+< 		}catch(SienaException e){
+< 			pm.rollbackTransaction();
+< 		}finally{
+< 			pm.closeConnection();
+< 		}
+< 		
+< 		TransactionAccountFrom accFromAfter = pm.getByKey(TransactionAccountFrom.class, accFrom.id);
+< 		assertNull(accFromAfter);
+< 		TransactionAccountTo accToAfter = pm.getByKey(TransactionAccountTo.class, accTo.id);
+< 		assertNull(accToAfter);
+< 	}
+< 	
+< 	public void testTransactionSave() {
+< 		TransactionAccountFrom accFrom = new TransactionAccountFrom(1000L);
+< 		TransactionAccountTo accTo = new TransactionAccountTo(1000L);
+< 		pm.insert(accFrom, accTo);
+< 	
+< 		try {
+< 			pm.beginTransaction(Connection.TRANSACTION_READ_COMMITTED);
+< 			accFrom.amount-=100L;
+< 			pm.save(accFrom);
+< 			accTo.amount+=100L;
+< 			pm.save(accTo);
+< 			pm.commitTransaction();
+< 		}catch(SienaException e){
+< 			pm.rollbackTransaction();
+< 			fail();
+< 		}finally{
+< 			pm.closeConnection();
+< 		}
+< 		
+< 		TransactionAccountFrom accFromAfter = pm.getByKey(TransactionAccountFrom.class, accFrom.id);
+< 		assertTrue(900L == accFromAfter.amount);
+< 		TransactionAccountTo accToAfter = pm.getByKey(TransactionAccountTo.class, accTo.id);
+< 		assertTrue(1100L == accToAfter.amount);
+< 	}
+< 	
+< 	public void testTransactionSaveFailure() {
+< 		TransactionAccountFrom accFrom = new TransactionAccountFrom(1000L);
+< 		TransactionAccountTo accTo = new TransactionAccountTo(1000L);
+< 		pm.insert(accFrom, accTo);
+< 	
+< 		try {
+< 			pm.beginTransaction(Connection.TRANSACTION_READ_COMMITTED);
+< 			accFrom.amount-=100L;
+< 			pm.save(accFrom);
+< 			accTo.amount+=100L;
+< 			pm.save(accTo);
+< 			throw new SienaException("test");
+< 		}catch(SienaException e){
+< 			pm.rollbackTransaction();
+< 		}finally{
+< 			pm.closeConnection();
+< 		}
+< 		
+< 		TransactionAccountFrom accFromAfter = pm.getByKey(TransactionAccountFrom.class, accFrom.id);
+< 		assertTrue(1000L == accFromAfter.amount);
+< 		TransactionAccountTo accToAfter = pm.getByKey(TransactionAccountTo.class, accTo.id);
+< 		assertTrue(1000L == accToAfter.amount);
+< 	}
+< 	
+< 	public void testTransactionDelete() {
+< 		TransactionAccountFrom accFrom = new TransactionAccountFrom(1000L);
+< 		TransactionAccountTo accTo = new TransactionAccountTo(1000L);
+< 		pm.insert(accFrom, accTo);
+< 	
+< 		try {
+< 			pm.beginTransaction(Connection.TRANSACTION_READ_COMMITTED);
+< 			pm.delete(accFrom);
+< 			pm.delete(accTo);
+< 			pm.commitTransaction();
+< 		}catch(SienaException e){
+< 			pm.rollbackTransaction();
+< 			fail();
+< 		}finally{
+< 			pm.closeConnection();
+< 		}
+< 		
+< 		TransactionAccountFrom accFromAfter = pm.getByKey(TransactionAccountFrom.class, accFrom.id);
+< 		assertNull(accFromAfter);
+< 		TransactionAccountTo accToAfter = pm.getByKey(TransactionAccountTo.class, accTo.id);
+< 		assertNull(accToAfter);
+< 	}
+< 	
+< 	public void testTransactionDeleteFailure() {
+< 		TransactionAccountFrom accFrom = new TransactionAccountFrom(1000L);
+< 		TransactionAccountTo accTo = new TransactionAccountTo(100L);
+< 		pm.insert(accFrom, accTo);
+< 	
+< 		try {
+< 			pm.beginTransaction(Connection.TRANSACTION_READ_COMMITTED);
+< 			pm.delete(accFrom);
+< 			pm.delete(accTo);
+< 			throw new SienaException("test");
+< 		}catch(SienaException e){
+< 			pm.rollbackTransaction();
+< 		}finally{
+< 			pm.closeConnection();
+< 		}
+< 		
+< 		TransactionAccountFrom accFromAfter = pm.getByKey(TransactionAccountFrom.class, accFrom.id);
+< 		assertTrue(1000L == accFromAfter.amount);
+< 		TransactionAccountTo accToAfter = pm.getByKey(TransactionAccountTo.class, accTo.id);
+< 		assertTrue(100L == accToAfter.amount);
+< 	}
+< 	
+< 	public void testTransactionInsertBatch() {
+< 		TransactionAccountFrom accFrom = new TransactionAccountFrom(1000L);
+< 		TransactionAccountTo accTo = new TransactionAccountTo(1000L);
+< 	
+< 		try {
+< 			pm.beginTransaction(Connection.TRANSACTION_READ_COMMITTED);
+< 			accFrom.amount=1000L;
+< 			accTo.amount=100L;
+< 			pm.insert(accFrom, accTo);
+< 			pm.commitTransaction();
+< 		}catch(SienaException e){
+< 			pm.rollbackTransaction();
+< 			fail();
+< 		}finally{
+< 			pm.closeConnection();
+< 		}
+< 		
+< 		TransactionAccountFrom accFromAfter = pm.getByKey(TransactionAccountFrom.class, accFrom.id);
+< 		assertTrue(1000L == accFromAfter.amount);
+< 		TransactionAccountTo accToAfter = pm.getByKey(TransactionAccountTo.class, accTo.id);
+< 		assertTrue(100L == accToAfter.amount);
+< 	}
+< 	
+< 	public void testTransactionInsertBatchFailure() {
+< 		TransactionAccountFrom accFrom = new TransactionAccountFrom(1000L);
+< 		TransactionAccountTo accTo = new TransactionAccountTo(1000L);
+< 	
+< 		try {
+< 			pm.beginTransaction(Connection.TRANSACTION_READ_COMMITTED);
+< 			accFrom.amount=1000L;
+< 			accTo.amount=100L;
+< 			pm.insert(accFrom, accTo);
+< 			throw new SienaException("test");
+< 		}catch(SienaException e){
+< 			pm.rollbackTransaction();
+< 		}finally{
+< 			pm.closeConnection();
+< 		}
+< 		
+< 		TransactionAccountFrom accFromAfter = pm.getByKey(TransactionAccountFrom.class, accFrom.id);
+< 		assertNull(accFromAfter);
+< 		TransactionAccountTo accToAfter = pm.getByKey(TransactionAccountTo.class, accTo.id);
+< 		assertNull(accToAfter);
+< 	}
+< 	
+< 	public void testTransactionDeleteBatch() {
+< 		TransactionAccountFrom accFrom = new TransactionAccountFrom(1000L);
+< 		TransactionAccountTo accTo = new TransactionAccountTo(1000L);
+< 		pm.insert(accFrom, accTo);
+< 
+< 		try {
+< 			pm.beginTransaction(Connection.TRANSACTION_READ_COMMITTED);
+< 			pm.delete(accFrom, accTo);
+< 			pm.commitTransaction();
+< 		}catch(SienaException e){
+< 			pm.rollbackTransaction();
+< 			fail();
+< 		}finally{
+< 			pm.closeConnection();
+< 		}
+< 		
+< 		TransactionAccountFrom accFromAfter = pm.getByKey(TransactionAccountFrom.class, accFrom.id);
+< 		assertNull(accFromAfter);
+< 		TransactionAccountTo accToAfter = pm.getByKey(TransactionAccountTo.class, accTo.id);
+< 		assertNull(accToAfter);
+< 	}
+< 	
+< 	public void testTransactionDeleteBatchFailure() {
+< 		TransactionAccountFrom accFrom = new TransactionAccountFrom(1000L);
+< 		TransactionAccountTo accTo = new TransactionAccountTo(100L);
+< 		pm.insert(accFrom, accTo);
+< 	
+< 		try {
+< 			pm.beginTransaction(Connection.TRANSACTION_READ_COMMITTED);
+< 			pm.delete(accFrom, accTo);
+< 			throw new SienaException("test");
+< 		}catch(SienaException e){
+< 			pm.rollbackTransaction();
+< 		}finally{
+< 			pm.closeConnection();
+< 		}
+< 		
+< 		TransactionAccountFrom accFromAfter = pm.getByKey(TransactionAccountFrom.class, accFrom.id);
+< 		assertTrue(1000L == accFromAfter.amount);
+< 		TransactionAccountTo accToAfter = pm.getByKey(TransactionAccountTo.class, accTo.id);
+< 		assertTrue(100L == accToAfter.amount);
+< 	}
+< 	
+< 	public void testTransactionUpdateBatch() {
+< 		TransactionAccountFrom accFrom = new TransactionAccountFrom(1000L);
+< 		TransactionAccountTo accTo = new TransactionAccountTo(1000L);
+< 		pm.insert(accFrom, accTo);
+< 	
+< 		try {
+< 			pm.beginTransaction(Connection.TRANSACTION_READ_COMMITTED);
+< 			accFrom.amount-=100L;
+< 			accTo.amount+=100L;
+< 			pm.update(accFrom, accTo);
+< 			pm.commitTransaction();
+< 		}catch(SienaException e){
+< 			pm.rollbackTransaction();
+< 			fail();
+< 		}finally{
+< 			pm.closeConnection();
+< 		}
+< 		
+< 		TransactionAccountFrom accFromAfter = pm.getByKey(TransactionAccountFrom.class, accFrom.id);
+< 		assertTrue(900L == accFromAfter.amount);
+< 		TransactionAccountTo accToAfter = pm.getByKey(TransactionAccountTo.class, accTo.id);
+< 		assertTrue(1100L == accToAfter.amount);
+< 	}
+< 	
+< 	public void testTransactionUpdateBatchFailure() {
+< 		TransactionAccountFrom accFrom = new TransactionAccountFrom(1000L);
+< 		TransactionAccountTo accTo = new TransactionAccountTo(1000L);
+< 		pm.insert(accFrom, accTo);
+< 	
+< 		try {
+< 			pm.beginTransaction(Connection.TRANSACTION_READ_COMMITTED);
+< 			accFrom.amount-=100L;
+< 			accTo.amount+=100L;
+< 			pm.update(accFrom, accTo);
+< 			throw new SienaException("test");
+< 		}catch(SienaException e){
+< 			pm.rollbackTransaction();
+< 		}finally{
+< 			pm.closeConnection();
+< 		}
+< 		
+< 		TransactionAccountFrom accFromAfter = pm.getByKey(TransactionAccountFrom.class, accFrom.id);
+< 		assertTrue(1000L == accFromAfter.amount);
+< 		TransactionAccountTo accToAfter = pm.getByKey(TransactionAccountTo.class, accTo.id);
+< 		assertTrue(1000L == accToAfter.amount);
+< 	}
+< 	
+< 	public void testTransactionSaveBatch() {
+< 		TransactionAccountFrom accFrom = new TransactionAccountFrom(1000L);
+< 		TransactionAccountTo accTo = new TransactionAccountTo(1000L);
+< 		pm.insert(accFrom, accTo);
+< 	
+< 		try {
+< 			pm.beginTransaction(Connection.TRANSACTION_READ_COMMITTED);
+< 			accFrom.amount-=100L;
+< 			accTo.amount+=100L;
+< 			pm.save(accFrom, accTo);
+< 			pm.commitTransaction();
+< 		}catch(SienaException e){
+< 			pm.rollbackTransaction();
+< 			fail();
+< 		}finally{
+< 			pm.closeConnection();
+< 		}
+< 		
+< 		TransactionAccountFrom accFromAfter = pm.getByKey(TransactionAccountFrom.class, accFrom.id);
+< 		assertTrue(900L == accFromAfter.amount);
+< 		TransactionAccountTo accToAfter = pm.getByKey(TransactionAccountTo.class, accTo.id);
+< 		assertTrue(1100L == accToAfter.amount);
+< 	}
+< 	
+< 	public void testTransactionSaveBatchFailure() {
+< 		TransactionAccountFrom accFrom = new TransactionAccountFrom(1000L);
+< 		TransactionAccountTo accTo = new TransactionAccountTo(1000L);
+< 		pm.insert(accFrom, accTo);
+< 	
+< 		try {
+< 			pm.beginTransaction(Connection.TRANSACTION_READ_COMMITTED);
+< 			accFrom.amount-=100L;
+< 			accTo.amount+=100L;
+< 			pm.save(accFrom, accTo);
+< 			throw new SienaException("test");
+< 		}catch(SienaException e){
+< 			pm.rollbackTransaction();
+< 		}finally{
+< 			pm.closeConnection();
+< 		}
+< 		
+< 		TransactionAccountFrom accFromAfter = pm.getByKey(TransactionAccountFrom.class, accFrom.id);
+< 		assertTrue(1000L == accFromAfter.amount);
+< 		TransactionAccountTo accToAfter = pm.getByKey(TransactionAccountTo.class, accTo.id);
+< 		assertTrue(1000L == accToAfter.amount);
+< 	}
+diff -r source/src/test/java/siena/base/test/GaeModelTest.java /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/src/test/java/siena/base/test/GaeModelTest.java
+6,10d5
+< import siena.SienaException;
+< import siena.base.test.model.TransactionAccountFrom;
+< import siena.base.test.model.TransactionAccountFromModel;
+< import siena.base.test.model.TransactionAccountTo;
+< import siena.base.test.model.TransactionAccountToModel;
+229,268c224,227
+< 	// SPECIFIC TESTS FOR GAE (transaction on one entity in a given group)
+< 	public void testTransactionSave() {
+< 		TransactionAccountFromModel accFrom = new TransactionAccountFromModel(1000L);
+< 		
+< 		accFrom.insert();
+< 	
+< 		try {
+< 			accFrom.getPersistenceManager().beginTransaction();
+< 			accFrom.amount-=100L;
+< 			accFrom.save();
+< 			accFrom.getPersistenceManager().commitTransaction();
+< 		}catch(SienaException e){
+< 			accFrom.getPersistenceManager().rollbackTransaction();
+< 			fail();
+< 		}finally{
+< 			accFrom.getPersistenceManager().closeConnection();
+< 		}
+< 		
+< 		TransactionAccountFrom accFromAfter = pm.getByKey(TransactionAccountFrom.class, accFrom.id);
+< 		assertTrue(900L == accFromAfter.amount);
+< 
+< 	}
+< 	
+< 	public void testTransactionSaveFailure() {
+< 		TransactionAccountFromModel accFrom = new TransactionAccountFromModel(1000L);
+< 		accFrom.insert();
+< 	
+< 		try {
+< 			accFrom.getPersistenceManager().beginTransaction();
+< 			accFrom.amount-=100L;
+< 			accFrom.save();
+< 			throw new SienaException("test");
+< 		}catch(SienaException e){
+< 			accFrom.getPersistenceManager().rollbackTransaction();
+< 		}finally{
+< 			accFrom.getPersistenceManager().closeConnection();
+< 		}
+< 		
+< 		TransactionAccountFrom accFromAfter = pm.getByKey(TransactionAccountFrom.class, accFrom.id);
+< 		assertTrue(1000L == accFromAfter.amount);
+---
+> 	@Override
+> 	public void testAggregate() {
+> 		// TODO Auto-generated method stub
+> 		super.testAggregate();
+diff -r source/src/test/java/siena/base/test/GaeTest.java /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/src/test/java/siena/base/test/GaeTest.java
+3d2
+< import java.sql.Connection;
+15,16d13
+< import siena.base.test.model.TransactionAccountFrom;
+< import siena.base.test.model.TransactionAccountTo;
+419,494d415
+< 	@Override
+< 	public void testTransactionUpdate() {
+< 		TransactionAccountFrom accFrom = new TransactionAccountFrom(1000L);
+< 		pm.insert(accFrom);
+< 	
+< 		try {
+< 			pm.beginTransaction(Connection.TRANSACTION_READ_COMMITTED);
+< 			accFrom.amount-=100L;
+< 			pm.update(accFrom);
+< 			pm.commitTransaction();
+< 		}catch(SienaException e){
+< 			pm.rollbackTransaction();
+< 			fail();
+< 		}finally{
+< 			pm.closeConnection();
+< 		}
+< 		
+< 		TransactionAccountFrom accFromAfter = pm.getByKey(TransactionAccountFrom.class, accFrom.id);
+< 		assertTrue(900L == accFromAfter.amount);
+< 	}
+< 	
+< 	@Override
+< 	public void testTransactionUpdateFailure() {
+< 		TransactionAccountFrom accFrom = new TransactionAccountFrom(1000L);
+< 		pm.insert(accFrom);
+< 	
+< 		try {
+< 			pm.beginTransaction(Connection.TRANSACTION_READ_COMMITTED);
+< 			accFrom.amount-=100L;
+< 			pm.update(accFrom);
+< 			throw new SienaException("test");
+< 		}catch(SienaException e){
+< 			pm.rollbackTransaction();
+< 		}finally{
+< 			pm.closeConnection();
+< 		}
+< 		
+< 		TransactionAccountFrom accFromAfter = pm.getByKey(TransactionAccountFrom.class, accFrom.id);
+< 		assertTrue(1000L == accFromAfter.amount);
+< 	}
+< 	
+< 	public void testTransactionInsert() {
+< 		TransactionAccountFrom accFrom = new TransactionAccountFrom(1000L);
+< 	
+< 		try {
+< 			pm.beginTransaction(Connection.TRANSACTION_READ_COMMITTED);
+< 			accFrom.amount=1000L;
+< 			pm.insert(accFrom);
+< 			pm.commitTransaction();
+< 		}catch(SienaException e){
+< 			pm.rollbackTransaction();
+< 			fail();
+< 		}finally{
+< 			pm.closeConnection();
+< 		}
+< 		
+< 		TransactionAccountFrom accFromAfter = pm.getByKey(TransactionAccountFrom.class, accFrom.id);
+< 		assertTrue(1000L == accFromAfter.amount);
+< 	}
+< 	
+< 	public void testTransactionInsertFailure() {
+< 		TransactionAccountFrom accFrom = new TransactionAccountFrom(1000L);
+< 	
+< 		try {
+< 			pm.beginTransaction(Connection.TRANSACTION_READ_COMMITTED);
+< 			accFrom.amount=1000L;
+< 			pm.insert(accFrom);
+< 			throw new SienaException("test");
+< 		}catch(SienaException e){
+< 			pm.rollbackTransaction();
+< 		}finally{
+< 			pm.closeConnection();
+< 		}
+< 		
+< 		TransactionAccountFrom accFromAfter = pm.getByKey(TransactionAccountFrom.class, accFrom.id);
+< 		assertNull(accFromAfter);
+496,723d416
+< 	}
+< 	
+< 	public void testTransactionSave() {
+< 		TransactionAccountFrom accFrom = new TransactionAccountFrom(1000L);
+< 		pm.insert(accFrom);
+< 	
+< 		try {
+< 			pm.beginTransaction(Connection.TRANSACTION_READ_COMMITTED);
+< 			accFrom.amount-=100L;
+< 			pm.save(accFrom);
+< 			pm.commitTransaction();
+< 		}catch(SienaException e){
+< 			pm.rollbackTransaction();
+< 			fail();
+< 		}finally{
+< 			pm.closeConnection();
+< 		}
+< 		
+< 		TransactionAccountFrom accFromAfter = pm.getByKey(TransactionAccountFrom.class, accFrom.id);
+< 		assertTrue(900L == accFromAfter.amount);
+< 	}
+< 	
+< 	public void testTransactionSaveFailure() {
+< 		TransactionAccountFrom accFrom = new TransactionAccountFrom(1000L);
+< 		pm.insert(accFrom);
+< 	
+< 		try {
+< 			pm.beginTransaction(Connection.TRANSACTION_READ_COMMITTED);
+< 			accFrom.amount-=100L;
+< 			pm.save(accFrom);
+< 			throw new SienaException("test");
+< 		}catch(SienaException e){
+< 			pm.rollbackTransaction();
+< 		}finally{
+< 			pm.closeConnection();
+< 		}
+< 		
+< 		TransactionAccountFrom accFromAfter = pm.getByKey(TransactionAccountFrom.class, accFrom.id);
+< 		assertTrue(1000L == accFromAfter.amount);
+< 	}
+< 	
+< 	public void testTransactionDelete() {
+< 		TransactionAccountFrom accFrom = new TransactionAccountFrom(1000L);
+< 		pm.insert(accFrom);
+< 	
+< 		try {
+< 			pm.beginTransaction(Connection.TRANSACTION_READ_COMMITTED);
+< 			pm.delete(accFrom);
+< 			pm.commitTransaction();
+< 		}catch(SienaException e){
+< 			pm.rollbackTransaction();
+< 			fail();
+< 		}finally{
+< 			pm.closeConnection();
+< 		}
+< 		
+< 		TransactionAccountFrom accFromAfter = pm.getByKey(TransactionAccountFrom.class, accFrom.id);
+< 		assertNull(accFromAfter);
+< 	}
+< 	
+< 	public void testTransactionDeleteFailure() {
+< 		TransactionAccountFrom accFrom = new TransactionAccountFrom(1000L);
+< 		pm.insert(accFrom);
+< 	
+< 		try {
+< 			pm.beginTransaction(Connection.TRANSACTION_READ_COMMITTED);
+< 			pm.delete(accFrom);
+< 			throw new SienaException("test");
+< 		}catch(SienaException e){
+< 			pm.rollbackTransaction();
+< 		}finally{
+< 			pm.closeConnection();
+< 		}
+< 		
+< 		TransactionAccountFrom accFromAfter = pm.getByKey(TransactionAccountFrom.class, accFrom.id);
+< 		assertTrue(1000L == accFromAfter.amount);
+< 	}
+< 	
+< 	public void testTransactionInsertBatch() {
+< 		TransactionAccountFrom accFrom = new TransactionAccountFrom(1000L);
+< 	
+< 		try {
+< 			pm.beginTransaction(Connection.TRANSACTION_READ_COMMITTED);
+< 			accFrom.amount=1000L;
+< 			pm.insert(accFrom);
+< 			pm.commitTransaction();
+< 		}catch(SienaException e){
+< 			pm.rollbackTransaction();
+< 			fail();
+< 		}finally{
+< 			pm.closeConnection();
+< 		}
+< 		
+< 		TransactionAccountFrom accFromAfter = pm.getByKey(TransactionAccountFrom.class, accFrom.id);
+< 		assertTrue(1000L == accFromAfter.amount);
+< 	}
+< 	
+< 	public void testTransactionInsertBatchFailure() {
+< 		TransactionAccountFrom accFrom = new TransactionAccountFrom(1000L);
+< 	
+< 		try {
+< 			pm.beginTransaction(Connection.TRANSACTION_READ_COMMITTED);
+< 			accFrom.amount=1000L;
+< 			pm.insert(accFrom);
+< 			throw new SienaException("test");
+< 		}catch(SienaException e){
+< 			pm.rollbackTransaction();
+< 		}finally{
+< 			pm.closeConnection();
+< 		}
+< 		
+< 		TransactionAccountFrom accFromAfter = pm.getByKey(TransactionAccountFrom.class, accFrom.id);
+< 		assertNull(accFromAfter);
+< 	}
+< 	
+< 	public void testTransactionDeleteBatch() {
+< 		TransactionAccountFrom accFrom = new TransactionAccountFrom(1000L);
+< 		pm.insert(accFrom);
+< 
+< 		try {
+< 			pm.beginTransaction(Connection.TRANSACTION_READ_COMMITTED);
+< 			pm.delete(accFrom);
+< 			pm.commitTransaction();
+< 		}catch(SienaException e){
+< 			pm.rollbackTransaction();
+< 			fail();
+< 		}finally{
+< 			pm.closeConnection();
+< 		}
+< 		
+< 		TransactionAccountFrom accFromAfter = pm.getByKey(TransactionAccountFrom.class, accFrom.id);
+< 		assertNull(accFromAfter);
+< 	}
+< 	
+< 	public void testTransactionDeleteBatchFailure() {
+< 		TransactionAccountFrom accFrom = new TransactionAccountFrom(1000L);
+< 		pm.insert(accFrom);
+< 	
+< 		try {
+< 			pm.beginTransaction(Connection.TRANSACTION_READ_COMMITTED);
+< 			pm.delete(accFrom);
+< 			throw new SienaException("test");
+< 		}catch(SienaException e){
+< 			pm.rollbackTransaction();
+< 		}finally{
+< 			pm.closeConnection();
+< 		}
+< 		
+< 		TransactionAccountFrom accFromAfter = pm.getByKey(TransactionAccountFrom.class, accFrom.id);
+< 		assertTrue(1000L == accFromAfter.amount);
+< 	}
+< 	
+< 	public void testTransactionUpdateBatch() {
+< 		TransactionAccountFrom accFrom = new TransactionAccountFrom(1000L);
+< 		pm.insert(accFrom);
+< 	
+< 		try {
+< 			pm.beginTransaction(Connection.TRANSACTION_READ_COMMITTED);
+< 			accFrom.amount-=100L;
+< 			pm.update(accFrom);
+< 			pm.commitTransaction();
+< 		}catch(SienaException e){
+< 			pm.rollbackTransaction();
+< 			fail();
+< 		}finally{
+< 			pm.closeConnection();
+< 		}
+< 		
+< 		TransactionAccountFrom accFromAfter = pm.getByKey(TransactionAccountFrom.class, accFrom.id);
+< 		assertTrue(900L == accFromAfter.amount);
+< 	}
+< 	
+< 	public void testTransactionUpdateBatchFailure() {
+< 		TransactionAccountFrom accFrom = new TransactionAccountFrom(1000L);
+< 		pm.insert(accFrom);
+< 	
+< 		try {
+< 			pm.beginTransaction(Connection.TRANSACTION_READ_COMMITTED);
+< 			accFrom.amount-=100L;
+< 			throw new SienaException("test");
+< 		}catch(SienaException e){
+< 			pm.rollbackTransaction();
+< 		}finally{
+< 			pm.closeConnection();
+< 		}
+< 		
+< 		TransactionAccountFrom accFromAfter = pm.getByKey(TransactionAccountFrom.class, accFrom.id);
+< 		assertTrue(1000L == accFromAfter.amount);
+< 	}
+< 	
+< 	public void testTransactionSaveBatch() {
+< 		TransactionAccountFrom accFrom = new TransactionAccountFrom(1000L);
+< 		pm.insert(accFrom);
+< 	
+< 		try {
+< 			pm.beginTransaction(Connection.TRANSACTION_READ_COMMITTED);
+< 			accFrom.amount-=100L;
+< 			pm.save(accFrom);
+< 			pm.commitTransaction();
+< 		}catch(SienaException e){
+< 			pm.rollbackTransaction();
+< 			fail();
+< 		}finally{
+< 			pm.closeConnection();
+< 		}
+< 		
+< 		TransactionAccountFrom accFromAfter = pm.getByKey(TransactionAccountFrom.class, accFrom.id);
+< 		assertTrue(900L == accFromAfter.amount);
+< 	}
+< 	
+< 	public void testTransactionSaveBatchFailure() {
+< 		TransactionAccountFrom accFrom = new TransactionAccountFrom(1000L);
+< 		pm.insert(accFrom);
+< 	
+< 		try {
+< 			pm.beginTransaction(Connection.TRANSACTION_READ_COMMITTED);
+< 			accFrom.amount-=100L;
+< 			pm.save(accFrom);
+< 			throw new SienaException("test");
+< 		}catch(SienaException e){
+< 			pm.rollbackTransaction();
+< 		}finally{
+< 			pm.closeConnection();
+< 		}
+< 		
+< 		TransactionAccountFrom accFromAfter = pm.getByKey(TransactionAccountFrom.class, accFrom.id);
+< 		assertTrue(1000L == accFromAfter.amount);
+< 	}
+2150,2167d1842
+< 	@Override
+< 	public void testBigDecimalNoPrecision() {
+< 		// TODO Auto-generated method stub
+< 		super.testBigDecimalNoPrecision();
+< 	}
+< 
+< 	@Override
+< 	public void testBigDecimalString() {
+< 		// TODO Auto-generated method stub
+< 		super.testBigDecimalString();
+< 	}
+< 
+< 	@Override
+< 	public void testBigDecimalDouble() {
+< 		// TODO Auto-generated method stub
+< 		super.testBigDecimalDouble();
+< 	}
+< 
+diff -r source/src/test/java/siena/base/test/H2Test.java /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/src/test/java/siena/base/test/H2Test.java
+1617,1730d1616
+< 	@Override
+< 	public void testBigDecimalNoPrecision() {
+< 		// TODO Auto-generated method stub
+< 		super.testBigDecimalNoPrecision();
+< 	}
+< 
+< 	@Override
+< 	public void testBigDecimalString() {
+< 		// TODO Auto-generated method stub
+< 		super.testBigDecimalString();
+< 	}
+< 
+< 	@Override
+< 	public void testBigDecimalDouble() {
+< 		// TODO Auto-generated method stub
+< 		super.testBigDecimalDouble();
+< 	}
+< 
+< 	@Override
+< 	public void testTransactionUpdate() {
+< 		// TODO Auto-generated method stub
+< 		super.testTransactionUpdate();
+< 	}
+< 
+< 	@Override
+< 	public void testTransactionUpdateFailure() {
+< 		// TODO Auto-generated method stub
+< 		super.testTransactionUpdateFailure();
+< 	}
+< 
+< 	@Override
+< 	public void testTransactionInsert() {
+< 		// TODO Auto-generated method stub
+< 		super.testTransactionInsert();
+< 	}
+< 
+< 	@Override
+< 	public void testTransactionInsertFailure() {
+< 		// TODO Auto-generated method stub
+< 		super.testTransactionInsertFailure();
+< 	}
+< 
+< 	@Override
+< 	public void testTransactionSave() {
+< 		// TODO Auto-generated method stub
+< 		super.testTransactionSave();
+< 	}
+< 
+< 	@Override
+< 	public void testTransactionSaveFailure() {
+< 		// TODO Auto-generated method stub
+< 		super.testTransactionSaveFailure();
+< 	}
+< 
+< 	@Override
+< 	public void testTransactionDelete() {
+< 		// TODO Auto-generated method stub
+< 		super.testTransactionDelete();
+< 	}
+< 
+< 	@Override
+< 	public void testTransactionDeleteFailure() {
+< 		// TODO Auto-generated method stub
+< 		super.testTransactionDeleteFailure();
+< 	}
+< 
+< 	@Override
+< 	public void testTransactionInsertBatch() {
+< 		// TODO Auto-generated method stub
+< 		super.testTransactionInsertBatch();
+< 	}
+< 
+< 	@Override
+< 	public void testTransactionInsertBatchFailure() {
+< 		// TODO Auto-generated method stub
+< 		super.testTransactionInsertBatchFailure();
+< 	}
+< 
+< 	@Override
+< 	public void testTransactionDeleteBatch() {
+< 		// TODO Auto-generated method stub
+< 		super.testTransactionDeleteBatch();
+< 	}
+< 
+< 	@Override
+< 	public void testTransactionDeleteBatchFailure() {
+< 		// TODO Auto-generated method stub
+< 		super.testTransactionDeleteBatchFailure();
+< 	}
+< 
+< 	@Override
+< 	public void testTransactionUpdateBatch() {
+< 		// TODO Auto-generated method stub
+< 		super.testTransactionUpdateBatch();
+< 	}
+< 
+< 	@Override
+< 	public void testTransactionUpdateBatchFailure() {
+< 		// TODO Auto-generated method stub
+< 		super.testTransactionUpdateBatchFailure();
+< 	}
+< 
+< 	@Override
+< 	public void testTransactionSaveBatch() {
+< 		// TODO Auto-generated method stub
+< 		super.testTransactionSaveBatch();
+< 	}
+< 
+< 	@Override
+< 	public void testTransactionSaveBatchFailure() {
+< 		// TODO Auto-generated method stub
+< 		super.testTransactionSaveBatchFailure();
+< 	}
+< 
+diff -r source/src/test/java/siena/base/test/JdbcModelTest.java /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/src/test/java/siena/base/test/JdbcModelTest.java
+239,250d238
+< 
+< 	@Override
+< 	public void testTransactionSave() {
+< 		// TODO Auto-generated method stub
+< 		super.testTransactionSave();
+< 	}
+< 
+< 	@Override
+< 	public void testTransactionSaveFailure() {
+< 		// TODO Auto-generated method stub
+< 		super.testTransactionSaveFailure();
+< 	}
+diff -r source/src/test/java/siena/base/test/JdbcTest.java /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/src/test/java/siena/base/test/JdbcTest.java
+12d11
+< import org.apache.ddlutils.platform.CreationParameters;
+14d12
+< import siena.ClassInfo;
+57c55
+< 			Class.forName("com.mysql.jdbc.Driver").newInstance();
+---
+> 			Class.forName("com.mysql.jdbc.Driver");
+63,69c61
+< 			CreationParameters cp = new CreationParameters();
+< 			// to search, it requires MyISAM
+< 			cp.addParameter(database.findTable("discoveries_search"), "ENGINE", "MyISAM");
+< 			cp.addParameter(database.findTable("discoveries_search2"), "ENGINE", "MyISAM");
+< 
+< 			platform.alterTables(connection, database, cp, true);
+< 			
+---
+> 			platform.alterTables(connection, database, true);
+1622,1735d1613
+< 	@Override
+< 	public void testBigDecimalNoPrecision() {
+< 		// TODO Auto-generated method stub
+< 		super.testBigDecimalNoPrecision();
+< 	}
+< 
+< 	@Override
+< 	public void testBigDecimalString() {
+< 		// TODO Auto-generated method stub
+< 		super.testBigDecimalString();
+< 	}
+< 
+< 	@Override
+< 	public void testBigDecimalDouble() {
+< 		// TODO Auto-generated method stub
+< 		super.testBigDecimalDouble();
+< 	}
+< 
+< 	@Override
+< 	public void testTransactionUpdate() {
+< 		// TODO Auto-generated method stub
+< 		super.testTransactionUpdate();
+< 	}
+< 
+< 	@Override
+< 	public void testTransactionUpdateFailure() {
+< 		// TODO Auto-generated method stub
+< 		super.testTransactionUpdateFailure();
+< 	}
+< 
+< 	@Override
+< 	public void testTransactionInsert() {
+< 		// TODO Auto-generated method stub
+< 		super.testTransactionInsert();
+< 	}
+< 
+< 	@Override
+< 	public void testTransactionInsertFailure() {
+< 		// TODO Auto-generated method stub
+< 		super.testTransactionInsertFailure();
+< 	}
+< 
+< 	@Override
+< 	public void testTransactionSave() {
+< 		// TODO Auto-generated method stub
+< 		super.testTransactionSave();
+< 	}
+< 
+< 	@Override
+< 	public void testTransactionSaveFailure() {
+< 		// TODO Auto-generated method stub
+< 		super.testTransactionSaveFailure();
+< 	}
+< 
+< 	@Override
+< 	public void testTransactionDelete() {
+< 		// TODO Auto-generated method stub
+< 		super.testTransactionDelete();
+< 	}
+< 
+< 	@Override
+< 	public void testTransactionDeleteFailure() {
+< 		// TODO Auto-generated method stub
+< 		super.testTransactionDeleteFailure();
+< 	}
+< 
+< 	@Override
+< 	public void testTransactionInsertBatch() {
+< 		// TODO Auto-generated method stub
+< 		super.testTransactionInsertBatch();
+< 	}
+< 
+< 	@Override
+< 	public void testTransactionInsertBatchFailure() {
+< 		// TODO Auto-generated method stub
+< 		super.testTransactionInsertBatchFailure();
+< 	}
+< 
+< 	@Override
+< 	public void testTransactionDeleteBatch() {
+< 		// TODO Auto-generated method stub
+< 		super.testTransactionDeleteBatch();
+< 	}
+< 
+< 	@Override
+< 	public void testTransactionDeleteBatchFailure() {
+< 		// TODO Auto-generated method stub
+< 		super.testTransactionDeleteBatchFailure();
+< 	}
+< 
+< 	@Override
+< 	public void testTransactionUpdateBatch() {
+< 		// TODO Auto-generated method stub
+< 		super.testTransactionUpdateBatch();
+< 	}
+< 
+< 	@Override
+< 	public void testTransactionUpdateBatchFailure() {
+< 		// TODO Auto-generated method stub
+< 		super.testTransactionUpdateBatchFailure();
+< 	}
+< 
+< 	@Override
+< 	public void testTransactionSaveBatch() {
+< 		// TODO Auto-generated method stub
+< 		super.testTransactionSaveBatch();
+< 	}
+< 
+< 	@Override
+< 	public void testTransactionSaveBatchFailure() {
+< 		// TODO Auto-generated method stub
+< 		super.testTransactionSaveBatchFailure();
+< 	}
+< 
+Only in /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/src/test/java/siena/base/test/model: AggregateChildModel.java
+Only in /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/src/test/java/siena/base/test/model: AggregateParentModel.java
+Only in source/src/test/java/siena/base/test/model: BigDecimalDoubleModel.java
+diff -r source/src/test/java/siena/base/test/model/BigDecimalModel.java /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/src/test/java/siena/base/test/model/BigDecimalModel.java
+24d23
+< import siena.core.DecimalPrecision.StorageType;
+32c31
+< 	@DecimalPrecision(storateType=StorageType.NATIVE, size=21, scale=10)
+---
+> 	@DecimalPrecision(size=21, scale=10)
+Only in source/src/test/java/siena/base/test/model: BigDecimalModelNoPrecision.java
+Only in source/src/test/java/siena/base/test/model: BigDecimalStringModel.java
+diff -r source/src/test/java/siena/base/test/model/ContainerModel.java /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/src/test/java/siena/base/test/model/ContainerModel.java
+2a3,4
+> import java.util.List;
+> 
+19a22,25
+>     @Embedded
+>     @Column("embeds")
+>     public List<EmbeddedModel> embeds;
+>     
+21c27
+<     	return id + " " + embed;
+---
+>     	return "id:"+id + " - embed:" + embed + " - embeds:"+embeds;
+diff -r source/src/test/java/siena/base/test/model/EmbeddedModel.java /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/src/test/java/siena/base/test/model/EmbeddedModel.java
+20a21,22
+>     private boolean isGamma;
+>     
+23a26,33
+>     public boolean isGamma() {
+>     	return isGamma;
+>     }
+>     
+>     public void setGamma(boolean isGamma){
+>     	this.isGamma = isGamma;
+>     }
+>     
+25c35
+<     	return id + " " + alpha + " " + beta;
+---
+>     	return "id:"+id + " - alpha:" + alpha + " - beta:" + beta + " - isGamma:"+isGamma;
+Only in source/src/test/java/siena/base/test/model: GroupChildModel.java
+Only in source/src/test/java/siena/base/test/model: GroupParentModel.java
+Only in source/src/test/java/siena/base/test/model: TransactionAccountFrom.java
+Only in source/src/test/java/siena/base/test/model: TransactionAccountFromModel.java
+Only in source/src/test/java/siena/base/test/model: TransactionAccountTo.java
+Only in source/src/test/java/siena/base/test/model: TransactionAccountToModel.java
+diff -r source/src/test/java/siena/base/test/PostgresqlTest.java /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/src/test/java/siena/base/test/PostgresqlTest.java
+1631,1744d1630
+< 	@Override
+< 	public void testBigDecimalNoPrecision() {
+< 		// TODO Auto-generated method stub
+< 		super.testBigDecimalNoPrecision();
+< 	}
+< 
+< 	@Override
+< 	public void testBigDecimalString() {
+< 		// TODO Auto-generated method stub
+< 		super.testBigDecimalString();
+< 	}
+< 
+< 	@Override
+< 	public void testBigDecimalDouble() {
+< 		// TODO Auto-generated method stub
+< 		super.testBigDecimalDouble();
+< 	}
+< 
+< 	@Override
+< 	public void testTransactionUpdate() {
+< 		// TODO Auto-generated method stub
+< 		super.testTransactionUpdate();
+< 	}
+< 
+< 	@Override
+< 	public void testTransactionUpdateFailure() {
+< 		// TODO Auto-generated method stub
+< 		super.testTransactionUpdateFailure();
+< 	}
+< 
+< 	@Override
+< 	public void testTransactionInsert() {
+< 		// TODO Auto-generated method stub
+< 		super.testTransactionInsert();
+< 	}
+< 
+< 	@Override
+< 	public void testTransactionInsertFailure() {
+< 		// TODO Auto-generated method stub
+< 		super.testTransactionInsertFailure();
+< 	}
+< 
+< 	@Override
+< 	public void testTransactionSave() {
+< 		// TODO Auto-generated method stub
+< 		super.testTransactionSave();
+< 	}
+< 
+< 	@Override
+< 	public void testTransactionSaveFailure() {
+< 		// TODO Auto-generated method stub
+< 		super.testTransactionSaveFailure();
+< 	}
+< 
+< 	@Override
+< 	public void testTransactionDelete() {
+< 		// TODO Auto-generated method stub
+< 		super.testTransactionDelete();
+< 	}
+< 
+< 	@Override
+< 	public void testTransactionDeleteFailure() {
+< 		// TODO Auto-generated method stub
+< 		super.testTransactionDeleteFailure();
+< 	}
+< 
+< 	@Override
+< 	public void testTransactionInsertBatch() {
+< 		// TODO Auto-generated method stub
+< 		super.testTransactionInsertBatch();
+< 	}
+< 
+< 	@Override
+< 	public void testTransactionInsertBatchFailure() {
+< 		// TODO Auto-generated method stub
+< 		super.testTransactionInsertBatchFailure();
+< 	}
+< 
+< 	@Override
+< 	public void testTransactionDeleteBatch() {
+< 		// TODO Auto-generated method stub
+< 		super.testTransactionDeleteBatch();
+< 	}
+< 
+< 	@Override
+< 	public void testTransactionDeleteBatchFailure() {
+< 		// TODO Auto-generated method stub
+< 		super.testTransactionDeleteBatchFailure();
+< 	}
+< 
+< 	@Override
+< 	public void testTransactionUpdateBatch() {
+< 		// TODO Auto-generated method stub
+< 		super.testTransactionUpdateBatch();
+< 	}
+< 
+< 	@Override
+< 	public void testTransactionUpdateBatchFailure() {
+< 		// TODO Auto-generated method stub
+< 		super.testTransactionUpdateBatchFailure();
+< 	}
+< 
+< 	@Override
+< 	public void testTransactionSaveBatch() {
+< 		// TODO Auto-generated method stub
+< 		super.testTransactionSaveBatch();
+< 	}
+< 
+< 	@Override
+< 	public void testTransactionSaveBatchFailure() {
+< 		// TODO Auto-generated method stub
+< 		super.testTransactionSaveBatchFailure();
+< 	}
+< 
+diff -r source/src/test/java/siena/remote/test/MockPersistenceManager.java /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/src/test/java/siena/remote/test/MockPersistenceManager.java
+32a33
+> import siena.core.ListQuery;
+49,51d49
+< 	
+< 	public void beginTransaction() {
+< 	}
+151c149
+< 		public Query<T> clone() {
+---
+> 		public Query<T> copy() {
+642a641,647
+> 	@Override
+> 	public <T> ListQuery<T> createListQuery(Class<T> clazz) {
+> 		// TODO Auto-generated method stub
+> 		return null;
+> 	}
+> 
+> 
+Binary files source/target/classes/siena/AbstractPersistenceManager.class and /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/target/classes/siena/AbstractPersistenceManager.class differ
+Binary files source/target/classes/siena/BaseQuery.class and /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/target/classes/siena/BaseQuery.class differ
+Binary files source/target/classes/siena/ClassInfo.class and /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/target/classes/siena/ClassInfo.class differ
+Only in /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/target/classes/siena/core: Aggregated.class
+Binary files source/target/classes/siena/core/async/PersistenceManagerAsync.class and /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/target/classes/siena/core/async/PersistenceManagerAsync.class differ
+Only in /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/target/classes/siena/core: BaseListQuery.class
+Binary files source/target/classes/siena/core/DecimalPrecision.class and /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/target/classes/siena/core/DecimalPrecision.class differ
+Only in source/target/classes/siena/core: DecimalPrecision$StorageType.class
+Binary files source/target/classes/siena/core/lifecycle/LifeCycleUtils.class and /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/target/classes/siena/core/lifecycle/LifeCycleUtils.class differ
+Only in /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/target/classes/siena/core: ListQuery.class
+Binary files source/target/classes/siena/core/PersistenceManagerLifeCycleWrapper.class and /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/target/classes/siena/core/PersistenceManagerLifeCycleWrapper.class differ
+Binary files source/target/classes/siena/gae/GaeMappingUtils.class and /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/target/classes/siena/gae/GaeMappingUtils.class differ
+Binary files source/target/classes/siena/gae/GaePersistenceManagerAsync$10.class and /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/target/classes/siena/gae/GaePersistenceManagerAsync$10.class differ
+Binary files source/target/classes/siena/gae/GaePersistenceManagerAsync$11.class and /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/target/classes/siena/gae/GaePersistenceManagerAsync$11.class differ
+Binary files source/target/classes/siena/gae/GaePersistenceManagerAsync$12.class and /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/target/classes/siena/gae/GaePersistenceManagerAsync$12.class differ
+Binary files source/target/classes/siena/gae/GaePersistenceManagerAsync$13.class and /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/target/classes/siena/gae/GaePersistenceManagerAsync$13.class differ
+Binary files source/target/classes/siena/gae/GaePersistenceManagerAsync$14.class and /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/target/classes/siena/gae/GaePersistenceManagerAsync$14.class differ
+Binary files source/target/classes/siena/gae/GaePersistenceManagerAsync$15.class and /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/target/classes/siena/gae/GaePersistenceManagerAsync$15.class differ
+Binary files source/target/classes/siena/gae/GaePersistenceManagerAsync$16.class and /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/target/classes/siena/gae/GaePersistenceManagerAsync$16.class differ
+Binary files source/target/classes/siena/gae/GaePersistenceManagerAsync$17.class and /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/target/classes/siena/gae/GaePersistenceManagerAsync$17.class differ
+Binary files source/target/classes/siena/gae/GaePersistenceManagerAsync$18.class and /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/target/classes/siena/gae/GaePersistenceManagerAsync$18.class differ
+Binary files source/target/classes/siena/gae/GaePersistenceManagerAsync$19.class and /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/target/classes/siena/gae/GaePersistenceManagerAsync$19.class differ
+Binary files source/target/classes/siena/gae/GaePersistenceManagerAsync$20.class and /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/target/classes/siena/gae/GaePersistenceManagerAsync$20.class differ
+Binary files source/target/classes/siena/gae/GaePersistenceManagerAsync$21.class and /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/target/classes/siena/gae/GaePersistenceManagerAsync$21.class differ
+Only in source/target/classes/siena/gae: GaePersistenceManagerAsync$22.class
+Binary files source/target/classes/siena/gae/GaePersistenceManagerAsync$4.class and /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/target/classes/siena/gae/GaePersistenceManagerAsync$4.class differ
+Binary files source/target/classes/siena/gae/GaePersistenceManagerAsync$5.class and /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/target/classes/siena/gae/GaePersistenceManagerAsync$5.class differ
+Binary files source/target/classes/siena/gae/GaePersistenceManagerAsync$6.class and /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/target/classes/siena/gae/GaePersistenceManagerAsync$6.class differ
+Binary files source/target/classes/siena/gae/GaePersistenceManagerAsync$7.class and /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/target/classes/siena/gae/GaePersistenceManagerAsync$7.class differ
+Binary files source/target/classes/siena/gae/GaePersistenceManagerAsync$8.class and /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/target/classes/siena/gae/GaePersistenceManagerAsync$8.class differ
+Binary files source/target/classes/siena/gae/GaePersistenceManagerAsync$9.class and /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/target/classes/siena/gae/GaePersistenceManagerAsync$9.class differ
+Binary files source/target/classes/siena/gae/GaePersistenceManagerAsync.class and /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/target/classes/siena/gae/GaePersistenceManagerAsync.class differ
+Binary files source/target/classes/siena/gae/GaePersistenceManager.class and /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/target/classes/siena/gae/GaePersistenceManager.class differ
+Binary files source/target/classes/siena/hbase/HBasePersistenceManager.class and /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/target/classes/siena/hbase/HBasePersistenceManager.class differ
+Binary files source/target/classes/siena/hbase/HBasePersistenceManager$HBaseQuery.class and /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/target/classes/siena/hbase/HBasePersistenceManager$HBaseQuery.class differ
+Binary files source/target/classes/siena/jdbc/AbstractConnectionManager.class and /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/target/classes/siena/jdbc/AbstractConnectionManager.class differ
+Binary files source/target/classes/siena/jdbc/ConnectionManager.class and /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/target/classes/siena/jdbc/ConnectionManager.class differ
+Binary files source/target/classes/siena/jdbc/ddl/DdlGenerator.class and /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/target/classes/siena/jdbc/ddl/DdlGenerator.class differ
+Binary files source/target/classes/siena/jdbc/JdbcDBUtils.class and /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/target/classes/siena/jdbc/JdbcDBUtils.class differ
+Binary files source/target/classes/siena/jdbc/JdbcMappingUtils.class and /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/target/classes/siena/jdbc/JdbcMappingUtils.class differ
+Binary files source/target/classes/siena/jdbc/JdbcPersistenceManager.class and /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/target/classes/siena/jdbc/JdbcPersistenceManager.class differ
+Binary files source/target/classes/siena/jdbc/JdbcPersistenceManager$JdbcClassInfo.class and /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/target/classes/siena/jdbc/JdbcPersistenceManager$JdbcClassInfo.class differ
+Binary files source/target/classes/siena/Model.class and /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/target/classes/siena/Model.class differ
+Only in /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/target/classes/siena: Model$ProxyListQuery.class
+Only in /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/target/classes/siena: Model$ProxyMode.class
+Binary files source/target/classes/siena/Model$ProxyQuery.class and /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/target/classes/siena/Model$ProxyQuery.class differ
+Binary files source/target/classes/siena/PersistenceManager.class and /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/target/classes/siena/PersistenceManager.class differ
+Binary files source/target/classes/siena/Query.class and /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/target/classes/siena/Query.class differ
+Binary files source/target/classes/siena/remote/RemotePersistenceManager.class and /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/target/classes/siena/remote/RemotePersistenceManager.class differ
+Binary files source/target/classes/siena/sdb/SdbPersistenceManager.class and /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/target/classes/siena/sdb/SdbPersistenceManager.class differ
+Binary files source/target/classes/siena/Util$1.class and /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/target/classes/siena/Util$1.class differ
+Binary files source/target/classes/siena/Util$2.class and /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/target/classes/siena/Util$2.class differ
+Binary files source/target/classes/siena/Util$3.class and /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/target/classes/siena/Util$3.class differ
+Binary files source/target/classes/siena/Util.class and /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/target/classes/siena/Util.class differ
+Only in /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/target: generated-sources
+Only in /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/target: maven-archiver
+Only in /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/target: siena-1.0.0-b3.jar
+Only in /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/target: siena-1.0.0-b4.jar
+Only in /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/target: surefire
+Only in /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/target: surefire-reports
+Binary files source/target/test-classes/siena/base/test/BaseModelTest$1.class and /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/target/test-classes/siena/base/test/BaseModelTest$1.class differ
+Binary files source/target/test-classes/siena/base/test/BaseModelTest$2.class and /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/target/test-classes/siena/base/test/BaseModelTest$2.class differ
+Binary files source/target/test-classes/siena/base/test/BaseModelTest.class and /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/target/test-classes/siena/base/test/BaseModelTest.class differ
+Binary files source/target/test-classes/siena/base/test/BaseTest$10.class and /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/target/test-classes/siena/base/test/BaseTest$10.class differ
+Binary files source/target/test-classes/siena/base/test/BaseTest$11.class and /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/target/test-classes/siena/base/test/BaseTest$11.class differ
+Binary files source/target/test-classes/siena/base/test/BaseTest$1.class and /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/target/test-classes/siena/base/test/BaseTest$1.class differ
+Binary files source/target/test-classes/siena/base/test/BaseTest$2.class and /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/target/test-classes/siena/base/test/BaseTest$2.class differ
+Binary files source/target/test-classes/siena/base/test/BaseTest$3.class and /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/target/test-classes/siena/base/test/BaseTest$3.class differ
+Binary files source/target/test-classes/siena/base/test/BaseTest$4.class and /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/target/test-classes/siena/base/test/BaseTest$4.class differ
+Binary files source/target/test-classes/siena/base/test/BaseTest$5.class and /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/target/test-classes/siena/base/test/BaseTest$5.class differ
+Binary files source/target/test-classes/siena/base/test/BaseTest$6.class and /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/target/test-classes/siena/base/test/BaseTest$6.class differ
+Binary files source/target/test-classes/siena/base/test/BaseTest$7.class and /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/target/test-classes/siena/base/test/BaseTest$7.class differ
+Binary files source/target/test-classes/siena/base/test/BaseTest$8.class and /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/target/test-classes/siena/base/test/BaseTest$8.class differ
+Binary files source/target/test-classes/siena/base/test/BaseTest$9.class and /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/target/test-classes/siena/base/test/BaseTest$9.class differ
+Binary files source/target/test-classes/siena/base/test/BaseTest.class and /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/target/test-classes/siena/base/test/BaseTest.class differ
+Binary files source/target/test-classes/siena/base/test/GaeModelTest.class and /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/target/test-classes/siena/base/test/GaeModelTest.class differ
+Binary files source/target/test-classes/siena/base/test/GaeTest.class and /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/target/test-classes/siena/base/test/GaeTest.class differ
+Binary files source/target/test-classes/siena/base/test/H2Test.class and /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/target/test-classes/siena/base/test/H2Test.class differ
+Binary files source/target/test-classes/siena/base/test/JdbcModelTest.class and /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/target/test-classes/siena/base/test/JdbcModelTest.class differ
+Binary files source/target/test-classes/siena/base/test/JdbcTest.class and /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/target/test-classes/siena/base/test/JdbcTest.class differ
+Only in /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/target/test-classes/siena/base/test/model: AggregateChildModel.class
+Only in /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/target/test-classes/siena/base/test/model: AggregateParentModel.class
+Only in source/target/test-classes/siena/base/test/model: BigDecimalDoubleModel.class
+Binary files source/target/test-classes/siena/base/test/model/BigDecimalModel.class and /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/target/test-classes/siena/base/test/model/BigDecimalModel.class differ
+Only in source/target/test-classes/siena/base/test/model: BigDecimalModelNoPrecision.class
+Only in source/target/test-classes/siena/base/test/model: BigDecimalStringModel.class
+Binary files source/target/test-classes/siena/base/test/model/ContainerModel.class and /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/target/test-classes/siena/base/test/model/ContainerModel.class differ
+Binary files source/target/test-classes/siena/base/test/model/EmbeddedModel.class and /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/target/test-classes/siena/base/test/model/EmbeddedModel.class differ
+Only in source/target/test-classes/siena/base/test/model: GroupChildModel.class
+Only in source/target/test-classes/siena/base/test/model: GroupParentModel.class
+Only in source/target/test-classes/siena/base/test/model: TransactionAccountFrom.class
+Only in source/target/test-classes/siena/base/test/model: TransactionAccountFromModel.class
+Only in source/target/test-classes/siena/base/test/model: TransactionAccountTo.class
+Only in source/target/test-classes/siena/base/test/model: TransactionAccountToModel.class
+Binary files source/target/test-classes/siena/base/test/PostgresqlTest.class and /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/target/test-classes/siena/base/test/PostgresqlTest.class differ
+Binary files source/target/test-classes/siena/remote/test/MockPersistenceManager.class and /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/target/test-classes/siena/remote/test/MockPersistenceManager.class differ
+Binary files source/target/test-classes/siena/remote/test/MockPersistenceManager$MockQuery.class and /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source/target/test-classes/siena/remote/test/MockPersistenceManager$MockQuery.class differ
+Only in source: toto
+Only in /home/mandubian/work/play/workspace/siena.mandubian.master.before_branch_aggreg/source: WEB-INF

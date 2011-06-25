@@ -2,6 +2,8 @@ package siena;
 
 import java.util.List;
 
+import siena.core.BaseListQuery;
+import siena.core.ListQuery;
 import siena.core.SienaIterablePerPage;
 import siena.core.batch.BaseBatch;
 import siena.core.batch.Batch;
@@ -24,6 +26,10 @@ public abstract class AbstractPersistenceManager implements PersistenceManager {
 		return new BaseBatch<T>(this, clazz);
 	}
 
+	public <T> ListQuery<T> createListQuery(Class<T> clazz) {
+		return new BaseListQuery<T>(this, clazz);
+	}
+	
 	public <T> T get(Query<T> query) {
 		List<T> list = fetch(query, 1);
 		if(list.isEmpty()) { return null; }

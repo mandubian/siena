@@ -59,7 +59,7 @@ public interface Query<T> extends QueryData<T>{
 	
 	Iterable<T> iterPerPage(int limit);
 		
-	Query<T> clone();
+	Query<T> copy();
 	
 	/**
 	 * sets the limit number of entities to fetch

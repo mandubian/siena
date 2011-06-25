@@ -21,15 +21,19 @@ import java.lang.reflect.Field;
 import java.lang.reflect.ParameterizedType;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import siena.core.Aggregated;
 import siena.core.InheritFilter;
+import siena.core.ListQuery;
 import siena.core.async.ModelAsync;
 import siena.core.async.QueryAsync;
 import siena.core.batch.Batch;
 import siena.core.options.QueryOption;
+import siena.core.options.QueryOptionState;
 
 /**
  * This is the base abstract class to extend your domain classes.
@@ -158,22 +162,47 @@ public abstract class Model {
         
         for(Class<?> c: classH) {		
 			for (Field field : c.getDeclaredFields()) {
-				if(field.getType() != Query.class) { continue; }
-				if(removedFields.contains(field.getName())) continue;
-	
-				Filter filter = field.getAnnotation(Filter.class);
-				if(filter == null) {
-					throw new SienaException("Found Query<T> field without @Filter annotation at "
-							+c.getName()+"."+field.getName());
-				}
-	
-				ParameterizedType pt = (ParameterizedType) field.getGenericType();
-				cl = (Class<?>) pt.getActualTypeArguments()[0];
-	
-				try {
-					Util.setField(this, field, new ProxyQuery(cl, filter.value(), this));
-				} catch (Exception e) {
-					throw new SienaException(e);
+				if(removedFields.contains(field.getName())) continue;	
+				if(field.getType() == Query.class) { 
+					Filter filter = field.getAnnotation(Filter.class);
+					if(filter == null) {
+						throw new SienaException("Found Query<T> field without @Filter annotation at "
+								+c.getName()+"."+field.getName());
+					}
+		
+					ParameterizedType pt = (ParameterizedType) field.getGenericType();
+					cl = (Class<?>) pt.getActualTypeArguments()[0];
+		
+					try {
+						field.set(this, new ProxyQuery(cl, filter.value(), this));
+					} catch (Exception e) {
+						throw new SienaException(e);
+					}
+					
+				}else if(field.getType() == ListQuery.class){
+					ParameterizedType pt = (ParameterizedType) field.getGenericType();
+					cl = (Class<?>) pt.getActualTypeArguments()[0];
+					
+					Aggregated agg = field.getAnnotation(Aggregated.class);
+					Filter filter = field.getAnnotation(Filter.class);
+					if(agg!=null && filter!=null){
+						throw new SienaException("Found ListQuery<T> field "
+								+ c.getName()+"."+field.getName() 
+								+ "with @Filter + @Aggregated: this is not authorized");
+					}
+					if(agg != null){
+						try {
+							field.set(this, new ProxyListQuery(cl, this, ProxyMode.AGGREGATION, field));
+						} catch (Exception e) {
+							throw new SienaException(e);
+						}
+					}else if(filter != null){
+						try {
+							field.set(this, new ProxyQuery(cl, filter.value(), this));
+						} catch (Exception e) {
+							throw new SienaException(e);
+						}
+					}
 				}
 			}
         }
@@ -185,7 +214,8 @@ public abstract class Model {
 		private String filter;
 		private Class<T> clazz;
 		private Model obj;
-
+		private Query<T> query;
+		
 		public ProxyQuery(Class<T> clazz, String filter, Model obj) {
 			this.filter = filter;
 			this.clazz = clazz;
@@ -193,7 +223,17 @@ public abstract class Model {
 		}
 
 		private Query<T> createQuery() {
-			return getPersistenceManager().createQuery(clazz).filter(filter, obj);
+			//return getPersistenceManager().createQuery(clazz).filter(filter, obj);
+			
+			// initializes once the query and reuses it
+			// it is not initialized in the constructor because the persistencemanager might not be
+			// initialized correctly with the Model
+			if(this.query == null){
+				this.query = obj.getPersistenceManager().createQuery(clazz);				
+			}
+			else if(((QueryOptionState)this.query.option(QueryOptionState.ID)).isStateless())
+				this.query.release();
+			return this.query.filter(filter, obj);
 		}
 
 		public int count() {
@@ -259,7 +299,7 @@ public abstract class Model {
 			return createQuery().iterPerPage(limit);
 		}	
 		
-		public ProxyQuery<T> clone() {
+		public ProxyQuery<T> copy() {
 			return new ProxyQuery<T>(clazz, filter, obj);
 		}
 
@@ -408,4 +448,261 @@ public abstract class Model {
 		
 	}
 
+	enum ProxyMode {
+		FILTER,
+		AGGREGATION
+	}
+	
+	class ProxyListQuery<T> implements ListQuery<T> {
+		private static final long serialVersionUID = -4540064249546783019L;
+		
+		private Class<T> 		clazz;
+		private Model 			obj;
+		private ListQuery<T> 	listQuery;
+		private ProxyMode 		mode;
+		private Field			field;	
+
+		public ProxyListQuery(Class<T> clazz, Model obj, ProxyMode mode, Field field) {
+			this.clazz = clazz;
+			this.obj = obj;
+			this.mode = mode;
+			this.field = field;
+		}
+
+		private ListQuery<T> createQuery() {
+			if(this.listQuery == null){
+				this.listQuery = obj.getPersistenceManager().createListQuery(clazz);				
+			}
+			else if(((QueryOptionState)this.listQuery.option(QueryOptionState.ID)).isStateless())
+				this.listQuery.release();
+			if(mode == ProxyMode.AGGREGATION){
+				//return this.listQuery.aggregate(obj, field);
+			}
+			
+			return this.listQuery;
+		}
+		
+		@Override
+		public Iterator<T> iterator() {
+			return createQuery().iterator();
+		}
+
+		@Override
+		public PersistenceManager getPersistenceManager() {
+			return obj.getPersistenceManager();
+		}
+
+		@Override
+		public List<T> elements() {
+			return createQuery().elements();
+		}
+
+		public int count() {
+			return createQuery().count();
+		}
+
+		@Deprecated
+		public int count(int limit) {
+			return createQuery().count(limit);
+		}
+
+		@Deprecated
+		public int count(int limit, Object offset) {
+			return createQuery().count(limit, offset);
+		}
+
+		public List<T> fetch() {
+			return createQuery().fetch();
+		}
+
+		public List<T> fetch(int limit) {
+			return createQuery().fetch(limit);
+		}
+
+		public List<T> fetch(int limit, Object offset) {
+			return createQuery().fetch(limit, offset);
+		}
+
+		public Query<T> filter(String fieldName, Object value) {
+			return createQuery().filter(fieldName, value);
+		}
+
+		public Query<T> order(String fieldName) {
+			return createQuery().order(fieldName);
+		}
+
+		@Deprecated
+		public Query<T> search(String match, boolean inBooleanMode, String index) {
+			return createQuery().search(match, inBooleanMode, index);
+		}
+		
+		public Query<T> join(String field, String... sortFields) {
+			return createQuery().join(field, sortFields);
+		}
+
+		public T get() {
+			return createQuery().get();
+		}
+
+		public Iterable<T> iter() {
+			return createQuery().iter();
+		}
+		
+		public Iterable<T> iter(int limit) {
+			return createQuery().iter(limit);
+		}
+		
+		public Iterable<T> iter(int limit, Object offset) {
+			return createQuery().iter(limit, offset);
+		}
+		
+		public Iterable<T> iterPerPage(int limit) {
+			return createQuery().iterPerPage(limit);
+		}	
+		
+		public ProxyListQuery<T> copy() {
+			return new ProxyListQuery<T>(clazz, obj, mode, field);
+		}
+
+		@Deprecated
+		public Object nextOffset() {
+			return createQuery().nextOffset();
+		}
+
+		public int delete() {
+			return createQuery().delete();
+		}
+
+		public List<T> fetchKeys() {
+			return createQuery().fetchKeys();
+		}
+
+		public List<T> fetchKeys(int limit) {
+			return createQuery().fetchKeys(limit);
+		}
+
+		public List<T> fetchKeys(int limit, Object offset) {
+			return createQuery().fetchKeys(limit, offset);
+		}
+
+		public List<QueryFilter> getFilters() {
+			return createQuery().getFilters();
+		}
+
+		public List<QueryOrder> getOrders() {
+			return createQuery().getOrders();
+		}
+
+		public List<QueryFilterSearch> getSearches() {
+			return createQuery().getSearches();
+		}
+
+		public List<QueryJoin> getJoins() {
+			return createQuery().getJoins();
+		}
+
+		@Deprecated
+		public void setNextOffset(Object nextOffset) {
+			createQuery().setNextOffset(nextOffset);
+		}
+
+		public Class<T> getQueriedClass() {
+			return clazz;
+		}
+
+		public Query<T> paginate(int limit) {
+			return createQuery().paginate(limit);
+		}
+
+		public Query<T> limit(int limit) {
+			return createQuery().limit(limit);
+		}
+
+		public Query<T> offset(Object offset) {
+			return createQuery().offset(offset);
+		}
+
+		public Query<T> customize(QueryOption... options) {
+			return createQuery().customize(options);
+		}
+
+		public QueryOption option(int option) {
+			return createQuery().option(option);
+		}
+
+		public Map<Integer, QueryOption> options() {
+			return createQuery().options();
+		}
+
+		public Query<T> stateful() {
+			return createQuery().stateful();
+		}
+
+		public Query<T> stateless() {
+			return createQuery().stateless();
+		}
+
+		public Query<T> release() {
+			return createQuery().release();
+		}
+
+		public Query<T> resetData() {
+			return createQuery().resetData();
+		}
+
+		public Query<T> search(String match, String... fields) {
+			return createQuery().search(match, fields);
+		}
+
+		public Query<T> search(String match, QueryOption opt, String... fields) {
+			return createQuery().search(match, opt, fields);
+		}
+
+		public int update(Map<String, ?> fieldValues) {
+			return createQuery().update(fieldValues);
+		}
+
+		public Query<T> nextPage() {
+			return createQuery().nextPage();
+		}
+
+		public Query<T> previousPage() {
+			return createQuery().previousPage();
+		}
+
+		public String dump() {
+			return createQuery().dump();
+		}
+
+		public Query<T> restore(String dump) {
+			return createQuery().restore(dump);
+		}
+
+		public QueryAsync<T> async() {
+			return createQuery().async();
+		}
+
+		public T getByKey(Object key) {
+			return createQuery().getByKey(key);
+		}
+
+		public String dump(QueryOption... options) {
+			return createQuery().dump(options);
+		}
+
+		public void dump(OutputStream os, QueryOption... options) {
+			createQuery().dump(os, options);
+		}
+
+		public Query<T> restore(String dump, QueryOption... options) {
+			return createQuery().restore(dump, options);
+		}
+
+		public Query<T> restore(InputStream dump, QueryOption... options) {
+			return createQuery().restore(dump, options);
+		}
+
+		
+	}
+	
 }

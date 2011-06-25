@@ -29,7 +29,9 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
+import siena.core.Aggregated;
 import siena.core.InheritFilter;
+import siena.core.ListQuery;
 import siena.core.lifecycle.LifeCyclePhase;
 import siena.core.lifecycle.LifeCycleUtils;
 import siena.embed.Embedded;
@@ -49,6 +51,7 @@ public class ClassInfo {
 	public List<Field> allFields = new ArrayList<Field>();
 	public List<Field> joinFields = new ArrayList<Field>();
 	public List<Field> queryAndAllFields = new ArrayList<Field>();
+	public List<Field> aggregatedFields = new ArrayList<Field>();
 
 	public Map<LifeCyclePhase, List<Method>> lifecycleMethods = new HashMap<LifeCyclePhase, List<Method>>();
 	
@@ -105,12 +108,20 @@ public class ClassInfo {
 					insertFields.add(field);
 				}
 				
-				if(field.getAnnotation(Join.class) != null){
+				if(isJoined(field)){
 					if (!ClassInfo.isModel(field.getType())){
 						throw new SienaException("Join not possible: Field "+field.getName()+" is not a relation field");
 					}
 					else joinFields.add(field);
 				}
+				
+				if(isAggregated(field)){
+					if (!isModel(field.getType()) && !ListQuery.class.isAssignableFrom(type)){
+						throw new SienaException("Aggregation not possible: Field "+field.getName()+" is not a model neither a ListQuery");
+					}
+					else aggregatedFields.add(field);
+				}
+				
 				allFields.add(field);
 				queryAndAllFields.add(field);
 			}
@@ -198,7 +209,7 @@ public class ClassInfo {
 			// if the model has one single key, we use the local field name
 			// if the model has several keys, we concatenate the fieldName+"_"+keyName
 			if(ci.keys.size()==1){
-				return new String[] { field.getName() };
+				return new String[] { prefix+field.getName() };
 			}
 			for (Field key : ci.keys) {
 				// concatenates prefix with new prefix
@@ -230,10 +241,18 @@ public class ClassInfo {
 			// if the model has one single key, we use the local field name
 			// if the model has several keys, we concatenate the fieldName+"_"+keyName
 			if(ci.keys.size()==1){
-				return new String[] { field.getName() };
+				if(tableName!=null && !("".equals(tableName))){
+					return new String[] { tableName+"."+field.getName() };
+				}else {
+					return new String[] { field.getName() };
+				}
 			}
 			for (Field key : ci.keys) {
-				keys.addAll(Arrays.asList(getColumnNamesWithPrefix(key, field.getName()+"_")));
+				if(tableName!=null && !("".equals(tableName))){
+					keys.addAll(Arrays.asList(getColumnNamesWithPrefix(key, tableName+"."+field.getName()+"_")));
+				}else {
+					keys.addAll(Arrays.asList(getColumnNamesWithPrefix(key, field.getName()+"_")));
+				}
 			}
 			return keys.toArray(new String[keys.size()]);
 		}
@@ -262,6 +281,18 @@ public class ClassInfo {
 	public static boolean isEmbedded(Field field) {
 		return field.isAnnotationPresent(Embedded.class);
 	}
+
+	public static boolean isAggregated(Field field) {
+		return field.isAnnotationPresent(Aggregated.class);
+	}
+	
+	public static boolean isJoined(Field field) {
+		return field.isAnnotationPresent(Join.class);
+	}	
+	
+	public static boolean isListQuery(Field field) {
+		return ListQuery.class.isAssignableFrom(field.getType());
+	}	
 	
 	public static boolean isGenerated(Field field) {
 		Id id = field.getAnnotation(Id.class);

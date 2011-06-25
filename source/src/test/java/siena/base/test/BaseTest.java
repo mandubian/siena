@@ -5398,11 +5398,22 @@ public abstract class BaseTest extends TestCase {
 		embed.id = "embed";
 		embed.alpha = "test";
 		embed.beta = 123;
+		embed.setGamma(true);
 		pm.insert(embed);
+		
+		EmbeddedModel embed2 = new EmbeddedModel();
+		embed2.id = "embed2";
+		embed2.alpha = "test2";
+		embed2.beta = 1234;
+		embed2.setGamma(true);
+		pm.insert(embed2);
 		
 		ContainerModel container = new ContainerModel();
 		container.id = "container";
 		container.embed = embed;
+		container.embeds = new ArrayList<EmbeddedModel>();
+		container.embeds.add(embed);
+		container.embeds.add(embed2);
 		pm.insert(container);
 
 		ContainerModel afterContainer = pm.getByKey(ContainerModel.class, container.id);
@@ -5412,6 +5423,11 @@ public abstract class BaseTest extends TestCase {
 		assertEquals(embed.id, afterContainer.embed.id);
 		assertEquals(null, afterContainer.embed.alpha);
 		assertEquals(embed.beta, afterContainer.embed.beta);
+		int i=0;
+		for(EmbeddedModel mod: afterContainer.embeds){
+			assertEquals(container.embeds.get(i++).id, mod.id);
+		}
+		assertEquals(embed.isGamma(), afterContainer.embed.isGamma());
 	}
 
 	public void testNoColumn() {

@@ -28,6 +28,7 @@ import siena.QueryFilterSearch;
 import siena.QueryJoin;
 import siena.QueryOrder;
 import siena.SienaException;
+import siena.core.ListQuery;
 import siena.core.async.PersistenceManagerAsync;
 import siena.core.async.QueryAsync;
 import siena.core.batch.Batch;
@@ -500,6 +501,12 @@ public class HBasePersistenceManager implements PersistenceManager {
 			return null;
 		}
 
+		@Override
+		public Query<T> copy() {
+			// TODO Auto-generated method stub
+			return null;
+		}
+
 
 
 	}
@@ -747,6 +754,12 @@ public class HBasePersistenceManager implements PersistenceManager {
 	public <T> int update(Query<T> query, Map<String, ?> fieldValues) {
 		// TODO Auto-generated method stub
 		return 0;
+	}
+
+	@Override
+	public <T> ListQuery<T> createListQuery(Class<T> clazz) {
+		// TODO Auto-generated method stub
+		return null;
 	}
 
 
