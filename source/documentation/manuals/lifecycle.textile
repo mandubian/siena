@@ -40,21 +40,21 @@ bq. **Lifecycle annotations are not managed by default by Siena**. Maybe in the 
 
 h3. Create a normal persistence manager
 
-bc.. 	// The most simple GAE case:
-	PersistenceManager pm = new GaePersistenceManager();
+bc.. // The most simple GAE case:
+PersistenceManager pm = new GaePersistenceManager();
 	
 p. 
 
 h3. Wrap it into a PersistenceManagerLifeCycleWrapper and init it
 
-bc.. 	pm = new PersistenceManagerLifeCycleWrapper(pm);
-	pm.init(null);
+bc.. pm = new PersistenceManagerLifeCycleWrapper(pm);
+pm.init(null);
 
 p. 
 
 h3. Install the PersistenceManagerLifeCycleWrapper into PersistenceManagerFactory for your class
 
-bc.. 	PersistenceManagerFactory.install(persistenceManager, MyModel.class);
+bc.. PersistenceManagerFactory.install(persistenceManager, MyModel.class);
 
 p. Now when you create a new instance of your Model, it will be associated with the PersistenceManagerLifeCycleWrapper which manages your lifecycle annotations.
 
@@ -93,30 +93,30 @@ h2. <a name="method">Annotating a method</a>
 
 You can annotate 2 kinds of function with one or more lifecycle annotations:
 
-bc.. 	@PreFetch 
-	@PreInsert 
-	private/public void myFunction() {}
+bc.. @PreFetch 
+@PreInsert 
+private/public void myFunction() {}
 
 p. or 
 
-bc.. 	@PreFetch 
-	@PreInsert 
-	private/public void myFunction(LifeCyclePhase lcp) {}
+bc.. @PreFetch 
+@PreInsert 
+private/public void myFunction(LifeCyclePhase lcp) {}
 
 p. LifeCyclePhase gives you the lifecycle phase in which the function is called. It's an enum defined as following:
 
-bc.. 	public enum LifeCyclePhase {
-		PRE_FETCH,
-		POST_FETCH,
-		PRE_INSERT,
-		POST_INSERT,
-		PRE_DELETE,
-		POST_DELETE,
-		PRE_UPDATE,
-		POST_UPDATE,
-		PRE_SAVE,
-		POST_SAVE
-	}
+bc.. public enum LifeCyclePhase {
+	PRE_FETCH,
+	POST_FETCH,
+	PRE_INSERT,
+	POST_INSERT,
+	PRE_DELETE,
+	POST_DELETE,
+	PRE_UPDATE,
+	POST_UPDATE,
+	PRE_SAVE,
+	POST_SAVE
+}
 
 p. This can be useful to write one single function and do something depending on the phase.
 
