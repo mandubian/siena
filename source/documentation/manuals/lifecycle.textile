@@ -93,13 +93,13 @@ h2. <a name="method">Annotating a method</a>
 
 You can annotate 2 kinds of function with one or more lifecycle annotations:
 
-bc.. 		@PreFetch 
+bc.. 	@PreFetch 
 	@PreInsert 
 	private/public void myFunction() {}
 
 p. or 
 
-bc.. 		@PreFetch 
+bc.. 	@PreFetch 
 	@PreInsert 
 	private/public void myFunction(LifeCyclePhase lcp) {}
 
@@ -116,7 +116,7 @@ bc.. 	public enum LifeCyclePhase {
 		POST_UPDATE,
 		PRE_SAVE,
 		POST_SAVE
-}
+	}
 
 p. This can be useful to write one single function and do something depending on the phase.
 
