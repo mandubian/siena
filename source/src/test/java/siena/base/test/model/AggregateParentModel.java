@@ -18,8 +18,8 @@ public class AggregateParentModel extends Model {
 	public AggregateChildModel child;
 	
 	/* fields ignored by ClassInfo */
-	//@Aggregated
-	//public ListQuery<AggregateChildModel> children;
+	@Aggregated
+	public ListQuery<AggregateChildModel> children;
 	
 	@Override
 	public boolean equals(Object obj) {

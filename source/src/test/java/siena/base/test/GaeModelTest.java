@@ -226,6 +226,55 @@ public class GaeModelTest extends BaseModelTest{
 		super.testFilterInheritance();
 	}
 
+	@Override
+	public void testAggregate() {
+		// TODO Auto-generated method stub
+		super.testAggregate();
+	}
+
+	@Override
+	public void testAggregateUpdate() {
+		// TODO Auto-generated method stub
+		super.testAggregateUpdate();
+	}
+
+	@Override
+	public void testAggregateListQuerysFetch() {
+		// TODO Auto-generated method stub
+		super.testAggregateListQuerysFetch();
+	}
+	
+	@Override
+	public void testAggregateListQuerysFetchLimit() {
+		// TODO Auto-generated method stub
+		super.testAggregateListQuerysFetchLimit();
+	}
+
+	@Override
+	public void testAggregateListQuerysFetchLimitOffset() {
+		// TODO Auto-generated method stub
+		super.testAggregateListQuerysFetchLimitOffset();
+	}
+
+	@Override
+	public void testAggregateListQuerysFetchKeys() {
+		// TODO Auto-generated method stub
+		super.testAggregateListQuerysFetchKeys();
+	}
+
+
+	@Override
+	public void testAggregateListQuerysFetchKeysLimit() {
+		// TODO Auto-generated method stub
+		super.testAggregateListQuerysFetchKeysLimit();
+	}
+
+	@Override
+	public void testAggregateListQuerysFetchKeysLimitOffset() {
+		// TODO Auto-generated method stub
+		super.testAggregateListQuerysFetchKeysLimitOffset();
+	}
+
 	// SPECIFIC TESTS FOR GAE (transaction on one entity in a given group)
 	public void testTransactionSave() {
 		TransactionAccountFromModel accFrom = new TransactionAccountFromModel(1000L);

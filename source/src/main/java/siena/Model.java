@@ -29,6 +29,7 @@ import java.util.Set;
 import siena.core.Aggregated;
 import siena.core.InheritFilter;
 import siena.core.ListQuery;
+import siena.core.ListQuery4PM;
 import siena.core.async.ModelAsync;
 import siena.core.async.QueryAsync;
 import siena.core.batch.Batch;
@@ -279,6 +280,10 @@ public abstract class Model {
 			return createQuery().join(field, sortFields);
 		}
 
+		public Query<T> aggregated(Object aggregator, String fieldName) {
+			return createQuery().aggregated(aggregator, fieldName);
+		}
+
 		public T get() {
 			return createQuery().get();
 		}
@@ -338,6 +343,10 @@ public abstract class Model {
 
 		public List<QueryJoin> getJoins() {
 			return createQuery().getJoins();
+		}
+
+		public List<QueryAggregated> getAggregatees() {
+			return createQuery().getAggregatees();
 		}
 
 		@Deprecated
@@ -453,7 +462,7 @@ public abstract class Model {
 		AGGREGATION
 	}
 	
-	class ProxyListQuery<T> implements ListQuery<T> {
+	class ProxyListQuery<T> implements ListQuery4PM<T> {
 		private static final long serialVersionUID = -4540064249546783019L;
 		
 		private Class<T> 		clazz;
@@ -469,32 +478,37 @@ public abstract class Model {
 			this.field = field;
 		}
 
-		private ListQuery<T> createQuery() {
+		private Query<T> createQuery() {
 			if(this.listQuery == null){
 				this.listQuery = obj.getPersistenceManager().createListQuery(clazz);				
 			}
 			else if(((QueryOptionState)this.listQuery.option(QueryOptionState.ID)).isStateless())
 				this.listQuery.release();
 			if(mode == ProxyMode.AGGREGATION){
-				//return this.listQuery.aggregate(obj, field);
+				return this.listQuery.aggregated(obj, field.getName());
 			}
 			
 			return this.listQuery;
 		}
 		
-		@Override
 		public Iterator<T> iterator() {
-			return createQuery().iterator();
+			return ((ListQuery<T>)createQuery()).iterator();
 		}
 
-		@Override
 		public PersistenceManager getPersistenceManager() {
 			return obj.getPersistenceManager();
 		}
 
-		@Override
 		public List<T> elements() {
-			return createQuery().elements();
+			return ((ListQuery<T>)createQuery()).elements();
+		}
+
+		public boolean isSync() {
+			return ((ListQuery<T>)createQuery()).isSync();
+		}
+
+		public ListQuery4PM<T> setSync(boolean isSync) {
+			return ((ListQuery4PM<T>)createQuery()).setSync(isSync);
 		}
 
 		public int count() {
@@ -538,6 +552,10 @@ public abstract class Model {
 		
 		public Query<T> join(String field, String... sortFields) {
 			return createQuery().join(field, sortFields);
+		}
+
+		public Query<T> aggregated(Object aggregator, String fieldName) {
+			return createQuery().aggregated(aggregator, fieldName);
 		}
 
 		public T get() {
@@ -599,6 +617,10 @@ public abstract class Model {
 
 		public List<QueryJoin> getJoins() {
 			return createQuery().getJoins();
+		}
+
+		public List<QueryAggregated> getAggregatees() {
+			return createQuery().getAggregatees();
 		}
 
 		@Deprecated

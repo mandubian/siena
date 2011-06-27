@@ -4,6 +4,7 @@ import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -924,7 +925,7 @@ public abstract class BaseModelTest extends TestCase {
 		AggregateChildModel adam1 = new AggregateChildModel();
 		adam1.name = "adam1";
 		AggregateChildModel adam2 = new AggregateChildModel();
-		adam1.name = "adam2";
+		adam2.name = "adam2";
 		
 		AggregateChildModel eve = new AggregateChildModel();
 		eve.name = "eve";
@@ -932,27 +933,335 @@ public abstract class BaseModelTest extends TestCase {
 		AggregateChildModel bob = new AggregateChildModel();
 		bob.name = "bob";
 
-		AggregateParentModel parent = new AggregateParentModel();
-		parent.name = "god";
-		parent.child = adam1;
-		//parent.children.elements().addAll(Arrays.asList(adam2, eve, bob));
+		AggregateParentModel god = new AggregateParentModel();
+		god.name = "god";
+		god.child = adam1;
+		god.children.elements().addAll(Arrays.asList(adam2, eve, bob));
 				
-		parent.insert();
+		god.insert();
 		
-		assertNotNull(parent.id);
-		assertNotNull(parent.child.id);
+		assertNotNull(god.id);
+		assertNotNull(god.child.id);
 		
 		AggregateParentModel god1 = 
-			pm.getByKey(AggregateParentModel.class, parent.id);
+			pm.getByKey(AggregateParentModel.class, god.id);
 		
 		assertNotNull(god1);
 		assertEquals(adam1, god1.child);
-		//List<AggregateChildModel> children = god1.children.fetch();
+		assertEquals(false, god1.children.isSync());
+		List<AggregateChildModel> children = god1.children.fetch();
+		assertEquals(adam2, children.get(0));
+		assertEquals(eve, children.get(1));
+		assertEquals(bob, children.get(2));
+		assertEquals(true, god1.children.isSync());
 		
-		AggregateChildModel adamAfter = AggregateParentModel.all().filter("name", "god").get().child;
-		assertEquals(adam1, adamAfter);
-		// can't work with aggregated in GAE because there is no join
-		//AggregateParentModel.all().filter("child.name", "adam");
-		//AggregateChildModel.all().aggregated("child", parent.id).fetch();
+		// get aggregated one2one
+		AggregateChildModel adamAfter2 = AggregateChildModel.all().aggregated(god, "child").get();
+		assertEquals(adam1, adamAfter2);
+		
+		// get aggregated one2many
+		children = AggregateChildModel.all().aggregated(god, "children").fetch();
+		assertEquals(adam2, children.get(0));
+		assertEquals(eve, children.get(1));
+		assertEquals(bob, children.get(2));
+
+		AggregateParentModel god2 = AggregateParentModel.all().filter("name", "god").get();
+		assertEquals(adam1, god2.child);
+		children = god2.children.elements();
+		assertEquals(adam2, children.get(0));
+		assertEquals(eve, children.get(1));
+		assertEquals(bob, children.get(2));
+		assertEquals(true, god2.children.isSync());
+	}
+	
+	public void testAggregateUpdate() {
+		AggregateChildModel adam1 = new AggregateChildModel();
+		adam1.name = "adam1";
+		AggregateChildModel adam2 = new AggregateChildModel();
+		adam2.name = "adam2";
+		
+		AggregateChildModel eve = new AggregateChildModel();
+		eve.name = "eve";
+
+		AggregateChildModel bob = new AggregateChildModel();
+		bob.name = "bob";
+
+		AggregateParentModel god = new AggregateParentModel();
+		god.name = "god";
+		god.child = adam1;
+		god.children.elements().addAll(Arrays.asList(adam2, eve, bob));
+				
+		god.insert();
+		
+		assertNotNull(god.id);
+		assertNotNull(god.child.id);
+		
+		god.name = "goddy";
+		adam1.name = "adammy";
+		bob.name = "bobby";
+		eve.name = "evvy";
+		
+		god.update();
+		
+		AggregateParentModel godbis = AggregateParentModel.all().filter("name", "goddy").get();
+		assertEquals(god, godbis);
+		assertEquals(false, godbis.children.isSync());
+		List<AggregateChildModel> children = godbis.children.elements();
+		assertEquals(adam2, children.get(0));
+		assertEquals(eve, children.get(1));
+		assertEquals(bob, children.get(2));
+		assertEquals(true, godbis.children.isSync());
+	}
+	
+	public void testAggregateListQuerysFetch() {
+		List<AggregateChildModel> adams = new ArrayList<AggregateChildModel>();
+		for(int i=0; i<100; i++){
+			AggregateChildModel adam = new AggregateChildModel();
+			adam.name = "adam"+i;
+			adams.add(adam);
+		}
+		
+		AggregateChildModel eve = new AggregateChildModel();
+		eve.name = "eve";
+
+		AggregateParentModel god = new AggregateParentModel();
+		god.name = "god";
+		god.child = eve;
+		god.children.elements().addAll(adams);
+				
+		god.insert();
+		
+		assertNotNull(god.id);
+		assertNotNull(god.child.id);
+		
+		// get aggregated one2many
+		AggregateParentModel godbis = AggregateParentModel.all().filter("name", "god").get();
+		List<AggregateChildModel> children = godbis.children.fetch();
+		for(int i=0; i<100; i++){
+			assertEquals(adams.get(i), children.get(i));			
+		}
+		
+		for(int i=0; i<100; i++){
+			assertEquals(adams.get(i), godbis.children.elements().get(i));			
+		}
+		
+		Iterator<AggregateChildModel> it = godbis.children.iterator();
+		int i=0;
+		while(it.hasNext()){
+			assertEquals(adams.get(i++), it.next());	
+		}
+		assertEquals(100, i);
+	}
+	
+	public void testAggregateListQuerysFetchLimit() {
+		List<AggregateChildModel> adams = new ArrayList<AggregateChildModel>();
+		for(int i=0; i<100; i++){
+			AggregateChildModel adam = new AggregateChildModel();
+			adam.name = "adam"+i;
+			adams.add(adam);
+		}
+		
+		AggregateChildModel eve = new AggregateChildModel();
+		eve.name = "eve";
+
+		AggregateParentModel god = new AggregateParentModel();
+		god.name = "god";
+		god.child = eve;
+		god.children.elements().addAll(adams);
+				
+		god.insert();
+		
+		assertNotNull(god.id);
+		assertNotNull(god.child.id);
+		
+		// get aggregated one2many
+		AggregateParentModel godbis = AggregateParentModel.all().filter("name", "god").get();
+		List<AggregateChildModel> children_0_10 = godbis.children.fetch(10);
+		for(int i=0; i<10; i++){
+			assertEquals(adams.get(i), children_0_10.get(i));			
+		}
+		
+		for(int i=0; i<10; i++){
+			assertEquals(adams.get(i), godbis.children.elements().get(i));			
+		}
+		
+		Iterator<AggregateChildModel> it = godbis.children.iterator();
+		int i=0;
+		while(it.hasNext()){
+			assertEquals(adams.get(i++), it.next());	
+		}
+		assertEquals(10, i);
+	}
+	
+	public void testAggregateListQuerysFetchLimitOffset() {
+		List<AggregateChildModel> adams = new ArrayList<AggregateChildModel>();
+		for(int i=0; i<100; i++){
+			AggregateChildModel adam = new AggregateChildModel();
+			adam.name = "adam"+i;
+			adams.add(adam);
+		}
+		
+		AggregateChildModel eve = new AggregateChildModel();
+		eve.name = "eve";
+
+		AggregateParentModel god = new AggregateParentModel();
+		god.name = "god";
+		god.child = eve;
+		god.children.elements().addAll(adams);
+				
+		god.insert();
+		
+		assertNotNull(god.id);
+		assertNotNull(god.child.id);
+		
+		// get aggregated one2many
+		AggregateParentModel godbis = AggregateParentModel.all().filter("name", "god").get();
+		List<AggregateChildModel> children_26_36 = godbis.children.fetch(10, 26);
+		for(int i=0; i<10; i++){
+			assertEquals(adams.get(i+26), children_26_36.get(i));			
+		}
+		
+		for(int i=0; i<10; i++){
+			assertEquals(adams.get(i+26), godbis.children.elements().get(i));			
+		}
+		
+		Iterator<AggregateChildModel> it = godbis.children.iterator();
+		int i=26;
+		while(it.hasNext()){
+			assertEquals(adams.get(i++), it.next());	
+		}
+		assertEquals(10, i);
+	}
+	
+	public void testAggregateListQuerysFetchKeys() {
+		List<AggregateChildModel> adams = new ArrayList<AggregateChildModel>();
+		for(int i=0; i<100; i++){
+			AggregateChildModel adam = new AggregateChildModel();
+			adam.name = "adam"+i;
+			adams.add(adam);
+		}
+		
+		AggregateChildModel eve = new AggregateChildModel();
+		eve.name = "eve";
+
+		AggregateParentModel god = new AggregateParentModel();
+		god.name = "god";
+		god.child = eve;
+		god.children.elements().addAll(adams);
+				
+		god.insert();
+		
+		assertNotNull(god.id);
+		assertNotNull(god.child.id);
+		
+		// get aggregated one2many
+		AggregateParentModel godbis = AggregateParentModel.all().filter("name", "god").get();
+		List<AggregateChildModel> children = godbis.children.fetchKeys();
+		for(int i=0; i<100; i++){
+			assertEquals(adams.get(i).id, children.get(i).id);			
+			assertTrue(children.get(i).name == null);			
+		}
+		
+		for(int i=0; i<100; i++){
+			assertEquals(adams.get(i).id, godbis.children.elements().get(i).id);			
+			assertTrue(children.get(i).name == null);			
+		}
+		
+		Iterator<AggregateChildModel> it = godbis.children.iterator();
+		int i=0;
+		while(it.hasNext()){
+			AggregateChildModel child = it.next();
+			assertEquals(adams.get(i++).id, child.id);	
+			assertTrue(child.name == null);			
+		}
+		assertEquals(100, i);
+	}
+	
+	public void testAggregateListQuerysFetchKeysLimit() {
+		List<AggregateChildModel> adams = new ArrayList<AggregateChildModel>();
+		for(int i=0; i<100; i++){
+			AggregateChildModel adam = new AggregateChildModel();
+			adam.name = "adam"+i;
+			adams.add(adam);
+		}
+		
+		AggregateChildModel eve = new AggregateChildModel();
+		eve.name = "eve";
+
+		AggregateParentModel god = new AggregateParentModel();
+		god.name = "god";
+		god.child = eve;
+		god.children.elements().addAll(adams);
+				
+		god.insert();
+		
+		assertNotNull(god.id);
+		assertNotNull(god.child.id);
+		
+		// get aggregated one2many
+		AggregateParentModel godbis = AggregateParentModel.all().filter("name", "god").get();
+		List<AggregateChildModel> children = godbis.children.fetchKeys(10);
+		for(int i=0; i<10; i++){
+			assertEquals(adams.get(i).id, children.get(i).id);			
+			assertTrue(children.get(i).name == null);			
+		}
+		
+		for(int i=0; i<10; i++){
+			assertEquals(adams.get(i).id, godbis.children.elements().get(i).id);			
+			assertTrue(children.get(i).name == null);			
+		}
+		
+		Iterator<AggregateChildModel> it = godbis.children.iterator();
+		int i=0;
+		while(it.hasNext()){
+			AggregateChildModel child = it.next();
+			assertEquals(adams.get(i++).id, child.id);	
+			assertTrue(child.name == null);			
+		}
+		assertEquals(10, i);
+	}
+	
+	public void testAggregateListQuerysFetchKeysLimitOffset() {
+		List<AggregateChildModel> adams = new ArrayList<AggregateChildModel>();
+		for(int i=0; i<100; i++){
+			AggregateChildModel adam = new AggregateChildModel();
+			adam.name = "adam"+i;
+			adams.add(adam);
+		}
+		
+		AggregateChildModel eve = new AggregateChildModel();
+		eve.name = "eve";
+
+		AggregateParentModel god = new AggregateParentModel();
+		god.name = "god";
+		god.child = eve;
+		god.children.elements().addAll(adams);
+				
+		god.insert();
+		
+		assertNotNull(god.id);
+		assertNotNull(god.child.id);
+		
+		// get aggregated one2many
+		AggregateParentModel godbis = AggregateParentModel.all().filter("name", "god").get();
+		List<AggregateChildModel> children = godbis.children.fetchKeys(10, 26);
+		for(int i=0; i<10; i++){
+			assertEquals(adams.get(i+26).id, children.get(i).id);			
+			assertTrue(children.get(i).name == null);			
+		}
+		
+		for(int i=0; i<10; i++){
+			assertEquals(adams.get(i+26).id, godbis.children.elements().get(i).id);			
+			assertTrue(children.get(i).name == null);			
+		}
+		
+		Iterator<AggregateChildModel> it = godbis.children.iterator();
+		int i=26;
+		while(it.hasNext()){
+			AggregateChildModel child = it.next();
+			assertEquals(adams.get(i++).id, child.id);	
+			assertTrue(child.name == null);			
+		}
+		assertEquals(36, i);
 	}
 }

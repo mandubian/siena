@@ -17,6 +17,8 @@ package siena;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.math.BigDecimal;
 import java.security.MessageDigest;
 import java.text.ParseException;
@@ -345,4 +347,16 @@ public class Util {
 			Util.setField(objTo, field, Util.readField(objFrom, field));
 		}
 	}
+	
+	public static Class<?> getGenericClass(Field f, int n) {
+		Type genericFieldType = f.getGenericType();
+		if(genericFieldType instanceof ParameterizedType){
+		    ParameterizedType aType = (ParameterizedType) genericFieldType;
+		    Type[] fieldArgTypes = aType.getActualTypeArguments();
+		    return (Class<?>) fieldArgTypes[n];
+		}
+		return null;
+	}
+
+
 }

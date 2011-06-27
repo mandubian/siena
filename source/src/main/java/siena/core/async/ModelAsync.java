@@ -21,6 +21,7 @@ import java.util.Map;
 import siena.Model;
 import siena.PersistenceManagerFactory;
 import siena.Query;
+import siena.QueryAggregated;
 import siena.QueryFilter;
 import siena.QueryFilterSearch;
 import siena.QueryJoin;
@@ -90,6 +91,8 @@ public class ModelAsync {
 	}
 
 	class ProxyQueryAsync<T> implements QueryAsync<T> {
+		private static final long serialVersionUID = -1820063783201503668L;
+
 		private String filter;
 		private Class<T> clazz;
 		private ModelAsync obj;
@@ -114,6 +117,10 @@ public class ModelAsync {
 
 		public QueryAsync<T> join(String field, String... sortFields) {
 			return createQuery().join(field, sortFields);
+		}
+
+		public QueryAsync<T> aggregated(Object aggregator, String field) {
+			return createQuery().aggregated(aggregator, field);
 		}
 
 		public QueryAsync<T> search(String match, String... fields) {
@@ -262,6 +269,10 @@ public class ModelAsync {
 			return createQuery().getJoins();
 		}
 		
+		public List<QueryAggregated> getAggregatees() {
+			return createQuery().getAggregatees();
+		}
+
 		public QueryAsync<T> clone() {
 			return createQuery().clone();
 		}

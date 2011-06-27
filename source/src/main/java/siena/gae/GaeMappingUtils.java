@@ -14,13 +14,14 @@ import siena.SienaException;
 import siena.SienaRestrictedApiException;
 import siena.Util;
 import siena.core.DecimalPrecision;
-import siena.embed.Embedded;
+import siena.core.ListQuery4PM;
 import siena.embed.JsonSerializer;
 
 import com.google.appengine.api.datastore.Blob;
 import com.google.appengine.api.datastore.Entity;
 import com.google.appengine.api.datastore.Key;
 import com.google.appengine.api.datastore.KeyFactory;
+import com.google.appengine.api.datastore.PreparedQuery;
 import com.google.appengine.api.datastore.Text;
 
 public class GaeMappingUtils {
@@ -72,7 +73,20 @@ public class GaeMappingUtils {
 		return entity;
 	}
 	
-	public static Entity createEntityInstanceFromParent(Field idField, ClassInfo info, Object obj, Key parentKey, Field parentField){
+	public static Entity createEntityInstanceForUpdateFromParent(Field idField, ClassInfo info, Object obj, Key parentKey, ClassInfo parentInfo, Field parentField){
+		Key key = makeKeyFromParent(idField, info, obj, parentKey, parentInfo, parentField);
+		Entity entity = new Entity(key);
+		
+		return entity;
+	}
+	
+	public static String getKindWithAncestorField(ClassInfo childInfo, ClassInfo parentInfo, Field field){
+		return childInfo.tableName + ":" + parentInfo.tableName + ":" + ClassInfo.getSingleColumnName(field);
+	}
+	
+	public static Entity createEntityInstanceFromParent(
+			Field idField, ClassInfo info, Object obj, 
+			Key parentKey, ClassInfo parentInfo, Field parentField){
 		Entity entity = null;
 		Id id = idField.getAnnotation(Id.class);
 		Class<?> type = idField.getType();
@@ -85,23 +99,23 @@ public class GaeMappingUtils {
 				if(idVal == null)
 					throw new SienaException("Id Field " + idField.getName() + " value null");
 				String keyVal = Util.toString(idField, idVal);				
-				entity = new Entity(parentField.getName()+"."+info.tableName, keyVal, parentKey);
+				entity = new Entity(getKindWithAncestorField(info, parentInfo, parentField), keyVal, parentKey);
 				break;
 			case AUTO_INCREMENT:
 				// manages String ID as not long!!!
 				if(Long.TYPE == type || Long.class.isAssignableFrom(type)){
-					entity = new Entity(parentField.getName()+"."+info.tableName, parentKey);
+					entity = new Entity(getKindWithAncestorField(info, parentInfo, parentField), parentKey);
 				}else {
 					Object idStringVal = null;
 					idStringVal = Util.readField(obj, idField);
 					if(idStringVal == null)
 						throw new SienaException("Id Field " + idField.getName() + " value null");
 					String keyStringVal = Util.toString(idField, idStringVal);				
-					entity = new Entity(parentField.getName()+"."+info.tableName, keyStringVal, parentKey);
+					entity = new Entity(getKindWithAncestorField(info, parentInfo, parentField), keyStringVal, parentKey);
 				}
 				break;
 			case UUID:
-				entity = new Entity(parentField.getName()+"."+info.tableName, UUID.randomUUID().toString(), parentKey);
+				entity = new Entity(getKindWithAncestorField(info, parentInfo, parentField), UUID.randomUUID().toString(), parentKey);
 				break;
 			default:
 				throw new SienaRestrictedApiException("DB", "createEntityInstance", "Id Generator "+id.value()+ " not supported");
@@ -207,50 +221,7 @@ public class GaeMappingUtils {
 		}
 	}
 	
-	protected static Key getKeyFromParent(Object obj, Entity parentEntity) {
-		Class<?> clazz = obj.getClass();
-		ClassInfo info = ClassInfo.getClassInfo(clazz);
 
-		try {
-			Field idField = info.getIdField();
-			Object value = Util.readField(obj, idField);
-			// TODO verify that returning NULL is not a bad thing
-			if(value == null) return null;
-			
-			Class<?> type = idField.getType();
-			
-			if(idField.isAnnotationPresent(Id.class)){
-				Id id = idField.getAnnotation(Id.class);
-				switch(id.value()) {
-				case NONE:
-					// long or string goes toString
-					return KeyFactory.createKey(
-						ClassInfo.getClassInfo(clazz).tableName,
-						value.toString());
-				case AUTO_INCREMENT:
-					// as a string with auto_increment can't exist, it is not cast into long
-					if (Long.TYPE == type || Long.class.isAssignableFrom(type)){
-						return KeyFactory.createKey(
-							ClassInfo.getClassInfo(clazz).tableName,
-							(Long)value);
-					}
-					return KeyFactory.createKey(
-						ClassInfo.getClassInfo(clazz).tableName,
-						value.toString());
-					
-				case UUID:
-					return KeyFactory.createKey(
-						ClassInfo.getClassInfo(clazz).tableName,
-						value.toString());
-				default:
-					throw new SienaException("Id Generator "+id.value()+ " not supported");
-				}
-			}
-			else throw new SienaException("Field " + idField.getName() + " is not an @Id field");
-		} catch (Exception e) {
-			throw new SienaException(e);
-		}
-	}
 	
 	protected static Key makeKey(Class<?> clazz, Object value) {
 		ClassInfo info = ClassInfo.getClassInfo(clazz);
@@ -331,7 +302,7 @@ public class GaeMappingUtils {
 		}
 	}
 
-	protected static Key makeKeyFromParent(Field field, ClassInfo info, Object object, Key parentKey) {
+	protected static Key makeKeyFromParent(Field field, ClassInfo info, Object object, Key parentKey, ClassInfo parentInfo, Field parentField) {
 		try {
 			Field idField = info.getIdField();
 			Object idVal = Util.readField(object, idField);
@@ -345,7 +316,7 @@ public class GaeMappingUtils {
 					// long or string goes toString
 					return KeyFactory.createKey(
 							parentKey,
-							info.tableName,
+							getKindWithAncestorField(info, parentInfo, parentField),
 							idVal.toString());
 				case AUTO_INCREMENT:
 					Class<?> type = idField.getType();
@@ -353,17 +324,17 @@ public class GaeMappingUtils {
 					if (Long.TYPE==type || Long.class.isAssignableFrom(type)){
 						return KeyFactory.createKey(
 							parentKey,
-							info.tableName,
+							getKindWithAncestorField(info, parentInfo, parentField),
 							(Long)idVal);
 					}
 					return KeyFactory.createKey(
 							parentKey,
-							info.tableName,
+							getKindWithAncestorField(info, parentInfo, parentField),
 							idVal.toString());
 				case UUID:
 					return KeyFactory.createKey(
 							parentKey,
-							info.tableName,
+							getKindWithAncestorField(info, parentInfo, parentField),
 							idVal.toString());
 				default:
 					throw new SienaException("Id Generator "+id.value()+ " not supported");
@@ -450,6 +421,7 @@ public class GaeMappingUtils {
 		}
 	}
 
+
 	public static void fillModel(Object obj, Entity entity) {
 		Class<?> clazz = obj.getClass();
 
@@ -458,14 +430,20 @@ public class GaeMappingUtils {
 			try {
 				Class<?> fieldClass = field.getType();
 				if (ClassInfo.isModel(fieldClass) && !ClassInfo.isEmbedded(field)) {
-					Key key = (Key) entity.getProperty(property);
-					if (key != null) {
-						Object value = Util.createObjectInstance(fieldClass);
-						Field id = ClassInfo.getIdField(fieldClass);
-						setIdFromKey(id, value, key);
-						Util.setField(obj, field, value);
+					if(!ClassInfo.isAggregated(field)){
+						Key key = (Key) entity.getProperty(property);
+						if (key != null) {
+							Object value = Util.createObjectInstance(fieldClass);
+							Field id = ClassInfo.getIdField(fieldClass);
+							setIdFromKey(id, value, key);
+							Util.setField(obj, field, value);
+						}
 					}
-				} else {
+				} 
+				else if(ClassInfo.isAggregated(field)){
+					// doesn nothing for the time being
+				}				
+				else {
 					setFromObject(obj, field, entity.getProperty(property));
 				}
 			} catch (Exception e) {
@@ -500,7 +478,11 @@ public class GaeMappingUtils {
 							Util.setField(obj, field, value);
 						}
 					}
-				} else {
+				} 
+				else if(ClassInfo.isAggregated(field)){
+					// doesn nothing for the time being
+				}
+				else {
 					setFromObject(obj, field, entity.getProperty(property));
 				}
 			} catch (Exception e) {

@@ -12,6 +12,7 @@ import java.util.regex.Pattern;
 
 import siena.ClassInfo;
 import siena.Id;
+import siena.QueryAggregated;
 import siena.QueryData;
 import siena.QueryFilter;
 import siena.QueryFilterSearch;
@@ -271,6 +272,20 @@ public class GaeQueryUtils {
 		return fieldMap;
 	}
 	
+	public static <T> Map<Field, ArrayList<Key>> buildJoinFieldKeysMap(T model){
+		// join queries
+		Map<Field, ArrayList<Key>> fieldMap = new HashMap<Field, ArrayList<Key>>();
+				
+		// join annotations
+		for(Field field: 
+			ClassInfo.getClassInfo(model.getClass()).joinFields)
+		{
+			fieldMap.put(field, new ArrayList<Key>());
+		}
+		
+		return fieldMap;
+	}
+
 	public static <T> void paginate(QueryData<T> query) {
 		QueryOptionGaeContext gaeCtx = (QueryOptionGaeContext)query.option(QueryOptionGaeContext.ID);
 		QueryOptionState state = (QueryOptionState)query.option(QueryOptionState.ID);

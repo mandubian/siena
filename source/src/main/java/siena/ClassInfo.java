@@ -190,6 +190,36 @@ public class ClassInfo {
 		}
 		return new String[]{ field.getName() };
 	}
+	
+	public static String getSingleColumnName(Field field) {
+		Column c = field.getAnnotation(Column.class);
+		if(c != null && c.value().length > 0) return c.value()[0];
+		
+		// default mapping: field names
+		if(isModel(field.getType())) {
+			ClassInfo ci = getClassInfo(field.getType());
+			String keys = "";
+			// if no @column is provided
+			// if the model has one single key, we use the local field name
+			// if the model has several keys, we concatenate the fieldName+"_"+keyName
+			if(ci.keys.size()==1){
+				return field.getName();
+			}
+			// multi keys returns field_key1:field_key2
+			int i=0;
+			int sz = ci.keys.size();
+			for (Field key : ci.keys) {
+				// uses the prefix fieldName_ to prevent problem with models having the same field names
+				keys += field.getName()+"_"+ getSingleColumnName(key);
+				if(i < sz){
+					keys += ":";
+				}
+				i++;
+			}
+			return keys;
+		}
+		return field.getName();
+	}
 
 	public static String[] getColumnNamesWithPrefix(Field field, String prefix) {
 		Column c = field.getAnnotation(Column.class);

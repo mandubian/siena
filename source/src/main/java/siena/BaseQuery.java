@@ -86,6 +86,11 @@ public class BaseQuery<T> extends BaseQueryData<T> implements Query<T> {
 		return this;
 	}
 	
+	public Query<T> aggregated(Object aggregator, String fieldName) {
+		addAggregated(aggregator, fieldName);
+		return this;
+	}
+
 	public T get() {
 		return pm.get(this);
 	}
@@ -158,11 +163,6 @@ public class BaseQuery<T> extends BaseQueryData<T> implements Query<T> {
 	
 	public Class<T> getQueriedClass() {
 		return clazz;
-	}
-
-	public Object raw(String request) {
-		// TODO Auto-generated method stub
-		return null;
 	}
 
 	@Deprecated

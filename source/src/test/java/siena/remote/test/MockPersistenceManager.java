@@ -26,6 +26,7 @@ import java.util.Properties;
 import siena.BaseQueryData;
 import siena.PersistenceManager;
 import siena.Query;
+import siena.QueryAggregated;
 import siena.QueryFilter;
 import siena.QueryFilterSearch;
 import siena.QueryJoin;
@@ -391,6 +392,18 @@ public class MockPersistenceManager implements PersistenceManager {
 
 		@Override
 		public Query<T> copy() {
+			// TODO Auto-generated method stub
+			return null;
+		}
+
+		@Override
+		public List<QueryAggregated> getAggregatees() {
+			// TODO Auto-generated method stub
+			return null;
+		}
+
+		@Override
+		public Query<T> aggregated(Object aggregator, String fieldName) {
 			// TODO Auto-generated method stub
 			return null;
 		}

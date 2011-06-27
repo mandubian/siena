@@ -30,6 +30,7 @@ public class BaseQueryData<T> implements QueryData<T> {
 	protected List<QueryOrder> orders;
 	protected List<QueryFilterSearch> searches;
 	protected List<QueryJoin> joins;
+	protected List<QueryAggregated> aggregatees;
 	
 	protected Map<Integer, QueryOption> options = defaultOptions();
 	
@@ -50,6 +51,7 @@ public class BaseQueryData<T> implements QueryData<T> {
 		orders = new ArrayList<QueryOrder>();
 		searches = new ArrayList<QueryFilterSearch>();
 		joins = new ArrayList<QueryJoin>();
+		aggregatees = new ArrayList<QueryAggregated>();
 	}
 	
 	public BaseQueryData(Class<T> clazz) {
@@ -59,6 +61,7 @@ public class BaseQueryData<T> implements QueryData<T> {
 		orders = new ArrayList<QueryOrder>();
 		searches = new ArrayList<QueryFilterSearch>();
 		joins = new ArrayList<QueryJoin>();
+		aggregatees = new ArrayList<QueryAggregated>();
 	}
 	
 	public BaseQueryData(BaseQueryData<T> data) {
@@ -83,6 +86,7 @@ public class BaseQueryData<T> implements QueryData<T> {
 		this.orders = data.orders;
 		this.searches = data.searches;
 		this.joins = data.joins;
+		this.aggregatees = data.aggregatees;
 
 		for(Integer key : data.options.keySet()){
 			this.options.put(key, data.options.get(key));
@@ -109,6 +113,9 @@ public class BaseQueryData<T> implements QueryData<T> {
 		return joins;
 	}
 
+	public List<QueryAggregated> getAggregatees() {
+		return aggregatees;
+	}
 	
 	public QueryOption option(int option) {
 		return options.get(option);
@@ -191,6 +198,13 @@ public class BaseQueryData<T> implements QueryData<T> {
 		} catch(Exception e) {
 			throw new SienaException(e);
 		}
+	}
+	
+	protected void addAggregated(Object aggregator, String fieldName){
+		Field field = Util.getField(aggregator.getClass(), fieldName);
+		// removes existing aggregatee (not very nice I know :) )
+		if(!aggregatees.isEmpty()) aggregatees.remove(0);
+		aggregatees.add(0, new QueryAggregated(aggregator, field));
 	}
 	
 	protected void optionPaginate(int pageSize) {
@@ -284,6 +298,7 @@ public class BaseQueryData<T> implements QueryData<T> {
 		orders.clear();
 		searches.clear();
 		joins.clear();
+		aggregatees.clear();
 		options = defaultOptions();
 	}
 	

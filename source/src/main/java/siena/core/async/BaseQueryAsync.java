@@ -16,6 +16,8 @@ import siena.core.options.QueryOption;
  * @author mandubian <pascal.voitot@mandubian.org>
  */
 public class BaseQueryAsync<T> extends BaseQueryData<T> implements QueryAsync<T> {
+	private static final long serialVersionUID = -7039977099068819124L;
+
 	private PersistenceManagerAsync pm;
 	
 	public BaseQueryAsync(PersistenceManagerAsync pm, Class<T> clazz) {
@@ -49,6 +51,11 @@ public class BaseQueryAsync<T> extends BaseQueryData<T> implements QueryAsync<T>
 
 	public QueryAsync<T> join(String fieldName, String... sortFields) {
 		addJoin(fieldName, sortFields);
+		return this;
+	}
+	
+	public QueryAsync<T> aggregated(Object aggregator, String fieldName) {
+		addAggregated(aggregator, fieldName);
 		return this;
 	}
 

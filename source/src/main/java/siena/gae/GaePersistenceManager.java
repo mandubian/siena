@@ -28,9 +28,11 @@ import java.util.Properties;
 import siena.AbstractPersistenceManager;
 import siena.ClassInfo;
 import siena.Query;
+import siena.QueryAggregated;
 import siena.SienaException;
 import siena.Util;
 import siena.core.ListQuery;
+import siena.core.ListQuery4PM;
 import siena.core.async.PersistenceManagerAsync;
 import siena.core.options.QueryOptionFetchType;
 import siena.core.options.QueryOptionOffset;
@@ -102,9 +104,21 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 
 	public void get(Object obj) {
 		Key key = GaeMappingUtils.getKey(obj);
+		ClassInfo info = ClassInfo.getClassInfo(obj.getClass());
 		try {
 			Entity entity = ds.get(key);
 			GaeMappingUtils.fillModel(obj, entity);
+
+			// aggregated management
+			if(!info.aggregatedFields.isEmpty()){
+				mapAggregated(obj);
+			}
+			
+			// join management
+			if(!info.joinFields.isEmpty()){
+				mapJoins(obj);
+			}
+
 		} 
 		catch (Exception e) {
 			throw new SienaException(e);
@@ -120,26 +134,17 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 			if(entity != null){
 				obj = Util.createObjectInstance(clazz);
 				GaeMappingUtils.fillModelAndKey(obj, entity);
-			}
-			
-			// now gets aggregated one2one (one2many are retrieved by ListQuery except with @Join)
-			for(Field f:info.aggregatedFields){
-				Class<?> cClazz = f.getType();
-				ClassInfo cInfo = ClassInfo.getClassInfo(cClazz);
-				if(ClassInfo.isModel(cClazz)){
-					// creates a query for fieldname.child_tablename
-					com.google.appengine.api.datastore.Query q = 
-						new com.google.appengine.api.datastore.Query(f.getName()+"."+cInfo.tableName);
-
-					PreparedQuery pq = ds.prepare(q.setAncestor(gKey));
-					Entity cEntity = pq.asSingleEntity();
-					Object cObj = Util.createObjectInstance(cClazz);
-					GaeMappingUtils.fillModelAndKey(cObj, cEntity);
-					Util.setField(obj, f, cObj);
+					
+				// aggregated management
+				if(!info.aggregatedFields.isEmpty()){
+					mapAggregated(obj);
 				}
-				// todo manage joined one2many listquery
-			}
 			
+				// join management
+				if(!info.joinFields.isEmpty()){
+					mapJoins(obj);
+				}
+			}
 			return obj;
 		} 
 		catch(EntityNotFoundException e){
@@ -151,16 +156,10 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 	}
 
 	public void insert(Object obj) {
-		/*Class<?> clazz = obj.getClass();
-		ClassInfo info = ClassInfo.getClassInfo(clazz);
-		Field idField = info.getIdField();
-		Entity entity = GaeMappingUtils.createEntityInstance(idField, info, obj);
-		GaeMappingUtils.fillEntity(obj, entity);
-		ds.put(entity);
-		GaeMappingUtils.setIdFromKey(idField, obj, entity.getKey());*/
-		_insertSingle(obj, null, null);	}
+		_insertSingle(obj, null, null, null);	
+	}
 
-	private void _insertSingle(Object obj, final Entity parent, Field field) {
+	private void _insertSingle(Object obj, final Entity parent, final ClassInfo parentInfo, final Field field) {
 		Class<?> clazz = obj.getClass();
 		ClassInfo info = ClassInfo.getClassInfo(clazz);
 		Field idField = info.getIdField();
@@ -172,7 +171,7 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 			ds.put(entity);
 			GaeMappingUtils.setIdFromKey(idField, obj, entity.getKey());
 		}else {
-			entity = GaeMappingUtils.createEntityInstanceFromParent(idField, info, obj, parent.getKey(), field);
+			entity = GaeMappingUtils.createEntityInstanceFromParent(idField, info, obj, parent.getKey(), parentInfo, field);
 			GaeMappingUtils.fillEntity(obj, entity);
 			// fills the parent entity field with the key in the case of the One2One aggregated relation.
 			// put them together in the db
@@ -183,27 +182,36 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 			GaeMappingUtils.setIdFromKey(idField, obj, entity.getKey());
 		}
 		
-		for(Field f: info.aggregatedFields){
-			if(ClassInfo.isModel(f.getType())){
-				Object aggObj = Util.readField(obj, f);
-				_insertSingle(aggObj, entity, f);
-			}
-			else if(ClassInfo.isListQuery(f)){
-				ListQuery<?> lq = (ListQuery<?>)Util.readField(obj, f);
-				if(!lq.elements().isEmpty()){
-					_insertMultiple(lq.elements(), entity, f);
+		if(!info.aggregatedFields.isEmpty()){
+			Map<Key, Map<Field, List<Object>>> keyMap = new HashMap<Key, Map<Field, List<Object>>>();
+			Map<Field, List<Object>> objectMap = new HashMap<Field, List<Object>>();
+			keyMap.put(entity.getKey(), objectMap);
+			for(Field f: info.aggregatedFields){
+				if(ClassInfo.isModel(f.getType())){
+					Object aggObj = Util.readField(obj, f);
+					//_insertSingle(aggObj, entity, info, f);
+					objectMap.put(f, Arrays.asList(aggObj));
+				}
+				else if(ClassInfo.isListQuery(f)){
+					ListQuery<?> lq = (ListQuery<?>)Util.readField(obj, f);
+					if(!lq.elements().isEmpty()){
+						//_insertMultiple(lq.elements(), entity, info, f);
+						objectMap.put(f, (List<Object>)lq.elements());
+					}
 				}
 			}
+			
+			_insertMultipleMapFromParent(keyMap, Arrays.asList(info));
 		}
 	}
 	
-	private int _insertMultiple(Object[] objects, final Entity parent, Field field) {
-		return _insertMultiple(Arrays.asList(objects), parent, field);
+	private int _insertMultiple(Object[] objects, final Entity parentEntity, final ClassInfo parentInfo, final Field field) {
+		return _insertMultiple(Arrays.asList(objects), parentEntity, parentInfo, field);
 	}
 	
-	private int _insertMultiple(Iterable<?> objects, final Entity parent, Field field) {
+	private int _insertMultiple(Iterable<?> objects, final Entity parentEntity, final ClassInfo parentInfo, final Field field) {
 		List<Entity> entities = new ArrayList<Entity>();
-		if(parent==null){
+		if(parentEntity==null){
 			for(Object obj:objects){
 				Class<?> clazz = obj.getClass();
 				ClassInfo info = ClassInfo.getClassInfo(clazz);
@@ -217,7 +225,9 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 				Class<?> clazz = obj.getClass();
 				ClassInfo info = ClassInfo.getClassInfo(clazz);
 				Field idField = info.getIdField();
-				Entity entity = GaeMappingUtils.createEntityInstanceFromParent(idField, info, obj, parent.getKey(), field);
+				Entity entity = GaeMappingUtils.createEntityInstanceFromParent(
+							idField, info, obj, 
+							parentEntity.getKey(), parentInfo, field);
 				GaeMappingUtils.fillEntity(obj, entity);
 				entities.add(entity);
 			}
@@ -226,38 +236,136 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 		List<Key> generatedKeys = ds.put(entities);
 		
 		int i=0;
+		Map<Key, Map<Field, List<Object>>> keyMap = new HashMap<Key, Map<Field, List<Object>>>();
+		List<ClassInfo> infos = new ArrayList<ClassInfo>();
 		for(Object obj:objects){
 			Class<?> clazz = obj.getClass();
 			ClassInfo info = ClassInfo.getClassInfo(clazz);
 			Field idField = info.getIdField();
 			GaeMappingUtils.setIdFromKey(idField, obj, generatedKeys.get(i));
 			
-			for(Field f: info.aggregatedFields){
-				if(ClassInfo.isModel(f.getType())){
-					Object aggObj = Util.readField(obj, f);
-					_insertSingle(aggObj, entities.get(i), f);
-				}
-				else if(ClassInfo.isListQuery(f)){
-					ListQuery<?> lq = (ListQuery<?>)Util.readField(obj, f);
-					if(!lq.elements().isEmpty()){
-						_insertMultiple(lq.elements(), entities.get(i), f);
+			if(!info.aggregatedFields.isEmpty()){
+				infos.add(info);
+				Map<Field, List<Object>> objectMap = new HashMap<Field, List<Object>>();		
+				keyMap.put(generatedKeys.get(i), objectMap);
+				for(Field f: info.aggregatedFields){
+					if(ClassInfo.isModel(f.getType())){
+						Object aggObj = Util.readField(obj, f);
+						objectMap.put(f, Arrays.asList(aggObj));
+					}
+					else if(ClassInfo.isListQuery(f)){
+						ListQuery<?> lq = (ListQuery<?>)Util.readField(obj, f);
+						if(!lq.elements().isEmpty()){
+							objectMap.put(f, (List<Object>)lq.elements());
+						}
 					}
 				}
 			}
-			
 			i++;
+		}
+		if(!keyMap.isEmpty()){
+			_insertMultipleMapFromParent(keyMap, infos);
+		}
+		return generatedKeys.size();
+	}
+	
+	private int _insertMultipleMapFromParent(final Map<Key, Map<Field, List<Object>>> keyMap, final List<ClassInfo> parentInfos) {
+		List<Entity> entities = new ArrayList<Entity>();
+		int i=0;
+		for(Key key:keyMap.keySet()){
+			Map<Field, List<Object>> objectMap = keyMap.get(key);
+			for(Field field: objectMap.keySet()){
+				for(Object obj:objectMap.get(field)){
+					Class<?> clazz = obj.getClass();
+					ClassInfo info = ClassInfo.getClassInfo(clazz);
+					Field idField = info.getIdField();
+					Entity entity = GaeMappingUtils.createEntityInstanceFromParent(idField, info, obj, key, parentInfos.get(i), field);
+					GaeMappingUtils.fillEntity(obj, entity);
+					entities.add(entity);
+				}
+			}
+			i++;
+		}
+		
+		List<Key> generatedKeys = ds.put(entities);
+		
+		i=0;
+		Map<Key, Map<Field, List<Object>>> recKeyMap = new HashMap<Key, Map<Field, List<Object>>>();
+		List<ClassInfo> recInfos = new ArrayList<ClassInfo>();
+		for(Key key:keyMap.keySet()){
+			Map<Field, List<Object>> objectMap = keyMap.get(key);
+			for(Field field: objectMap.keySet()){
+				for(Object obj:objectMap.get(field)){
+					Class<?> clazz = obj.getClass();
+					ClassInfo info = ClassInfo.getClassInfo(clazz);
+					Field idField = info.getIdField();
+					GaeMappingUtils.setIdFromKey(idField, obj, generatedKeys.get(i));
+					
+					if(!info.aggregatedFields.isEmpty()){
+						recInfos.add(info);
+						Map<Field, List<Object>> recObjectMap = new HashMap<Field, List<Object>>();		
+						recKeyMap.put(generatedKeys.get(i), recObjectMap);
+						for(Field f: info.aggregatedFields){
+							if(ClassInfo.isModel(f.getType())){
+								Object aggObj = Util.readField(obj, f);
+								recObjectMap.put(f, Arrays.asList(aggObj));
+							}
+							else if(ClassInfo.isListQuery(f)){
+								ListQuery<?> lq = (ListQuery<?>)Util.readField(obj, f);
+								if(!lq.elements().isEmpty()){
+									recObjectMap.put(f, (List<Object>)lq.elements());
+								}
+							}
+						}
+					}
+					
+					i++;
+				}
+			}
+		}
+		if(!recKeyMap.isEmpty()){
+			_insertMultipleMapFromParent(recKeyMap, recInfos);
 		}
 		return generatedKeys.size();
 	}
 	
 	public void update(Object obj) {
+		List<Entity> entities = new ArrayList<Entity>(); 
+		_buildUpdateList(entities, obj, null, null, null);
+		
+		ds.put(entities);
+	}
+	
+	private void _buildUpdateList(List<Entity> entities, Object obj, Key parentKey, ClassInfo parentInfo, Field parentField){
 		Class<?> clazz = obj.getClass();
 		ClassInfo info = ClassInfo.getClassInfo(clazz);
 		Field idField = info.getIdField();
-		Entity entity = GaeMappingUtils.createEntityInstanceForUpdate(idField, info, obj);
-		//Entity entity = new Entity(GaeMappingUtils.getKey(obj));
-		GaeMappingUtils.fillEntity(obj, entity);
-		ds.put(entity);
+		
+		Entity entity;
+		if(parentKey == null){
+			entity = GaeMappingUtils.createEntityInstanceForUpdate(idField, info, obj);
+		}else {
+			entity = GaeMappingUtils.createEntityInstanceForUpdateFromParent(
+					idField, info, obj, parentKey, parentInfo, parentField);
+		}
+		GaeMappingUtils.fillEntity(obj, entity);		
+		entities.add(entity);
+		
+		for(Field f: info.aggregatedFields){
+			if(ClassInfo.isModel(f.getType())){
+				Object aggObj = Util.readField(obj, f);
+				_buildUpdateList(entities, aggObj, entity.getKey(), info, f);
+			}
+			else if(ClassInfo.isListQuery(f)){
+				ListQuery<?> lq = (ListQuery<?>)Util.readField(obj, f);
+				if(!lq.elements().isEmpty()){
+					for(Object elt : lq.elements()){
+						_buildUpdateList(entities, elt, entity.getKey(), info, f);
+					}					
+				}
+			}
+		}
+
 	}
 	
 	public void save(Object obj) {
@@ -293,17 +401,51 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 	
 	private <T> PreparedQuery prepare(Query<T> query) {
 		Class<?> clazz = query.getQueriedClass();
-		com.google.appengine.api.datastore.Query q = new com.google.appengine.api.datastore.Query(
-				ClassInfo.getClassInfo(clazz).tableName);
+		ClassInfo info = ClassInfo.getClassInfo(clazz);
+		com.google.appengine.api.datastore.Query q;
 
+		// manages aggregation at first
+		List<QueryAggregated> aggregs = query.getAggregatees();
+		if(aggregs.isEmpty()){
+			q = new com.google.appengine.api.datastore.Query(info.tableName);
+		}
+		else if(aggregs.size() == 1){
+			QueryAggregated aggreg = aggregs.get(0);
+			
+			q = new com.google.appengine.api.datastore.Query(
+					GaeMappingUtils.getKindWithAncestorField(info, 
+							ClassInfo.getClassInfo(aggreg.aggregator.getClass()), aggreg.field));
+			q.setAncestor(GaeMappingUtils.getKey(aggreg.aggregator));
+		}
+		else {
+			throw new SienaException("Only one aggregation per query allowed");
+		}
+		
 		return ds.prepare(GaeQueryUtils.addFiltersOrders(query, q));
 	}
 
 	private <T> PreparedQuery prepareKeysOnly(Query<T> query) {
 		Class<?> clazz = query.getQueriedClass();
-		com.google.appengine.api.datastore.Query q = new com.google.appengine.api.datastore.Query(
-				ClassInfo.getClassInfo(clazz).tableName);
+		ClassInfo info = ClassInfo.getClassInfo(clazz);
+		com.google.appengine.api.datastore.Query q;
 
+		// manages aggregation at first
+		List<QueryAggregated> aggregs = query.getAggregatees();
+		if(aggregs.isEmpty()){
+			q = new com.google.appengine.api.datastore.Query(ClassInfo.getClassInfo(clazz).tableName);
+		}
+		else if(aggregs.size() == 1){
+			QueryAggregated aggreg = aggregs.get(0);
+			
+			q = new com.google.appengine.api.datastore.Query(
+					GaeMappingUtils.getKindWithAncestorField(info, 
+							ClassInfo.getClassInfo(aggreg.aggregator.getClass()), aggreg.field));
+			q.setAncestor(GaeMappingUtils.getKey(aggreg.aggregator));
+		}
+		else {
+			throw new SienaException("Only one aggregation per query allowed");
+		}
+		
 		return ds.prepare(GaeQueryUtils.addFiltersOrders(query, q).setKeysOnly());
 	}
 
@@ -312,6 +454,57 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 		try {
 			// join queries
 			Map<Field, ArrayList<Key>> fieldMap = GaeQueryUtils.buildJoinFieldKeysMap(query);
+			
+			// creates the list of joined entity keys to extract 
+			for(Field field: fieldMap.keySet()){
+				Key key = GaeMappingUtils.getKey(field.get(model));
+				List<Key> keys = fieldMap.get(field);
+				if(!keys.contains(key))
+					keys.add(key);
+			}
+			
+			Map<Field, Map<Key, Entity>> entityMap = 
+				new HashMap<Field, Map<Key, Entity>>();
+
+			try {
+				// retrieves all joined entities per field
+				for(Field field: fieldMap.keySet()){
+					Map<Key, Entity> entities = ds.get(fieldMap.get(field));
+					entityMap.put(field, entities);
+				}
+			}catch(Exception ex){
+				throw new SienaException(ex);
+			}
+			// associates linked models to their models
+			// linkedModels is just a map to contain entities already mapped
+			Map<Key, Object> linkedModels = new HashMap<Key, Object>();
+			Object linkedObj;
+			Entity entity; 
+			
+			for(Field field: fieldMap.keySet()){
+				Object objVal = field.get(model);
+				Key key = GaeMappingUtils.getKey(objVal);
+				linkedObj = linkedModels.get(key);
+				if(linkedObj==null){
+					entity = entityMap.get(field).get(key);
+					linkedObj = objVal;
+					GaeMappingUtils.fillModel(linkedObj, entity);
+					linkedModels.put(key, linkedObj);
+				}
+			
+				field.set(model, linkedObj);				
+			}
+
+			return model;
+		} catch(IllegalAccessException ex){
+			throw new SienaException(ex);
+		}		
+	}
+	
+	protected <T> T mapJoins(T model) {
+		try {
+			// join queries
+			Map<Field, ArrayList<Key>> fieldMap = GaeQueryUtils.buildJoinFieldKeysMap(model);
 			
 			// creates the list of joined entity keys to extract 
 			for(Field field: fieldMap.keySet()){
@@ -425,78 +618,25 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 		}		
 	}
 	
-	protected <T> List<T> mapAggregated(Query<T> query, List<T> models) {
-		Class<?> clazz = query.getQueriedClass();
-		ClassInfo info = ClassInfo.getClassInfo(clazz);
-		
-		for (final T model : models) {
-			// creates a kindless query to retrieve all subentities at once.
-			com.google.appengine.api.datastore.Query q = 
-				new com.google.appengine.api.datastore.Query();
-			Key parentKey = GaeMappingUtils.getKey(model);
-			
-			q.setAncestor(parentKey);
-			// this removes the parent from query
-			q.addFilter(Entity.KEY_RESERVED_PROPERTY, 
-					com.google.appengine.api.datastore.Query.FilterOperator.GREATER_THAN,
-				    parentKey);
-			
-			PreparedQuery pq = ds.prepare(q);
-			List<Entity> childEntities = pq.asList(FetchOptions.Builder.withDefaults());
-			
-			for(Field f: info.aggregatedFields){
-				Class<?> fClazz = f.getType();
-				ClassInfo fInfo = ClassInfo.getClassInfo(fClazz);
-				
-				// one2one
-				if(ClassInfo.isModel(fClazz)){
-					Entity found = null;
-					for(Entity e: childEntities){
-						if((f.getName()+"."+fInfo.tableName).equals(e.getKind())){
-							found = e;
-							childEntities.remove(e);
-							break;
-						}
-					}
-					
-					if(found != null){
-						Object fObj = GaeMappingUtils.mapEntity(found, fClazz);
-						Util.setField(model, f, fObj);
-					}
-				}
-			}
-		}
-		
-		return models;
-	}
-	
-	/*protected <T> List<T> mapJoins(Query<T> query, List<T> models) {
+	protected <T> List<T> mapJoins(List<T> models) {
 		try {
-			List<QueryJoin> joins = query.getJoins();
-			
 			// join queries
-			Map<Field, ArrayList<Key>> fieldMap = new HashMap<Field, ArrayList<Key>>();
-			for (QueryJoin join : joins) {
-				Field field = join.field;
-				if (!ClassInfo.isModel(field.getType())){
-					throw new SienaRestrictedApiException(DB, "join", "Join not possible: Field "+field.getName()+" is not a relation field");
-				}
-				else if(join.sortFields!=null && join.sortFields.length!=0)
-					throw new SienaRestrictedApiException(DB, "join", "Join not allowed with sort fields");
-				fieldMap.put(field, new ArrayList<Key>());
-			}
-			
-			// join annotations
-			for(Field field: 
-				ClassInfo.getClassInfo(query.getQueriedClass()).joinFields)
-			{
-				fieldMap.put(field, new ArrayList<Key>());
-			}
+			Map<Field, ArrayList<Key>> fieldMap = null;
 			
 			// creates the list of joined entity keys to extract 
 			for (final T model : models) {
+				// initializes fieldMap
+				if(fieldMap == null){
+					fieldMap = GaeQueryUtils.buildJoinFieldKeysMap(model);
+				}
 				for(Field field: fieldMap.keySet()){
-					Key key = GaeMappingUtils.getKey(field.get(model));
+                    Object objVal = Util.readField(model, field);
+                    // our object is not linked to another object...so it doesn't have any key
+                    if(objVal == null) {
+                        continue;
+                    }
+
+                    Key key = GaeMappingUtils.getKey(objVal);
 					List<Key> keys = fieldMap.get(field);
 					if(!keys.contains(key))
 						keys.add(key);
@@ -506,12 +646,16 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 			Map<Field, Map<Key, Entity>> entityMap = 
 				new HashMap<Field, Map<Key, Entity>>();
 
-			// retrieves all joined entities per field
-			for(Field field: fieldMap.keySet()){
-				Map<Key, Entity> entities = ds.get(fieldMap.get(field));
-				entityMap.put(field, entities);
+			try {
+				// retrieves all joined entities per field
+				for(Field field: fieldMap.keySet()){
+					Map<Key, Entity> entities = ds.get(fieldMap.get(field));
+					// gets the future here because we need it so we wait for it
+					entityMap.put(field, entities);
+				}
+			}catch(Exception ex){
+				throw new SienaException(ex);
 			}
-			
 			// associates linked models to their models
 			// linkedModels is just a map to contain entities already mapped
 			Map<Key, Object> linkedModels = new HashMap<Key, Object>();
@@ -520,7 +664,12 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 			
 			for (final T model : models) {
 				for(Field field: fieldMap.keySet()){
-					Object objVal = field.get(model);
+					Object objVal = Util.readField(model, field);
+                    // our object is not linked to another object...so it doesn't have any key
+                    if(objVal == null) {
+                        continue;
+                    }
+
 					Key key = GaeMappingUtils.getKey(objVal);
 					linkedObj = linkedModels.get(key);
 					if(linkedObj==null){
@@ -537,16 +686,136 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 		} catch(IllegalAccessException ex){
 			throw new SienaException(ex);
 		}		
-	}*/
+	}
+	
+	protected <T> void fillAggregated(ClassInfo info, T ancestor, Key ancestorKey) {
+		// now gets aggregated one2one (one2many are retrieved by ListQuery except with @Join)
+		for(Field f:info.aggregatedFields){
+			Class<?> cClazz = f.getType();
+			ClassInfo cInfo = ClassInfo.getClassInfo(cClazz);
+			if(ClassInfo.isModel(cClazz)){
+				// creates a query for fieldname:child_tablename
+				com.google.appengine.api.datastore.Query q = 
+					new com.google.appengine.api.datastore.Query(GaeMappingUtils.getKindWithAncestorField(cInfo, info, f));
+
+				PreparedQuery pq = ds.prepare(q.setAncestor(ancestorKey));
+				Entity cEntity = pq.asSingleEntity();
+				Object cObj = Util.createObjectInstance(cClazz);
+				GaeMappingUtils.fillModelAndKey(cObj, cEntity);
+				Util.setField(ancestor, f, cObj);
+			}
+			// todo manage joined one2many listquery
+			else if(ClassInfo.isListQuery(f)){
+				ListQuery4PM<?> lq = (ListQuery4PM<?>)Util.readField(ancestor, f);
+				// sets the sync flag to false to tell that it should be fetched when the listquery is accessed!
+				lq.setSync(false);
+			}
+		}
+	}
+	
+	
+	protected <T> T mapAggregated(T model) {
+		Class<?> clazz = model.getClass();
+		ClassInfo info = ClassInfo.getClassInfo(clazz);
+		
+		Map<Field, ClassInfo> modelMap = new HashMap<Field, ClassInfo>();
+		boolean hasListQuery = false;
+		
+		// we scan the aggregatedfields to find potential listquery
+		// if there is a listquery, we don't try to use the KINDLESS request
+		// because we don't know how many children the entity can have.
+		// if there is NO listquery, we use the kindless request
+		for(Field f: info.aggregatedFields){
+			Class<?> fClazz = f.getType();
+			ClassInfo fInfo = ClassInfo.getClassInfo(fClazz);
+			if(ClassInfo.isModel(fClazz)){
+				modelMap.put(f, fInfo);
+			}
+			else if(ClassInfo.isListQuery(f)){
+				ListQuery4PM<?> lq = (ListQuery4PM<?>)Util.readField(model, f);
+				// sets the sync flag to false to tell that it should be fetched when the listquery is accessed!
+				lq.setSync(false);
+				
+				hasListQuery = true;
+			}
+		}
+			
+		if(!hasListQuery){
+			// creates a kindless query to retrieve all subentities at once.
+			com.google.appengine.api.datastore.Query q = 
+				new com.google.appengine.api.datastore.Query();
+			Key parentKey = GaeMappingUtils.getKey(model);
+			
+			q.setAncestor(parentKey);
+			// this removes the parent from query
+			q.addFilter(Entity.KEY_RESERVED_PROPERTY, 
+					com.google.appengine.api.datastore.Query.FilterOperator.GREATER_THAN,
+				    parentKey);
+			
+			PreparedQuery pq = ds.prepare(q);
+			List<Entity> childEntities = pq.asList(FetchOptions.Builder.withDefaults());
+			
+			for(Field f: modelMap.keySet()){
+				Class<?> fClazz = f.getType();
+				ClassInfo fInfo = modelMap.get(f);
+				String kind = GaeMappingUtils.getKindWithAncestorField(fInfo, info, f);
+				Entity found = null;
+				for(Entity e: childEntities){
+					if(kind.equals(e.getKind())){
+						found = e;
+						childEntities.remove(e);
+						break;
+					}
+				}
+					
+				if(found != null){
+					Object fObj = GaeMappingUtils.mapEntity(found, fClazz);
+					Util.setField(model, f, fObj);
+				}
+			}
+		}	
+		else {
+			for(Field f: modelMap.keySet()){
+				Class<?> fClazz = f.getType();
+				ClassInfo fInfo = modelMap.get(f);
+				String kind = GaeMappingUtils.getKindWithAncestorField(fInfo, info, f);
+				com.google.appengine.api.datastore.Query q = 
+					new com.google.appengine.api.datastore.Query(kind);
+				Key parentKey = GaeMappingUtils.getKey(model);
+				q.setAncestor(parentKey);
+				PreparedQuery pq = ds.prepare(q);
+				Entity childEntity = pq.asSingleEntity();
+				Object fObj = GaeMappingUtils.mapEntity(childEntity, fClazz);
+				Util.setField(model, f, fObj);
+			}
+		}
+		return model;
+	}
+	
+
+	
+	protected <T> List<T> mapAggregated(List<T> models) {
+		for (final T model : models) {
+			mapAggregated(model);
+		}
+		
+		return models;
+	}
+
 	
 	protected <T> T map(Query<T> query, Entity entity) {
 		Class<?> clazz = query.getQueriedClass();
 		@SuppressWarnings("unchecked")
 		T result = (T)GaeMappingUtils.mapEntity(entity, clazz);
 		
+		// aggregated management
+		if(!ClassInfo.getClassInfo(clazz).aggregatedFields.isEmpty()){
+			mapAggregated(result);
+		}
+		
 		// join management
-		if(!query.getJoins().isEmpty() || ClassInfo.getClassInfo(clazz).joinFields.size() != 0)
-			return mapJoins(query, result);
+		if(!query.getJoins().isEmpty() || !ClassInfo.getClassInfo(clazz).joinFields.isEmpty())
+			mapJoins(query, result);
 		
 		return result;
 	}
@@ -557,215 +826,18 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 		List<T> result = (List<T>) GaeMappingUtils.mapEntities(entities, clazz);
 		
 		// aggregated management
-		if(ClassInfo.getClassInfo(clazz).aggregatedFields.size() != 0){
-			return mapAggregated(query, result);
+		if(!ClassInfo.getClassInfo(clazz).aggregatedFields.isEmpty()){
+			mapAggregated(result);
 		}
 
 		// join management
-		if(!query.getJoins().isEmpty() || ClassInfo.getClassInfo(clazz).joinFields.size() != 0)
-			return mapJoins(query, result);
+		if(!query.getJoins().isEmpty() || !ClassInfo.getClassInfo(clazz).joinFields.isEmpty())
+			mapJoins(query, result);
 		
 		return result;
 	}
 
 
-	/*private <T> Iterable<T> doFetch(Query<T> query) {
-		QueryOptionPage pag = (QueryOptionPage)query.option(QueryOptionPage.ID);
-		QueryOptionOffset offset = (QueryOptionOffset)query.option(QueryOptionOffset.ID);
-		QueryOptionState reuse = (QueryOptionState)query.option(QueryOptionState.ID);
-		QueryOptionFetchType fetchType = (QueryOptionFetchType)query.option(QueryOptionFetchType.ID);
-		QueryOptionGaeContext gaeCtx = (QueryOptionGaeContext)query.option(QueryOptionGaeContext.ID);
-		if(gaeCtx==null){
-			gaeCtx = new QueryOptionGaeContext();
-			query.customize(gaeCtx);
-		}
-		
-		// TODO manage pagination + offset
-		FetchOptions fetchOptions = FetchOptions.Builder.withDefaults();
-		if(pag.isActive()) {
-			fetchOptions.limit(pag.pageSize);
-		}
-		// set offset only when no in REUSE mode because it would disturb the cursor
-		if(offset.isActive() && !reuse.isActive()){
-			fetchOptions.offset(offset.offset);
-		}
-		
-		if(!reuse.isActive()) {
-			switch(fetchType.type){
-			case KEYS_ONLY:
-				{
-					List<Entity> results = prepareKeysOnly(query).asList(fetchOptions);
-					//updates offset
-					if(offset.isActive()){
-						offset.offset+=results.size();
-					}
-					return map(query, 0, results);
-				}
-			case ITER:
-				{
-					Iterable<Entity> results = prepare(query).asIterable(fetchOptions);
-					//updates offset
-					if(offset.isActive()){
-						offset.offset+=pag.pageSize;
-					}
-					return new GaeSienaIterable<T>(results, query.getQueriedClass());
-				}
-			case NORMAL:
-			default:
-				{
-					List<Entity> results = prepare(query).asList(fetchOptions);
-					//updates offset
-					if(offset.isActive()){
-						offset.offset+=results.size();
-					}
-					return map(query, 0, results);
-				}
-			}
-			
-		}else {
-			// TODO manage cursor limitations for IN and != operators		
-			if(!gaeCtx.isActive()){
-				// cursor not yet created
-				switch(fetchType.type){
-				case KEYS_ONLY:
-					{
-						PreparedQuery pq =prepareKeysOnly(query);
-						if(!gaeCtx.useCursor){
-							// then uses offset (in case of IN or != operators)
-							if(offset.isActive()){
-								fetchOptions.offset(offset.offset);
-							}
-						}
-						QueryResultList<Entity> results = pq.asQueryResultList(fetchOptions);
-						// saves the cursor websafe string
-						gaeCtx.activate();
-						if(gaeCtx.useCursor){
-							gaeCtx.cursor = results.getCursor().toWebSafeString();
-						}else {
-							// uses offset
-							offset.offset+=results.size();
-						}
-						gaeCtx.query = pq;
-						return map(query, 0, results);
-					}
-				case ITER:
-					{
-						PreparedQuery pq =prepare(query);
-						if(!gaeCtx.useCursor){
-							// then uses offset (in case of IN or != operators)
-							if(offset.isActive()){
-								fetchOptions.offset(offset.offset);
-							}
-						}
-						QueryResultIterable<Entity> results = pq.asQueryResultIterable(fetchOptions);
-						gaeCtx.activate();
-						if(gaeCtx.useCursor){
-							gaeCtx.cursor = results.iterator().getCursor().toWebSafeString();
-						}else {
-							// uses offset
-							offset.offset+=pag.pageSize;
-						}
-						gaeCtx.query = pq;
-						return new GaeSienaIterable<T>(results, query.getQueriedClass());
-					}
-				case NORMAL:
-				default:
-					{
-						PreparedQuery pq =prepare(query);
-						if(!gaeCtx.useCursor){
-							// then uses offset (in case of IN or != operators)
-							if(offset.isActive()){
-								fetchOptions.offset(offset.offset);
-							}
-						}
-						QueryResultList<Entity> results = pq.asQueryResultList(fetchOptions);
-						// saves the cursor websafe string
-						gaeCtx.activate();
-						if(gaeCtx.useCursor){
-							gaeCtx.cursor = results.getCursor().toWebSafeString();
-						}else {
-							// uses offset
-							offset.offset+=results.size();
-						}
-						gaeCtx.query = pq;
-						return map(query, 0, results);
-					}
-				}
-				
-			}else {
-				switch(fetchType.type){
-				case KEYS_ONLY:
-					{
-						PreparedQuery pq = gaeCtx.query;
-						QueryResultList<Entity> results;
-						if(!gaeCtx.useCursor){
-							// then uses offset (in case of IN or != operators)
-							if(offset.isActive()){
-								fetchOptions.offset(offset.offset);
-							}
-							results = pq.asQueryResultList(fetchOptions);
-						}else {
-							results = pq.asQueryResultList(fetchOptions.startCursor(Cursor.fromWebSafeString(gaeCtx.cursor)));
-						}
-						// saves the cursor websafe string
-						if(gaeCtx.useCursor){
-							gaeCtx.cursor = results.getCursor().toWebSafeString();
-						}else {
-							// uses offset
-							offset.offset+=results.size();
-						}
-						return map(query, 0, results);
-					}
-				case ITER:
-					{
-						PreparedQuery pq = gaeCtx.query;
-						QueryResultIterable<Entity> results;
-						if(!gaeCtx.useCursor){
-							// then uses offset (in case of IN or != operators)
-							if(offset.isActive()){
-								fetchOptions.offset(offset.offset);
-							}
-							results = pq.asQueryResultIterable(fetchOptions);
-						}else {
-							results = pq.asQueryResultIterable(fetchOptions.startCursor(Cursor.fromWebSafeString(gaeCtx.cursor)));
-						}
-						if(gaeCtx.useCursor){
-							gaeCtx.cursor = results.iterator().getCursor().toWebSafeString();
-						}else {
-							// uses offset
-							offset.offset+=pag.pageSize;
-						}
-						return new GaeSienaIterable<T>(results, query.getQueriedClass());
-					}
-				case NORMAL:
-				default:
-					{
-						PreparedQuery pq = gaeCtx.query;
-						QueryResultList<Entity> results;
-						if(!gaeCtx.useCursor){
-							// then uses offset (in case of IN or != operators)
-							if(offset.isActive()){
-								fetchOptions.offset(offset.offset);
-							}
-							results = pq.asQueryResultList(fetchOptions);
-						}else {
-							results = pq.asQueryResultList(fetchOptions.startCursor(Cursor.fromWebSafeString(gaeCtx.cursor)));
-						}
-						// saves the cursor websafe string
-						if(gaeCtx.useCursor){
-							gaeCtx.cursor = results.getCursor().toWebSafeString();
-						}else {
-							// uses offset
-							offset.offset+=results.size();
-						}
-						return map(query, 0, results);
-					}
-				}
-			}
-
-		}
-	}*/
-	
 	private <T> List<T> doFetchList(Query<T> query, int limit, int offset) {
 		QueryOptionGaeContext gaeCtx = (QueryOptionGaeContext)query.option(QueryOptionGaeContext.ID);
 		if(gaeCtx==null){
@@ -1461,7 +1533,7 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 		
 		return generatedKeys.size();*/
 		
-		return _insertMultiple(objects, null, null);
+		return _insertMultiple(objects, null, null, null);
 	}
 
 	public int insert(Iterable<?> objects) {
@@ -1486,7 +1558,7 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 		}
 		return generatedKeys.size();*/
 		
-		return _insertMultiple(objects, null, null);
+		return _insertMultiple(objects, null, null, null);
 	}
 
 	public int delete(Object... models) {
@@ -1572,6 +1644,8 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 
 	public <T> List<T> getByKeys(Class<T> clazz, Iterable<?> keys) {
 		List<Key> gaeKeys = new ArrayList<Key>();
+		ClassInfo info = ClassInfo.getClassInfo(clazz);
+		
 		for(Object key:keys){
 			gaeKeys.add(GaeMappingUtils.makeKey(clazz, key));
 		}
@@ -1583,8 +1657,17 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 			T obj = null;
 			if(entity != null){
 				obj = GaeMappingUtils.mapEntity(entity, clazz);
+				// aggregated management
+				if(!info.aggregatedFields.isEmpty()){
+					mapAggregated(obj);
+				}
+				
+				// join management
+				if(!info.joinFields.isEmpty()){
+					mapJoins(obj);
+				}
+				models.add(obj);
 			}
-			models.add(obj);
 		}
 		
 		return models;
@@ -1592,38 +1675,18 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 
 
 	public <T> int update(Object... objects) {
-		//throw new NotImplementedException("update not implemented for GAE yet");
-		List<Entity> entities = new ArrayList<Entity>();
-		for(Object obj:objects){
-			Class<?> clazz = obj.getClass();
-			ClassInfo info = ClassInfo.getClassInfo(clazz);
-			Field idField = info.getIdField();
-			Entity entity = GaeMappingUtils.createEntityInstanceForUpdate(idField, info, obj);
-			GaeMappingUtils.fillEntity(obj, entity);
-			entities.add(entity);
-		}
-				
-		List<Key> generatedKeys = ds.put(entities);
-		
-		return generatedKeys.size();
+		return update(Arrays.asList(objects));
 	}
 
 	public <T> int update(Iterable<T> objects) {
-		//throw new NotImplementedException("update not implemented for GAE yet");
 		List<Entity> entities = new ArrayList<Entity>();
 		for(Object obj:objects){
-			Class<?> clazz = obj.getClass();
-			ClassInfo info = ClassInfo.getClassInfo(clazz);
-			Field idField = info.getIdField();
-			Entity entity = GaeMappingUtils.createEntityInstanceForUpdate(idField, info, obj);
-			GaeMappingUtils.fillEntity(obj, entity);
-			entities.add(entity);
+			_buildUpdateList(entities, obj, null, null, null);
 		}
 				
 		List<Key> generatedKeys = ds.put(entities);
 		
 		return generatedKeys.size();
-
 	}
 
 	public <T> int update(Query<T> query, Map<String, ?> fieldValues) {

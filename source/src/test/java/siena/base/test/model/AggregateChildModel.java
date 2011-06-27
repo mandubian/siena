@@ -3,6 +3,7 @@ package siena.base.test.model;
 import siena.Generator;
 import siena.Id;
 import siena.Model;
+import siena.Query;
 
 public class AggregateChildModel extends Model {
 	@Id(Generator.AUTO_INCREMENT)
@@ -26,6 +27,10 @@ public class AggregateChildModel extends Model {
 			return false;
 		}
 		return true;
+	}
+	
+	public static Query<AggregateChildModel> all(){
+		return Model.all(AggregateChildModel.class);
 	}
 	
 	public String toString(){
