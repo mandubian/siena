@@ -171,7 +171,7 @@ public abstract class Model {
 				cl = (Class<?>) pt.getActualTypeArguments()[0];
 	
 				try {
-					field.set(this, new ProxyQuery(cl, filter.value(), this));
+					Util.setField(this, field, new ProxyQuery(cl, filter.value(), this));
 				} catch (Exception e) {
 					throw new SienaException(e);
 				}
