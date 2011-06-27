@@ -67,7 +67,7 @@ For the time being, the lifecycle annotations are applied by Siena on the follow
 * **model.insert()**
 * **model.delete()**
 * **model.update()**
-* **model.save** (insert or update)
+* **model.save()** (insert or update)
 
 p(note). **Note** Query actions (fetch/iter...) or Batch actions are not concerned by lifecycle annotations because those actions are not called on a given object and generally return several objects. Nevertheless, in the future, we will see if lifecycle annotations are required for these functions. 
 
