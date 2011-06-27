@@ -84,11 +84,11 @@ There are 2 kinds of annotations:
 * __@PostXXX__ is called after action XXX begins.
 
 For each action, there are 2 annotations @Pre/PostXXX so we have 10 annotations:
-* **@PreFetch/@PostFetch**
-* **@PreInsert/@PostInsert**
-* **@PreDelete/@PostDelete**
-* **@PreUpdate/@PostUpdate**
-* **@PreSave/@PostSave**
+* **@PreFetch / @PostFetch**
+* **@PreInsert / @PostInsert**
+* **@PreDelete / @PostDelete**
+* **@PreUpdate / @PostUpdate**
+* **@PreSave / @PostSave**
 
 ==<br/>==
 
