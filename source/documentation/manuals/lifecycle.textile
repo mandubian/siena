@@ -40,24 +40,21 @@ bq. **Lifecycle annotations are not managed by default by Siena**. Maybe in the 
 
 h3. Create a normal persistence manager
 
-bc.. 
-	// The most simple GAE case:
+bc.. 	// The most simple GAE case:
 	PersistenceManager pm = new GaePersistenceManager();
 	
 p. 
 
 h3. Wrap it into a PersistenceManagerLifeCycleWrapper and init it
 
-bc.. 
-	pm = new PersistenceManagerLifeCycleWrapper(pm);
+bc.. 	pm = new PersistenceManagerLifeCycleWrapper(pm);
 	pm.init(null);
 
 p. 
 
 h3. Install the PersistenceManagerLifeCycleWrapper into PersistenceManagerFactory for your class
 
-bc.. 
-	PersistenceManagerFactory.install(persistenceManager, MyModel.class);
+bc.. 	PersistenceManagerFactory.install(persistenceManager, MyModel.class);
 
 p. Now when you create a new instance of your Model, it will be associated with the PersistenceManagerLifeCycleWrapper which manages your lifecycle annotations.
 
