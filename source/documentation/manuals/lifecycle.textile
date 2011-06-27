@@ -54,7 +54,7 @@ p.
 
 h3. Install the PersistenceManagerLifeCycleWrapper into PersistenceManagerFactory for your class
 
-bc.. PersistenceManagerFactory.install(persistenceManager, MyModel.class);
+bc.. PersistenceManagerFactory.install(pm, MyModel.class);
 
 p. Now when you create a new instance of your Model, it will be associated with the PersistenceManagerLifeCycleWrapper which manages your lifecycle annotations.
 
