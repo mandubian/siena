@@ -14,14 +14,12 @@ import siena.SienaException;
 import siena.SienaRestrictedApiException;
 import siena.Util;
 import siena.core.DecimalPrecision;
-import siena.core.ListQuery4PM;
 import siena.embed.JsonSerializer;
 
 import com.google.appengine.api.datastore.Blob;
 import com.google.appengine.api.datastore.Entity;
 import com.google.appengine.api.datastore.Key;
 import com.google.appengine.api.datastore.KeyFactory;
-import com.google.appengine.api.datastore.PreparedQuery;
 import com.google.appengine.api.datastore.Text;
 
 public class GaeMappingUtils {

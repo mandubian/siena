@@ -12,11 +12,13 @@ import siena.Query;
  * it extends Query and Iterable but not Collection because collection provides 
  * to many functions with names to near from Query... It would be misleading
  *
- * elements() is an accessor to the elements of the aggregator.
+ * asList manages all the elements as a list (useful to build the list)
+ * asQuery accesses the elements through a query (useful mainly in read mode)
  * isSync() tells if the listquery is synchronized with the DB content. When created, it will be considered as synchronized by default
  * @param <T>
  */
-public interface ListQuery<T> extends Iterable<T>, Query<T> {
-	List<T> elements();
-	boolean isSync();
+public interface ListQuery<T>  {
+	List<T> asList();
+	Query<T> asQuery();
+	boolean isSync();	
 }

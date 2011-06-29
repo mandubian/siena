@@ -4,44 +4,31 @@
 package siena.core;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
+import java.util.ListIterator;
+import java.util.Map;
 
 import siena.BaseQuery;
-import siena.BaseQueryData;
 import siena.PersistenceManager;
+import siena.Query;
 
 /**
  * @author mandubian <pascal.voitot@mandubian.org>
  *
  */
-public class BaseListQuery<T> extends BaseQuery<T> implements ListQuery4PM<T>{
+public class BaseListQuery<T> implements ListQuery4PM<T>{
 	transient private static final long serialVersionUID = -1417704952199421178L;
 
-	transient protected List<T> elements = new ArrayList<T>();
+	transient protected ProxyList<T> elements;
+	
+	transient protected ProxyQuery<T> query;
 	transient protected boolean isSync = true;
 	
 	public BaseListQuery(PersistenceManager pm, Class<T> clazz) {
-		super(pm, clazz);
-	}
-	
-	public BaseListQuery(BaseQuery<T> query) {
-		super(query);
-	}
-
-	public BaseListQuery(PersistenceManager pm, BaseQueryData<T> data) {
-		super(pm, data);
-	}
-	
-	public Iterator<T> iterator() {
-		return elements.iterator();
-	}
-
-	public List<T> elements() {
-		if(!isSync){
-			return fetch();
-		}
-		return elements;
+		query = new ProxyQuery<T>(this, pm, clazz);
+		elements = new ProxyList<T>(new ArrayList<T>());
 	}
 
 	public boolean isSync() {
@@ -53,85 +40,257 @@ public class BaseListQuery<T> extends BaseQuery<T> implements ListQuery4PM<T>{
 		
 		return this;
 	}
-	
-	@Override
-	public List<T> fetch() {
-		elements = super.fetch();
-		isSync = true;
-		return elements;
+
+	public List<T> asList() {
+		if(isSync){
+			return elements;
+		}else {
+			return query.fetch();
+		}
 	}
 
-	@Override
-	public List<T> fetch(int limit) {
-		elements = super.fetch(limit);
-		isSync = true;
-		return elements;
+	public Query<T> asQuery() {
+		return query;
 	}
 	
-	@Override
-	public List<T> fetch(int limit, Object offset) {
-		elements = super.fetch(limit, offset);
-		isSync = true;
-		return elements;
+	public List<T> asList2Remove() {
+		return elements.elements2Remove;
 	}
 
-	@Override
-	public List<T> fetchKeys() {
-		elements = super.fetchKeys();
-		isSync = true;
-		return elements;
+	protected class ProxyQuery<V> extends BaseQuery<V>{
+		private static final long serialVersionUID = 3622188538479070257L;
+		BaseListQuery<V> lq;
+		
+		public ProxyQuery(BaseListQuery<V> lq, PersistenceManager pm, Class<V> clazz) {
+			super(pm, clazz);
+			this.lq = lq;
+		}
+
+		@Override
+		public List<V> fetch() {
+			if(isSync){
+				return lq.elements;
+			}else {
+				lq.elements = new ProxyList(super.fetch());
+				lq.setSync(true);
+				return lq.elements;
+			}
+		}	
+		
+		@Override
+		public List<V> fetch(int limit) {
+			if(isSync){
+				return lq.elements;
+			}else {
+				// doesn't consider it's synchronized but doesn't change state
+				//lq.setSync(false);
+				return super.fetch(limit);
+			}
+		}	
+		
+		@Override
+		public List<V> fetch(int limit, Object offset) {
+			if(isSync){
+				return lq.elements;
+			}else {
+				// doesn't consider it's synchronized but doesn't change state
+				//lq.setSync(false);
+				return super.fetch(limit, offset);
+			}
+		}	
+		
+		@Override
+		public List<V> fetchKeys() {
+			// does use the already fetched object (yet it contains more than the key in general)
+			if(isSync){
+				return lq.elements;
+			}else {
+				// doesn't consider it's synchronized but doesn't change state
+				//lq.setSync(false);
+				return super.fetchKeys();
+			}
+		}	
+		
+		@Override
+		public List<V> fetchKeys(int limit) {
+			// does use the already fetched object (yet it contains more than the key in general)
+			if(isSync){
+				return lq.elements;
+			}else {
+				// doesn't consider it's synchronized but doesn't change state
+				//lq.setSync(false);
+				return super.fetchKeys(limit);
+			}
+		}	
+		
+		@Override
+		public List<V> fetchKeys(int limit, Object offset) {
+			// does use the already fetched object (yet it contains more than the key in general)
+			if(isSync){
+				return lq.elements;
+			}else {
+				// doesn't consider it's synchronized but doesn't change state
+				//lq.setSync(false);
+				return super.fetchKeys(limit, offset);
+			}
+		}	
+		
+		@Override
+		public int delete() {
+			// forces the sync to false;
+			lq.setSync(false);
+			return super.delete();			
+		}
+
+		@Override
+		public V get() {
+			if(isSync){
+				return lq.elements.get(0);
+			}
+			else {
+				return super.get();
+			}
+		}
+
+		@Override
+		public int count() {
+			if(isSync){
+				return lq.elements.size();
+			}
+			else {
+				return super.count();
+			}
+		}
+
 	}
 
-	@Override
-	public List<T> fetchKeys(int limit) {
-		elements = super.fetchKeys(limit);
-		isSync = true;
-		return elements;
-	}
+	protected class ProxyList<V> implements List<V>{
+		protected List<V> elements;
+		protected List<V> elements2Remove;
 
-	@Override
-	public List<T> fetchKeys(int limit, Object offset) {
-		elements = super.fetchKeys(limit, offset);
-		isSync = true;
-		return elements;
-	}
-	
-	@Override
-	public Iterable<T> iter() {
-		// TODO Auto-generated method stub
-		return super.iter();
-	}
+		public ProxyList(List<V> elements){
+			this.elements = elements;
+			this.elements2Remove = new ArrayList<V>();
+		}
+		
+		@Override
+		public boolean add(V e) {
+			return elements.add(e);
+		}
 
-	@Override
-	public Iterable<T> iter(int limit) {
-		// TODO Auto-generated method stub
-		return super.iter(limit);
-	}
+		@Override
+		public void add(int index, V element) {
+			elements.add(index, element);
+		}
 
-	@Override
-	public Iterable<T> iter(int limit, Object offset) {
-		// TODO Auto-generated method stub
-		return super.iter(limit, offset);
-	}
-	
-	@Override
-	public T get() {
-		// TODO Auto-generated method stub
-		return super.get();
-	}
+		@Override
+		public boolean addAll(Collection<? extends V> c) {
+			return elements.addAll(c);
+		}
 
+		@Override
+		public boolean addAll(int index, Collection<? extends V> c) {
+			return addAll(index, c);
+		}
 
+		@Override
+		public void clear() {
+			elements.clear();
+		}
 
-	@Override
-	public Iterable<T> iterPerPage(int pageSize) {
-		// TODO Auto-generated method stub
-		return super.iterPerPage(pageSize);
-	}
+		@Override
+		public boolean contains(Object o) {
+			return elements.contains(o);
+		}
 
-	@Override
-	public T getByKey(Object key) {
-		// TODO Auto-generated method stub
-		return super.getByKey(key);
+		@Override
+		public boolean containsAll(Collection<?> c) {
+			return elements.containsAll(c);
+		}
+
+		@Override
+		public V get(int index) {
+			return elements.get(index);
+		}
+
+		@Override
+		public int indexOf(Object o) {
+			return elements.indexOf(o);
+		}
+
+		@Override
+		public boolean isEmpty() {
+			return elements.isEmpty();
+		}
+
+		@Override
+		public Iterator<V> iterator() {
+			return elements.iterator();
+		}
+
+		@Override
+		public int lastIndexOf(Object o) {
+			return elements.lastIndexOf(o);
+		}
+
+		@Override
+		public ListIterator<V> listIterator() {
+			return elements.listIterator();
+		}
+
+		@Override
+		public ListIterator<V> listIterator(int index) {
+			return elements.listIterator(index);
+		}
+
+		@Override
+		public boolean remove(Object o) {
+			elements2Remove.add((V)o);
+			return elements.remove(o);
+		}
+
+		@Override
+		public V remove(int index) {
+			V o = elements.remove(index);
+			elements2Remove.add(o);
+			return o;
+		}
+
+		@Override
+		public boolean removeAll(Collection<?> c) {
+			return elements.removeAll(c);
+		}
+
+		@Override
+		public boolean retainAll(Collection<?> c) {
+			return elements.retainAll(c);
+		}
+
+		@Override
+		public V set(int index, V element) {
+			return elements.set(index, element);
+		}
+
+		@Override
+		public int size() {
+			return elements.size();
+		}
+
+		@Override
+		public List<V> subList(int fromIndex, int toIndex) {
+			return elements.subList(fromIndex, toIndex);
+		}
+
+		@Override
+		public Object[] toArray() {
+			return elements.toArray();
+		}
+
+		@Override
+		public <Z> Z[] toArray(Z[] a) {
+			return elements.toArray(a);
+		}
+		
 	}
 
 }

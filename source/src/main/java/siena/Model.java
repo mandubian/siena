@@ -21,7 +21,6 @@ import java.lang.reflect.Field;
 import java.lang.reflect.ParameterizedType;
 import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -467,7 +466,7 @@ public abstract class Model {
 		
 		private Class<T> 		clazz;
 		private Model 			obj;
-		private ListQuery<T> 	listQuery;
+		private ListQuery<T> listQuery;
 		private ProxyMode 		mode;
 		private Field			field;	
 
@@ -478,253 +477,41 @@ public abstract class Model {
 			this.field = field;
 		}
 
-		private Query<T> createQuery() {
+		private ListQuery<T> createListQuery() {
 			if(this.listQuery == null){
 				this.listQuery = obj.getPersistenceManager().createListQuery(clazz);				
 			}
-			else if(((QueryOptionState)this.listQuery.option(QueryOptionState.ID)).isStateless())
-				this.listQuery.release();
+			else if(((QueryOptionState)this.listQuery.asQuery().option(QueryOptionState.ID)).isStateless()){
+				this.listQuery.asQuery().release();				
+			}
+			
 			if(mode == ProxyMode.AGGREGATION){
-				return this.listQuery.aggregated(obj, field.getName());
+				this.listQuery.asQuery().aggregated(obj, field.getName());
 			}
 			
 			return this.listQuery;
 		}
-		
-		public Iterator<T> iterator() {
-			return ((ListQuery<T>)createQuery()).iterator();
+
+		public List<T> asList() {
+			return createListQuery().asList();
 		}
 
-		public PersistenceManager getPersistenceManager() {
-			return obj.getPersistenceManager();
-		}
-
-		public List<T> elements() {
-			return ((ListQuery<T>)createQuery()).elements();
+		public Query<T> asQuery() {
+			return createListQuery().asQuery();
 		}
 
 		public boolean isSync() {
-			return ((ListQuery<T>)createQuery()).isSync();
+			return createListQuery().isSync();
 		}
 
 		public ListQuery4PM<T> setSync(boolean isSync) {
-			return ((ListQuery4PM<T>)createQuery()).setSync(isSync);
+			return ((ListQuery4PM<T>)createListQuery()).setSync(isSync);
 		}
 
-		public int count() {
-			return createQuery().count();
+		public List<T> asList2Remove() {
+			return ((ListQuery4PM<T>)createListQuery()).asList2Remove();
 		}
 
-		@Deprecated
-		public int count(int limit) {
-			return createQuery().count(limit);
-		}
-
-		@Deprecated
-		public int count(int limit, Object offset) {
-			return createQuery().count(limit, offset);
-		}
-
-		public List<T> fetch() {
-			return createQuery().fetch();
-		}
-
-		public List<T> fetch(int limit) {
-			return createQuery().fetch(limit);
-		}
-
-		public List<T> fetch(int limit, Object offset) {
-			return createQuery().fetch(limit, offset);
-		}
-
-		public Query<T> filter(String fieldName, Object value) {
-			return createQuery().filter(fieldName, value);
-		}
-
-		public Query<T> order(String fieldName) {
-			return createQuery().order(fieldName);
-		}
-
-		@Deprecated
-		public Query<T> search(String match, boolean inBooleanMode, String index) {
-			return createQuery().search(match, inBooleanMode, index);
-		}
-		
-		public Query<T> join(String field, String... sortFields) {
-			return createQuery().join(field, sortFields);
-		}
-
-		public Query<T> aggregated(Object aggregator, String fieldName) {
-			return createQuery().aggregated(aggregator, fieldName);
-		}
-
-		public T get() {
-			return createQuery().get();
-		}
-
-		public Iterable<T> iter() {
-			return createQuery().iter();
-		}
-		
-		public Iterable<T> iter(int limit) {
-			return createQuery().iter(limit);
-		}
-		
-		public Iterable<T> iter(int limit, Object offset) {
-			return createQuery().iter(limit, offset);
-		}
-		
-		public Iterable<T> iterPerPage(int limit) {
-			return createQuery().iterPerPage(limit);
-		}	
-		
-		public ProxyListQuery<T> copy() {
-			return new ProxyListQuery<T>(clazz, obj, mode, field);
-		}
-
-		@Deprecated
-		public Object nextOffset() {
-			return createQuery().nextOffset();
-		}
-
-		public int delete() {
-			return createQuery().delete();
-		}
-
-		public List<T> fetchKeys() {
-			return createQuery().fetchKeys();
-		}
-
-		public List<T> fetchKeys(int limit) {
-			return createQuery().fetchKeys(limit);
-		}
-
-		public List<T> fetchKeys(int limit, Object offset) {
-			return createQuery().fetchKeys(limit, offset);
-		}
-
-		public List<QueryFilter> getFilters() {
-			return createQuery().getFilters();
-		}
-
-		public List<QueryOrder> getOrders() {
-			return createQuery().getOrders();
-		}
-
-		public List<QueryFilterSearch> getSearches() {
-			return createQuery().getSearches();
-		}
-
-		public List<QueryJoin> getJoins() {
-			return createQuery().getJoins();
-		}
-
-		public List<QueryAggregated> getAggregatees() {
-			return createQuery().getAggregatees();
-		}
-
-		@Deprecated
-		public void setNextOffset(Object nextOffset) {
-			createQuery().setNextOffset(nextOffset);
-		}
-
-		public Class<T> getQueriedClass() {
-			return clazz;
-		}
-
-		public Query<T> paginate(int limit) {
-			return createQuery().paginate(limit);
-		}
-
-		public Query<T> limit(int limit) {
-			return createQuery().limit(limit);
-		}
-
-		public Query<T> offset(Object offset) {
-			return createQuery().offset(offset);
-		}
-
-		public Query<T> customize(QueryOption... options) {
-			return createQuery().customize(options);
-		}
-
-		public QueryOption option(int option) {
-			return createQuery().option(option);
-		}
-
-		public Map<Integer, QueryOption> options() {
-			return createQuery().options();
-		}
-
-		public Query<T> stateful() {
-			return createQuery().stateful();
-		}
-
-		public Query<T> stateless() {
-			return createQuery().stateless();
-		}
-
-		public Query<T> release() {
-			return createQuery().release();
-		}
-
-		public Query<T> resetData() {
-			return createQuery().resetData();
-		}
-
-		public Query<T> search(String match, String... fields) {
-			return createQuery().search(match, fields);
-		}
-
-		public Query<T> search(String match, QueryOption opt, String... fields) {
-			return createQuery().search(match, opt, fields);
-		}
-
-		public int update(Map<String, ?> fieldValues) {
-			return createQuery().update(fieldValues);
-		}
-
-		public Query<T> nextPage() {
-			return createQuery().nextPage();
-		}
-
-		public Query<T> previousPage() {
-			return createQuery().previousPage();
-		}
-
-		public String dump() {
-			return createQuery().dump();
-		}
-
-		public Query<T> restore(String dump) {
-			return createQuery().restore(dump);
-		}
-
-		public QueryAsync<T> async() {
-			return createQuery().async();
-		}
-
-		public T getByKey(Object key) {
-			return createQuery().getByKey(key);
-		}
-
-		public String dump(QueryOption... options) {
-			return createQuery().dump(options);
-		}
-
-		public void dump(OutputStream os, QueryOption... options) {
-			createQuery().dump(os, options);
-		}
-
-		public Query<T> restore(String dump, QueryOption... options) {
-			return createQuery().restore(dump, options);
-		}
-
-		public Query<T> restore(InputStream dump, QueryOption... options) {
-			return createQuery().restore(dump, options);
-		}
-
-		
 	}
 	
 }

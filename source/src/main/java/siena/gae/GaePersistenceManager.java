@@ -194,9 +194,9 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 				}
 				else if(ClassInfo.isListQuery(f)){
 					ListQuery<?> lq = (ListQuery<?>)Util.readField(obj, f);
-					if(!lq.elements().isEmpty()){
+					if(!lq.asList().isEmpty()){
 						//_insertMultiple(lq.elements(), entity, info, f);
-						objectMap.put(f, (List<Object>)lq.elements());
+						objectMap.put(f, (List<Object>)lq.asList());
 					}
 				}
 			}
@@ -255,8 +255,8 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 					}
 					else if(ClassInfo.isListQuery(f)){
 						ListQuery<?> lq = (ListQuery<?>)Util.readField(obj, f);
-						if(!lq.elements().isEmpty()){
-							objectMap.put(f, (List<Object>)lq.elements());
+						if(!lq.asList().isEmpty()){
+							objectMap.put(f, (List<Object>)lq.asList());
 						}
 					}
 				}
@@ -312,8 +312,8 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 							}
 							else if(ClassInfo.isListQuery(f)){
 								ListQuery<?> lq = (ListQuery<?>)Util.readField(obj, f);
-								if(!lq.elements().isEmpty()){
-									recObjectMap.put(f, (List<Object>)lq.elements());
+								if(!lq.asList().isEmpty()){
+									recObjectMap.put(f, (List<Object>)lq.asList());
 								}
 							}
 						}
@@ -331,12 +331,18 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 	
 	public void update(Object obj) {
 		List<Entity> entities = new ArrayList<Entity>(); 
-		_buildUpdateList(entities, obj, null, null, null);
+		List<Key> entities2Remove = new ArrayList<Key>(); 
+		_buildUpdateList(entities, entities2Remove, obj, null, null, null);
 		
-		ds.put(entities);
+		if(!entities.isEmpty()){
+			ds.put(entities);
+		}
+		if(!entities2Remove.isEmpty()){
+			ds.delete(entities2Remove);
+		}
 	}
 	
-	private void _buildUpdateList(List<Entity> entities, Object obj, Key parentKey, ClassInfo parentInfo, Field parentField){
+	private void _buildUpdateList(List<Entity> entities, List<Key> entities2Remove, Object obj, Key parentKey, ClassInfo parentInfo, Field parentField){
 		Class<?> clazz = obj.getClass();
 		ClassInfo info = ClassInfo.getClassInfo(clazz);
 		Field idField = info.getIdField();
@@ -354,13 +360,27 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 		for(Field f: info.aggregatedFields){
 			if(ClassInfo.isModel(f.getType())){
 				Object aggObj = Util.readField(obj, f);
-				_buildUpdateList(entities, aggObj, entity.getKey(), info, f);
+				_buildUpdateList(entities, entities2Remove, aggObj, entity.getKey(), info, f);
 			}
 			else if(ClassInfo.isListQuery(f)){
-				ListQuery<?> lq = (ListQuery<?>)Util.readField(obj, f);
-				if(!lq.elements().isEmpty()){
-					for(Object elt : lq.elements()){
-						_buildUpdateList(entities, elt, entity.getKey(), info, f);
+				ListQuery4PM<?> lq = (ListQuery4PM<?>)Util.readField(obj, f);
+				if(!lq.asList().isEmpty()){
+					for(Object elt : lq.asList()){
+						_buildUpdateList(entities, entities2Remove, elt, entity.getKey(), info, f);
+					}					
+				}
+				
+				// add to entities2remove child entities that have been removed
+				if(!lq.asList2Remove().isEmpty()){
+					Key delKey;
+					for(Object elt : lq.asList2Remove()){
+						Class<?> delClazz = elt.getClass();
+						ClassInfo delInfo = ClassInfo.getClassInfo(delClazz);
+						Field delIdField = delInfo.getIdField();
+
+						delKey = GaeMappingUtils.makeKeyFromParent(
+									delIdField, delInfo, elt, entity.getKey(), info, f);
+						entities2Remove.add(delKey);
 					}					
 				}
 			}
@@ -1680,11 +1700,16 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 
 	public <T> int update(Iterable<T> objects) {
 		List<Entity> entities = new ArrayList<Entity>();
+		List<Key> entities2Remove = new ArrayList<Key>(); 
+
 		for(Object obj:objects){
-			_buildUpdateList(entities, obj, null, null, null);
+			_buildUpdateList(entities, entities2Remove, obj, null, null, null);
 		}
 				
 		List<Key> generatedKeys = ds.put(entities);
+		if(!entities2Remove.isEmpty()){
+			ds.delete(entities2Remove);
+		}
 		
 		return generatedKeys.size();
 	}

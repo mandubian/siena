@@ -237,7 +237,7 @@ public class GaeModelTest extends BaseModelTest{
 		// TODO Auto-generated method stub
 		super.testAggregateUpdate();
 	}
-
+	
 	@Override
 	public void testAggregateListQuerysFetch() {
 		// TODO Auto-generated method stub
@@ -255,7 +255,7 @@ public class GaeModelTest extends BaseModelTest{
 		// TODO Auto-generated method stub
 		super.testAggregateListQuerysFetchLimitOffset();
 	}
-
+	
 	@Override
 	public void testAggregateListQuerysFetchKeys() {
 		// TODO Auto-generated method stub
@@ -273,6 +273,24 @@ public class GaeModelTest extends BaseModelTest{
 	public void testAggregateListQuerysFetchKeysLimitOffset() {
 		// TODO Auto-generated method stub
 		super.testAggregateListQuerysFetchKeysLimitOffset();
+	}
+
+	@Override
+	public void testAggregateListQueryDelete() {
+		// TODO Auto-generated method stub
+		super.testAggregateListQueryDelete();
+	}
+
+	@Override
+	public void testAggregateListQueryGet() {
+		// TODO Auto-generated method stub
+		super.testAggregateListQueryGet();
+	}
+
+	@Override
+	public void testAggregateListQueryCount() {
+		// TODO Auto-generated method stub
+		super.testAggregateListQueryCount();
 	}
 
 	// SPECIFIC TESTS FOR GAE (transaction on one entity in a given group)
