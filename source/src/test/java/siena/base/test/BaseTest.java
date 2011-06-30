@@ -1005,6 +1005,16 @@ public abstract class BaseTest extends TestCase {
 		assertEquals(UUID_CURIE, curie);
 	}
 
+	public void testGetNonExisting() {
+		try {
+		PersonLongAutoID pers = getPersonLongAutoID(1234567L);
+		}catch(SienaException e){
+			return;
+		}
+		
+		fail();
+	}
+	
 	public void testGetLongAutoID() {
 		PersonLongAutoID curie = getPersonLongAutoID(LongAutoID_CURIE.id);
 		assertEquals(LongAutoID_CURIE, curie);

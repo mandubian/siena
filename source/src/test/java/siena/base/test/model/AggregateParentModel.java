@@ -5,7 +5,7 @@ import siena.Id;
 import siena.Model;
 import siena.Query;
 import siena.core.Aggregated;
-import siena.core.ListQuery;
+import siena.core.Many;
 
 public class AggregateParentModel extends Model {
 	
@@ -17,9 +17,15 @@ public class AggregateParentModel extends Model {
 	@Aggregated
 	public AggregateChildModel child;
 	
-	/* fields ignored by ClassInfo */
 	@Aggregated
-	public ListQuery<AggregateChildModel> children;
+	public Many<AggregateChildModel> children;
+	
+	public AggregateParentModel() {
+	}
+
+	public AggregateParentModel(String name) {
+		this.name = name;
+	}
 	
 	@Override
 	public boolean equals(Object obj) {

@@ -31,7 +31,7 @@ import siena.QueryFilter;
 import siena.QueryFilterSearch;
 import siena.QueryJoin;
 import siena.QueryOrder;
-import siena.core.ListQuery;
+import siena.core.Many4PM;
 import siena.core.async.PersistenceManagerAsync;
 import siena.core.async.QueryAsync;
 import siena.core.batch.Batch;
@@ -661,7 +661,7 @@ public class MockPersistenceManager implements PersistenceManager {
 	}
 
 	@Override
-	public <T> ListQuery<T> createListQuery(Class<T> clazz) {
+	public <T> Many4PM<T> createMany(Class<T> clazz) {
 		// TODO Auto-generated method stub
 		return null;
 	}

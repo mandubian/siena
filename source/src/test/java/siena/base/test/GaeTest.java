@@ -9,11 +9,9 @@ import siena.Query;
 import siena.SienaException;
 import siena.SienaRestrictedApiException;
 import siena.base.test.model.Discovery;
-import siena.base.test.model.Discovery4Join;
 import siena.base.test.model.Discovery4Search;
 import siena.base.test.model.PersonUUID;
 import siena.base.test.model.TransactionAccountFrom;
-import siena.base.test.model.TransactionAccountTo;
 import siena.gae.GaePersistenceManager;
 import siena.gae.QueryOptionGaeContext;
 
@@ -1188,6 +1186,12 @@ public class GaeTest extends BaseTest {
 	}
 
 	@Override
+	public void testGetNonExisting() {
+		// TODO Auto-generated method stub
+		super.testGetNonExisting();
+	}
+
+	@Override
 	public void testGetLongAutoID() {
 		// TODO Auto-generated method stub
 		super.testGetLongAutoID();
@@ -2014,7 +2018,7 @@ public class GaeTest extends BaseTest {
 		// TODO Auto-generated method stub
 		super.testBatchUpdateList();
 	}
-
+	
 	@Override
 	public void testGetByKeyNonExisting() {
 		// TODO Auto-generated method stub

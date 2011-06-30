@@ -41,8 +41,8 @@ public class PersistenceManagerLifeCycleWrapper implements PersistenceManager{
 	}
 	
 	@Override
-	public <T> ListQuery<T> createListQuery(Class<T> clazz) {
-			return pm.createListQuery(clazz);
+	public <T> Many4PM<T> createMany(Class<T> clazz) {
+			return pm.createMany(clazz);
 	}
 	
 	@Override

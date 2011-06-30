@@ -26,9 +26,11 @@ import java.util.Map;
 import java.util.Set;
 
 import siena.core.Aggregated;
+import siena.core.BaseMany.RelationMode;
 import siena.core.InheritFilter;
-import siena.core.ListQuery;
-import siena.core.ListQuery4PM;
+import siena.core.Many;
+import siena.core.Many4PM;
+import siena.core.SyncList;
 import siena.core.async.ModelAsync;
 import siena.core.async.QueryAsync;
 import siena.core.batch.Batch;
@@ -179,7 +181,7 @@ public abstract class Model {
 						throw new SienaException(e);
 					}
 					
-				}else if(field.getType() == ListQuery.class){
+				}else if(field.getType() == Many.class){
 					ParameterizedType pt = (ParameterizedType) field.getGenericType();
 					cl = (Class<?>) pt.getActualTypeArguments()[0];
 					
@@ -192,7 +194,7 @@ public abstract class Model {
 					}
 					if(agg != null){
 						try {
-							field.set(this, new ProxyListQuery(cl, this, ProxyMode.AGGREGATION, field));
+							field.set(this, new ProxyMany(cl, this, RelationMode.AGGREGATION, field));
 						} catch (Exception e) {
 							throw new SienaException(e);
 						}
@@ -456,60 +458,64 @@ public abstract class Model {
 		
 	}
 
-	enum ProxyMode {
-		FILTER,
-		AGGREGATION
-	}
 	
-	class ProxyListQuery<T> implements ListQuery4PM<T> {
+	class ProxyMany<T> implements Many4PM<T> {
 		private static final long serialVersionUID = -4540064249546783019L;
 		
 		private Class<T> 		clazz;
 		private Model 			obj;
-		private ListQuery<T> listQuery;
-		private ProxyMode 		mode;
+		private Many4PM<T> 		listQuery;
+		private RelationMode 	mode;
 		private Field			field;	
 
-		public ProxyListQuery(Class<T> clazz, Model obj, ProxyMode mode, Field field) {
+		public ProxyMany(Class<T> clazz, Model obj, RelationMode mode, Field field) {
 			this.clazz = clazz;
 			this.obj = obj;
 			this.mode = mode;
 			this.field = field;
 		}
 
-		private ListQuery<T> createListQuery() {
+		private Many4PM<T> createMany() {
 			if(this.listQuery == null){
-				this.listQuery = obj.getPersistenceManager().createListQuery(clazz);				
+				this.listQuery = obj.getPersistenceManager().createMany(clazz);
 			}
-			else if(((QueryOptionState)this.listQuery.asQuery().option(QueryOptionState.ID)).isStateless()){
-				this.listQuery.asQuery().release();				
-			}
-			
-			if(mode == ProxyMode.AGGREGATION){
-				this.listQuery.asQuery().aggregated(obj, field.getName());
+			//else if(((QueryOptionState)this.listQuery.asQuery().option(QueryOptionState.ID)).isStateless()){
+			//	this.listQuery.asQuery().release();				
+			//}
+			switch(mode){
+			case AGGREGATION:
+				aggregationMode(obj, field);
+				break;
+			case ASSOCIATION:
+				associationMode();				
+				break;
 			}
 			
 			return this.listQuery;
 		}
 
-		public List<T> asList() {
-			return createListQuery().asList();
+		public SyncList<T> asList() {
+			return createMany().asList();
 		}
 
 		public Query<T> asQuery() {
-			return createListQuery().asQuery();
-		}
-
-		public boolean isSync() {
-			return createListQuery().isSync();
-		}
-
-		public ListQuery4PM<T> setSync(boolean isSync) {
-			return ((ListQuery4PM<T>)createListQuery()).setSync(isSync);
+			return createMany().asQuery();
 		}
 
 		public List<T> asList2Remove() {
-			return ((ListQuery4PM<T>)createListQuery()).asList2Remove();
+			return ((Many4PM<T>)createMany()).asList2Remove();
+		}
+
+		public Many4PM<T> aggregationMode(Object aggregator, Field field) {
+			return this.listQuery.aggregationMode(aggregator, field);
+		}
+
+		public Many4PM<T> associationMode() {
+			return this.listQuery.associationMode();
+		}
+
+		public Many4PM<T> setSync(boolean isSync) {
+			return createMany().setSync(isSync);
 		}
 
 	}

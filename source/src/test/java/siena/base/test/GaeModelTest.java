@@ -3,7 +3,10 @@ package siena.base.test;
 import java.util.List;
 
 import siena.PersistenceManager;
+import siena.PersistenceManagerFactory;
 import siena.SienaException;
+import siena.base.test.model.AggregateChildModel;
+import siena.base.test.model.AggregateParentModel;
 import siena.base.test.model.TransactionAccountFrom;
 import siena.base.test.model.TransactionAccountFromModel;
 import siena.base.test.model.TransactionAccountTo;
@@ -29,6 +32,8 @@ public class GaeModelTest extends BaseModelTest{
     public void setUp() throws Exception {
     	helper.setUp();
         super.setUp();
+		PersistenceManagerFactory.install(pm, AggregateChildModel.class);
+		PersistenceManagerFactory.install(pm, AggregateParentModel.class);
     }
 
     @Override
@@ -239,6 +244,18 @@ public class GaeModelTest extends BaseModelTest{
 	}
 	
 	@Override
+	public void testAggregateSave() {
+		// TODO Auto-generated method stub
+		super.testAggregateSave();
+	}
+
+	@Override
+	public void testAggregateDelete() {
+		// TODO Auto-generated method stub
+		super.testAggregateDelete();
+	}
+
+	@Override
 	public void testAggregateListQuerysFetch() {
 		// TODO Auto-generated method stub
 		super.testAggregateListQuerysFetch();
@@ -291,6 +308,18 @@ public class GaeModelTest extends BaseModelTest{
 	public void testAggregateListQueryCount() {
 		// TODO Auto-generated method stub
 		super.testAggregateListQueryCount();
+	}
+
+	@Override
+	public void testAggregateListQueryFilter() {
+		// TODO Auto-generated method stub
+		super.testAggregateListQueryFilter();
+	}
+
+	@Override
+	public void testAggregateListQueryOrder() {
+		// TODO Auto-generated method stub
+		super.testAggregateListQueryOrder();
 	}
 
 	// SPECIFIC TESTS FOR GAE (transaction on one entity in a given group)

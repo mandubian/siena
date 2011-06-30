@@ -11,6 +11,13 @@ public class AggregateChildModel extends Model {
 
 	public String name;
 	
+	public AggregateChildModel(){
+	}
+
+	public AggregateChildModel(String name){
+		this.name = name;
+	}
+	
 	@Override
 	public boolean equals(Object obj) {
 		if (this == obj)

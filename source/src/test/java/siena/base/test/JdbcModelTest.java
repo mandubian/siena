@@ -254,6 +254,90 @@ public class JdbcModelTest extends BaseModelTest {
 		// TODO Auto-generated method stub
 		//super.testAggregate();
 	}
+
+	@Override
+	public void testAggregateUpdate() {
+		// TODO Auto-generated method stub
+		//super.testAggregateUpdate();
+	}
+
+	@Override
+	public void testAggregateSave() {
+		// TODO Auto-generated method stub
+		//super.testAggregateSave();
+	}
+
+	@Override
+	public void testAggregateDelete() {
+		// TODO Auto-generated method stub
+		//super.testAggregateDelete();
+	}
+
+	@Override
+	public void testAggregateListQuerysFetch() {
+		// TODO Auto-generated method stub
+		//super.testAggregateListQuerysFetch();
+	}
+
+	@Override
+	public void testAggregateListQuerysFetchLimit() {
+		// TODO Auto-generated method stub
+		//super.testAggregateListQuerysFetchLimit();
+	}
+
+	@Override
+	public void testAggregateListQuerysFetchLimitOffset() {
+		// TODO Auto-generated method stub
+		//super.testAggregateListQuerysFetchLimitOffset();
+	}
+
+	@Override
+	public void testAggregateListQuerysFetchKeys() {
+		// TODO Auto-generated method stub
+		//super.testAggregateListQuerysFetchKeys();
+	}
+
+	@Override
+	public void testAggregateListQuerysFetchKeysLimit() {
+		// TODO Auto-generated method stub
+		//super.testAggregateListQuerysFetchKeysLimit();
+	}
+
+	@Override
+	public void testAggregateListQuerysFetchKeysLimitOffset() {
+		// TODO Auto-generated method stub
+		//super.testAggregateListQuerysFetchKeysLimitOffset();
+	}
+
+	@Override
+	public void testAggregateListQueryDelete() {
+		// TODO Auto-generated method stub
+		//super.testAggregateListQueryDelete();
+	}
+
+	@Override
+	public void testAggregateListQueryGet() {
+		// TODO Auto-generated method stub
+		//super.testAggregateListQueryGet();
+	}
+
+	@Override
+	public void testAggregateListQueryCount() {
+		// TODO Auto-generated method stub
+		//super.testAggregateListQueryCount();
+	}
+
+	@Override
+	public void testAggregateListQueryFilter() {
+		// TODO Auto-generated method stub
+		//super.testAggregateListQueryFilter();
+	}
+
+	@Override
+	public void testAggregateListQueryOrder() {
+		// TODO Auto-generated method stub
+		//super.testAggregateListQueryOrder();
+	}
 	
 	
 }

@@ -31,7 +31,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import siena.core.Aggregated;
 import siena.core.InheritFilter;
-import siena.core.ListQuery;
+import siena.core.Many;
 import siena.core.lifecycle.LifeCyclePhase;
 import siena.core.lifecycle.LifeCycleUtils;
 import siena.embed.Embedded;
@@ -116,7 +116,7 @@ public class ClassInfo {
 				}
 				
 				if(isAggregated(field)){
-					if (!isModel(field.getType()) && !ListQuery.class.isAssignableFrom(type)){
+					if (!isModel(field.getType()) && !Many.class.isAssignableFrom(type)){
 						throw new SienaException("Aggregation not possible: Field "+field.getName()+" is not a model neither a ListQuery");
 					}
 					else aggregatedFields.add(field);
@@ -321,7 +321,7 @@ public class ClassInfo {
 	}	
 	
 	public static boolean isListQuery(Field field) {
-		return ListQuery.class.isAssignableFrom(field.getType());
+		return Many.class.isAssignableFrom(field.getType());
 	}	
 	
 	public static boolean isGenerated(Field field) {

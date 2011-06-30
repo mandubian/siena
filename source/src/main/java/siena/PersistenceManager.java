@@ -19,7 +19,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
-import siena.core.ListQuery;
+import siena.core.Many4PM;
 import siena.core.async.PersistenceManagerAsync;
 import siena.core.batch.Batch;
 
@@ -70,11 +70,11 @@ public interface PersistenceManager {
 	<T> Batch<T> createBatch(Class<T> clazz);
  
 	/**
-	 * Method for obtaining <code>AggregatorQuery</code> implementations.
+	 * Method for obtaining <code>Many</code> implementations.
 	 * 
-	 * @return A <code>AggregatorQuery</code> object that lets make batch operations
+	 * @return A <code>Many4PM</code> object that lets make batch operations
 	 */
-	<T> ListQuery<T> createListQuery(Class<T> clazz);
+	<T> Many4PM<T> createMany(Class<T> clazz);
 	
 	/**
 	 * This method fills all the fields of the given object using its primary key value

@@ -1738,8 +1738,13 @@ public class JdbcTest extends BaseTest {
 		// TODO Auto-generated method stub
 		super.testBatchGetByKeysNonExisting();
 	}
-
+	
 	@Override
+	public void testGetNonExisting() {
+		// TODO Auto-generated method stub
+		super.testGetNonExisting();
+	}
+
 	public void testGetByKeyNonExisting() {
 		// TODO Auto-generated method stub
 		super.testGetByKeyNonExisting();

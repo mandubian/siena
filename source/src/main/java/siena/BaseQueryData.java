@@ -140,12 +140,11 @@ public class BaseQueryData<T> implements QueryData<T> {
 		}
 		fieldName = fieldName.trim();
 		
-		try {
-			Field field = Util.getField(clazz, fieldName);
-			filters.add(new QueryFilterSimple(field, op, value));
-		} catch (Exception e) {
-			throw new SienaException(e);
+		Field field = Util.getField(clazz, fieldName);
+		if(field==null) {
+			throw new SienaException("Filter field '"+fieldName+"' not found"); 
 		}
+		filters.add(new QueryFilterSimple(field, op, value));
 	}
 	
 	protected void addOrder(String fieldName) {
@@ -155,12 +154,11 @@ public class BaseQueryData<T> implements QueryData<T> {
 			fieldName = fieldName.substring(1);
 			ascending = false;
 		}
-		try {
-			Field field = Util.getField(clazz, fieldName);
-			orders.add(new QueryOrder(field, ascending));
-		} catch(Exception e) {
-			throw new SienaException(e);
+		Field field = Util.getField(clazz, fieldName);
+		if(field==null) {
+			throw new SienaException("Order field '"+fieldName+"' not found"); 
 		}
+		orders.add(new QueryOrder(field, ascending));
 	}
 	
 	protected void addSearch(String match, String... fields) {

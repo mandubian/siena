@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 
 import junit.framework.TestCase;
+import siena.Model;
 import siena.PersistenceManager;
 import siena.PersistenceManagerFactory;
 import siena.Query;
@@ -59,8 +60,8 @@ public abstract class BaseModelTest extends TestCase {
 		classes.add(PersonLongAutoIDExtendedFilter.class);
 		classes.add(TransactionAccountFromModel.class);
 		classes.add(TransactionAccountToModel.class);
-		classes.add(AggregateChildModel.class);
-		classes.add(AggregateParentModel.class);
+//		classes.add(AggregateChildModel.class);
+//		classes.add(AggregateParentModel.class);
 
 		pm = createPersistenceManager(classes);
 		PersistenceManagerFactory.install(pm, classes);
@@ -922,38 +923,28 @@ public abstract class BaseModelTest extends TestCase {
 	}
 	
 	public void testAggregate() {
-		AggregateChildModel adam1 = new AggregateChildModel();
-		adam1.name = "adam1";
-		AggregateChildModel adam2 = new AggregateChildModel();
-		adam2.name = "adam2";
-		
-		AggregateChildModel eve = new AggregateChildModel();
-		eve.name = "eve";
+		AggregateChildModel adam1 = new AggregateChildModel("adam1");
+		AggregateChildModel adam2 = new AggregateChildModel("adam2");	
+		AggregateChildModel eve = new AggregateChildModel("eve");
+		AggregateChildModel bob = new AggregateChildModel("bob");
 
-		AggregateChildModel bob = new AggregateChildModel();
-		bob.name = "bob";
-
-		AggregateParentModel god = new AggregateParentModel();
-		god.name = "god";
+		AggregateParentModel god = new AggregateParentModel("god");
 		god.child = adam1;
-		god.children.asList().addAll(Arrays.asList(adam2, eve, bob));
-				
+		god.children.asList().addAll(adam2, eve, bob);				
 		god.insert();
 		
 		assertNotNull(god.id);
 		assertNotNull(god.child.id);
 		
 		AggregateParentModel god1 = 
-			pm.getByKey(AggregateParentModel.class, god.id);
+			Model.getByKey(AggregateParentModel.class, god.id);
 		
 		assertNotNull(god1);
 		assertEquals(adam1, god1.child);
-		assertEquals(false, god1.children.isSync());
 		List<AggregateChildModel> children = god1.children.asQuery().fetch();
 		assertEquals(adam2, children.get(0));
 		assertEquals(eve, children.get(1));
 		assertEquals(bob, children.get(2));
-		assertEquals(true, god1.children.isSync());
 		
 		// get aggregated one2one
 		AggregateChildModel adamAfter2 = AggregateChildModel.all().aggregated(god, "child").get();
@@ -971,23 +962,15 @@ public abstract class BaseModelTest extends TestCase {
 		assertEquals(adam2, children.get(0));
 		assertEquals(eve, children.get(1));
 		assertEquals(bob, children.get(2));
-		assertEquals(true, god2.children.isSync());
 	}
 	
 	public void testAggregateUpdate() {
-		AggregateChildModel adam1 = new AggregateChildModel();
-		adam1.name = "adam1";
-		AggregateChildModel adam2 = new AggregateChildModel();
-		adam2.name = "adam2";
-		
-		AggregateChildModel eve = new AggregateChildModel();
-		eve.name = "eve";
+		AggregateChildModel adam1 = new AggregateChildModel("adam1");
+		AggregateChildModel adam2 = new AggregateChildModel("adam2");	
+		AggregateChildModel eve = new AggregateChildModel("eve");
+		AggregateChildModel bob = new AggregateChildModel("bob");
 
-		AggregateChildModel bob = new AggregateChildModel();
-		bob.name = "bob";
-
-		AggregateParentModel god = new AggregateParentModel();
-		god.name = "god";
+		AggregateParentModel god = new AggregateParentModel("god");
 		god.child = adam1;
 		god.children.asList().addAll(Arrays.asList(adam2, eve, bob));
 				
@@ -1005,23 +988,92 @@ public abstract class BaseModelTest extends TestCase {
 		
 		AggregateParentModel godbis = AggregateParentModel.all().filter("name", "goddy").get();
 		assertEquals(god, godbis);
-		assertEquals(false, godbis.children.isSync());
 		List<AggregateChildModel> children = godbis.children.asList();
 		assertEquals(adam2, children.get(0));
 		assertEquals(eve, children.get(1));
 		assertEquals(bob, children.get(2));
-		assertEquals(true, godbis.children.isSync());
 		
 		god.children.asList().remove(eve);
 		god.update();
 		
 		godbis = AggregateParentModel.all().filter("name", "goddy").get();
 		assertEquals(god, godbis);
-		assertEquals(false, godbis.children.isSync());
 		children = godbis.children.asList();
 		assertEquals(adam2, children.get(0));
 		assertEquals(bob, children.get(1));
-		assertEquals(true, godbis.children.isSync());
+	}
+	
+	public void testAggregateSave() {
+		AggregateChildModel adam1 = new AggregateChildModel("adam1");
+		AggregateChildModel adam2 = new AggregateChildModel("adam2");	
+		AggregateChildModel eve = new AggregateChildModel("eve");
+		AggregateChildModel bob = new AggregateChildModel("bob");
+
+		AggregateParentModel god = new AggregateParentModel("god");
+		god.child = adam1;
+		god.children.asList().addAll(Arrays.asList(adam2, eve, bob));
+				
+		god.save();
+		
+		assertNotNull(god.id);
+		assertNotNull(god.child.id);
+		
+		AggregateParentModel god1 = 
+			Model.getByKey(AggregateParentModel.class, god.id);
+		
+		assertNotNull(god1);
+		assertEquals(adam1, god1.child);
+		List<AggregateChildModel> children = god1.children.asQuery().fetch();
+		assertEquals(adam2, children.get(0));
+		assertEquals(eve, children.get(1));
+		assertEquals(bob, children.get(2));
+
+		god.name = "goddy";
+		adam1.name = "adammy";
+		bob.name = "bobby";
+		eve.name = "evvy";
+		
+		god.save();
+		
+		AggregateParentModel godbis = AggregateParentModel.all().filter("name", "goddy").get();
+		assertEquals(god, godbis);
+		children = godbis.children.asList();
+		assertEquals(adam2, children.get(0));
+		assertEquals(eve, children.get(1));
+		assertEquals(bob, children.get(2));
+		
+		god.children.asList().remove(eve);
+		god.save();
+		
+		godbis = AggregateParentModel.all().filter("name", "goddy").get();
+		assertEquals(god, godbis);
+		children = godbis.children.asList();
+		assertEquals(adam2, children.get(0));
+		assertEquals(bob, children.get(1));
+	}
+	
+	public void testAggregateDelete() {
+		AggregateChildModel adam1 = new AggregateChildModel("adam1");
+		AggregateChildModel adam2 = new AggregateChildModel("adam2");	
+		AggregateChildModel eve = new AggregateChildModel("eve");
+		AggregateChildModel bob = new AggregateChildModel("bob");
+
+		AggregateParentModel god = new AggregateParentModel("god");
+		god.child = adam1;
+		god.children.asList().addAll(Arrays.asList(adam2, eve, bob));
+				
+		god.insert();
+		
+		assertNotNull(god.id);
+		assertNotNull(god.child.id);
+		
+		god.delete();
+		
+		AggregateParentModel godbis = AggregateParentModel.all().filter("name", "god").get();
+		assertNull(godbis);
+		
+		List<AggregateChildModel> children = Model.batch(AggregateChildModel.class).getByKeys(adam1.id, adam2.id, eve.id, bob.id);
+		assertTrue(children.isEmpty());
 	}
 	
 	public void testAggregateListQuerysFetch() {
@@ -1032,11 +1084,9 @@ public abstract class BaseModelTest extends TestCase {
 			adams.add(adam);
 		}
 		
-		AggregateChildModel eve = new AggregateChildModel();
-		eve.name = "eve";
+		AggregateChildModel eve = new AggregateChildModel("eve");
 
-		AggregateParentModel god = new AggregateParentModel();
-		god.name = "god";
+		AggregateParentModel god = new AggregateParentModel("god");
 		god.child = eve;
 		god.children.asList().addAll(adams);
 				
@@ -1174,16 +1224,14 @@ public abstract class BaseModelTest extends TestCase {
 		}
 		
 		for(int i=0; i<100; i++){
-			assertEquals(adams.get(i).id, godbis.children.asList().get(i).id);			
-			assertTrue(children.get(i).name == null);			
+			assertEquals(adams.get(i), godbis.children.asList().get(i));			
 		}
 		
 		Iterator<AggregateChildModel> it = godbis.children.asList().iterator();
 		int i=0;
 		while(it.hasNext()){
 			AggregateChildModel child = it.next();
-			assertEquals(adams.get(i++).id, child.id);	
-			assertTrue(child.name == null);			
+			assertEquals(adams.get(i++), child);	
 		}
 		assertEquals(100, i);
 	}
@@ -1297,12 +1345,9 @@ public abstract class BaseModelTest extends TestCase {
 		AggregateParentModel godbis = AggregateParentModel.all().filter("name", "god").get();
 		int nb = godbis.children.asQuery().delete();
 		assertEquals(100, nb);			
-		assertFalse( godbis.children.isSync());
 		assertTrue( godbis.children.asList().isEmpty());			
-		assertTrue( godbis.children.isSync());
 		
 		assertTrue( godbis.children.asQuery().fetch().isEmpty());			
-		assertTrue( godbis.children.isSync());
 		
 		List<AggregateChildModel> children = AggregateChildModel.all().aggregated(god, "children").fetch();
 		assertTrue(children.isEmpty());
@@ -1331,13 +1376,9 @@ public abstract class BaseModelTest extends TestCase {
 		
 		// get aggregated one2many
 		AggregateParentModel godbis = AggregateParentModel.all().filter("name", "god").get();
-		assertFalse( godbis.children.isSync());
 		assertEquals( adams.get(0), godbis.children.asQuery().get());			
-		assertFalse( godbis.children.isSync());
 		assertEquals( adams.get(0), godbis.children.asList().get(0));			
-		assertTrue( godbis.children.isSync());
 		assertEquals( adams.get(0), godbis.children.asQuery().get());			
-		assertTrue( godbis.children.isSync());
 
 	}
 	
@@ -1364,13 +1405,76 @@ public abstract class BaseModelTest extends TestCase {
 		
 		// get aggregated one2many
 		AggregateParentModel godbis = AggregateParentModel.all().filter("name", "god").get();
-		assertFalse( godbis.children.isSync());
 		assertEquals( adams.size(), godbis.children.asQuery().count());			
-		assertFalse( godbis.children.isSync());
 		assertEquals( adams.size(), godbis.children.asList().size());			
-		assertTrue( godbis.children.isSync());
 		assertEquals( adams.size(), godbis.children.asQuery().count());			
-		assertTrue( godbis.children.isSync());
 
+	}
+	
+	public void testAggregateListQueryFilter() {
+		List<AggregateChildModel> adams = new ArrayList<AggregateChildModel>();
+		for(int i=0; i<100; i++){
+			AggregateChildModel adam = new AggregateChildModel();
+			adam.name = "adam"+i;
+			adams.add(adam);
+		}
+		
+		AggregateChildModel eve = new AggregateChildModel();
+		eve.name = "eve";
+
+		AggregateParentModel god = new AggregateParentModel();
+		god.name = "god";
+		god.child = eve;
+		god.children.asList().addAll(adams);
+				
+		god.insert();
+		
+		assertNotNull(god.id);
+		assertNotNull(god.child.id);
+		
+		AggregateParentModel godbis = AggregateParentModel.all().filter("name", "god").get();
+		AggregateChildModel adam47 = godbis.children.asQuery().filter("name", "adam47").get();
+		assertEquals( adams.get(47), adam47);		
+
+		List<AggregateChildModel> adamsbis = 
+			godbis.children.asQuery().filter("name>", "adam47").filter("name<", "adam5").fetch();
+		assertEquals( adams.get(48), adamsbis.get(0));		
+		assertEquals( adams.get(49), adamsbis.get(1));		
+	}
+	
+	public void testAggregateListQueryOrder() {
+		List<AggregateChildModel> adams = new ArrayList<AggregateChildModel>();
+		for(int i=0; i<100; i++){
+			AggregateChildModel adam = new AggregateChildModel();
+			adam.name = "adam"+i;
+			adams.add(adam);
+		}
+		
+		AggregateChildModel eve = new AggregateChildModel();
+		eve.name = "eve";
+
+		AggregateParentModel god = new AggregateParentModel();
+		god.name = "god";
+		god.child = eve;
+		god.children.asList().addAll(adams);
+				
+		god.insert();
+		
+		assertNotNull(god.id);
+		assertNotNull(god.child.id);
+		
+		AggregateParentModel godbis = AggregateParentModel.all().filter("name", "god").get();
+
+		List<AggregateChildModel> adamsbis = 
+			godbis.children.asQuery().filter("name>=", "adam41").filter("name<=", "adam49").order("-name").fetch();
+		assertEquals( adams.get(49), adamsbis.get(0));		
+		assertEquals( adams.get(48), adamsbis.get(1));		
+		assertEquals( adams.get(47), adamsbis.get(2));		
+		assertEquals( adams.get(46), adamsbis.get(3));		
+		assertEquals( adams.get(45), adamsbis.get(4));		
+		assertEquals( adams.get(44), adamsbis.get(5));		
+		assertEquals( adams.get(43), adamsbis.get(6));		
+		assertEquals( adams.get(42), adamsbis.get(7));		
+		assertEquals( adams.get(41), adamsbis.get(8));		
 	}
 }

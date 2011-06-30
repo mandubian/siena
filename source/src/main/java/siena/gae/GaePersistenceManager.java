@@ -31,8 +31,8 @@ import siena.Query;
 import siena.QueryAggregated;
 import siena.SienaException;
 import siena.Util;
-import siena.core.ListQuery;
-import siena.core.ListQuery4PM;
+import siena.core.Many;
+import siena.core.Many4PM;
 import siena.core.async.PersistenceManagerAsync;
 import siena.core.options.QueryOptionFetchType;
 import siena.core.options.QueryOptionOffset;
@@ -98,27 +98,94 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 		txn.rollback();
 	}
 	
-	public void delete(Object obj) {
-		ds.delete(GaeMappingUtils.getKey(obj));
+	public void delete(Object obj){
+		List<Key> keys = new ArrayList<Key>();
+		_deleteSingle(obj, keys, null, null, null);
+		
+		ds.delete(keys);
+	}
+	
+	private void _deleteSingle(Object obj, List<Key> keys, final Key parentKey, final ClassInfo parentInfo, final Field parentField) {
+		Class<?> clazz = obj.getClass();
+		ClassInfo info = ClassInfo.getClassInfo(clazz);
+		
+		Key key;		
+		if(parentKey==null){
+			key = GaeMappingUtils.getKey(obj);
+		}else {
+			key = GaeMappingUtils.getKeyFromParent(obj, parentKey, parentInfo, parentField);
+		}
+		
+		// cascading on aggregated fields
+		if(!info.aggregatedFields.isEmpty()){
+			for(Field f: info.aggregatedFields){
+				if(ClassInfo.isModel(f.getType())){
+					Object aggObj = Util.readField(obj, f);
+					_deleteSingle(aggObj, keys, key, info, f);
+				}
+				else if(ClassInfo.isListQuery(f)){
+					Many<?> lq = (Many<?>)Util.readField(obj, f);
+					if(!lq.asList().isEmpty()){
+						_deleteMultiple(lq.asQuery().fetchKeys(), keys, key, info, f);
+					}
+				}
+			}
+		}
+		
+		keys.add(key);
 	}
 
+	private void _deleteMultiple(Iterable<?> objects, List<Key> keys, final Key parentKey, final ClassInfo parentInfo, final Field parentField) {
+		for(Object obj: objects){
+			Class<?> clazz = obj.getClass();
+			ClassInfo info = ClassInfo.getClassInfo(clazz);
+			
+			Key key;		
+			if(parentKey==null){
+				key = GaeMappingUtils.getKey(obj);
+			}else {
+				key = GaeMappingUtils.getKeyFromParent(obj, parentKey, parentInfo, parentField);
+			}
+			
+			// cascading on aggregated fields
+			if(!info.aggregatedFields.isEmpty()){
+				for(Field f: info.aggregatedFields){
+					if(ClassInfo.isModel(f.getType())){
+						Object aggObj = Util.readField(obj, f);
+						_deleteSingle(aggObj, keys, key, info, f);
+					}
+					else if(ClassInfo.isListQuery(f)){
+						Many<?> lq = (Many<?>)Util.readField(obj, f);
+						if(!lq.asList().isEmpty()){
+							_deleteMultiple(lq.asQuery().fetchKeys(), keys, key, info, f);
+						}
+					}
+				}
+			}
+			
+			keys.add(key);
+		}
+		
+	}
+	
 	public void get(Object obj) {
 		Key key = GaeMappingUtils.getKey(obj);
 		ClassInfo info = ClassInfo.getClassInfo(obj.getClass());
 		try {
 			Entity entity = ds.get(key);
-			GaeMappingUtils.fillModel(obj, entity);
-
-			// aggregated management
-			if(!info.aggregatedFields.isEmpty()){
-				mapAggregated(obj);
+			if(entity != null){
+				GaeMappingUtils.fillModel(obj, entity);
+	
+				// aggregated management
+				if(!info.aggregatedFields.isEmpty()){
+					mapAggregated(obj);
+				}
+				
+				// join management
+				if(!info.joinFields.isEmpty()){
+					mapJoins(obj);
+				}
 			}
-			
-			// join management
-			if(!info.joinFields.isEmpty()){
-				mapJoins(obj);
-			}
-
 		} 
 		catch (Exception e) {
 			throw new SienaException(e);
@@ -134,12 +201,10 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 			if(entity != null){
 				obj = Util.createObjectInstance(clazz);
 				GaeMappingUtils.fillModelAndKey(obj, entity);
-					
 				// aggregated management
 				if(!info.aggregatedFields.isEmpty()){
 					mapAggregated(obj);
 				}
-			
 				// join management
 				if(!info.joinFields.isEmpty()){
 					mapJoins(obj);
@@ -193,7 +258,7 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 					objectMap.put(f, Arrays.asList(aggObj));
 				}
 				else if(ClassInfo.isListQuery(f)){
-					ListQuery<?> lq = (ListQuery<?>)Util.readField(obj, f);
+					Many<?> lq = (Many<?>)Util.readField(obj, f);
 					if(!lq.asList().isEmpty()){
 						//_insertMultiple(lq.elements(), entity, info, f);
 						objectMap.put(f, (List<Object>)lq.asList());
@@ -254,7 +319,7 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 						objectMap.put(f, Arrays.asList(aggObj));
 					}
 					else if(ClassInfo.isListQuery(f)){
-						ListQuery<?> lq = (ListQuery<?>)Util.readField(obj, f);
+						Many<?> lq = (Many<?>)Util.readField(obj, f);
 						if(!lq.asList().isEmpty()){
 							objectMap.put(f, (List<Object>)lq.asList());
 						}
@@ -311,7 +376,7 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 								recObjectMap.put(f, Arrays.asList(aggObj));
 							}
 							else if(ClassInfo.isListQuery(f)){
-								ListQuery<?> lq = (ListQuery<?>)Util.readField(obj, f);
+								Many<?> lq = (Many<?>)Util.readField(obj, f);
 								if(!lq.asList().isEmpty()){
 									recObjectMap.put(f, (List<Object>)lq.asList());
 								}
@@ -363,7 +428,7 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 				_buildUpdateList(entities, entities2Remove, aggObj, entity.getKey(), info, f);
 			}
 			else if(ClassInfo.isListQuery(f)){
-				ListQuery4PM<?> lq = (ListQuery4PM<?>)Util.readField(obj, f);
+				Many4PM<?> lq = (Many4PM<?>)Util.readField(obj, f);
 				if(!lq.asList().isEmpty()){
 					for(Object elt : lq.asList()){
 						_buildUpdateList(entities, entities2Remove, elt, entity.getKey(), info, f);
@@ -397,19 +462,21 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 		Object idVal = Util.readField(obj, idField);
 		// id with null value means insert
 		if(idVal == null){
-			entity = GaeMappingUtils.createEntityInstance(idField, info, obj);
+			insert(obj);
+			//entity = GaeMappingUtils.createEntityInstance(idField, info, obj);
 		}
 		// id with not null value means update
 		else{
-			entity = GaeMappingUtils.createEntityInstanceForUpdate(idField, info, obj);			
+			update(obj);
+			//entity = GaeMappingUtils.createEntityInstanceForUpdate(idField, info, obj);			
 		}
 		
-		GaeMappingUtils.fillEntity(obj, entity);
+		/*GaeMappingUtils.fillEntity(obj, entity);
 		ds.put(entity);
 		
 		if(idVal == null){
 			GaeMappingUtils.setIdFromKey(idField, obj, entity.getKey());
-		}
+		}*/
 	}
 	
 	protected DatastoreService getDatastoreService() {
@@ -726,7 +793,7 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 			}
 			// todo manage joined one2many listquery
 			else if(ClassInfo.isListQuery(f)){
-				ListQuery4PM<?> lq = (ListQuery4PM<?>)Util.readField(ancestor, f);
+				Many4PM<?> lq = (Many4PM<?>)Util.readField(ancestor, f);
 				// sets the sync flag to false to tell that it should be fetched when the listquery is accessed!
 				lq.setSync(false);
 			}
@@ -752,7 +819,7 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 				modelMap.put(f, fInfo);
 			}
 			else if(ClassInfo.isListQuery(f)){
-				ListQuery4PM<?> lq = (ListQuery4PM<?>)Util.readField(model, f);
+				Many4PM<?> lq = (Many4PM<?>)Util.readField(model, f);
 				// sets the sync flag to false to tell that it should be fetched when the listquery is accessed!
 				lq.setSync(false);
 				
@@ -1582,22 +1649,13 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 	}
 
 	public int delete(Object... models) {
-		List<Key> keys = new ArrayList<Key>();
-		for(Object obj:models){
-			keys.add(GaeMappingUtils.getKey(obj));
-		}
-		
-		ds.delete(keys);
-		
-		return keys.size();
+		return delete(Arrays.asList(models));
 	}
 
 
 	public int delete(Iterable<?> models) {
 		List<Key> keys = new ArrayList<Key>();
-		for(Object obj:models){
-			keys.add(GaeMappingUtils.getKey(obj));
-		}
+		_deleteMultiple(models, keys, null, null, null);
 		
 		ds.delete(keys);
 		
@@ -1606,14 +1664,7 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 
 
 	public <T> int deleteByKeys(Class<T> clazz, Object... keys) {
-		List<Key> gaeKeys = new ArrayList<Key>();
-		for(Object key:keys){
-			gaeKeys.add(GaeMappingUtils.makeKey(clazz, key));
-		}
-		
-		ds.delete(gaeKeys);
-		
-		return gaeKeys.size();
+		return deleteByKeys(clazz, Arrays.asList(keys));
 	}
 
 	public <T> int deleteByKeys(Class<T> clazz, Iterable<?> keys) {
@@ -1629,18 +1680,7 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 
 
 	public int get(Object... objects) {
-		List<Key> keys = new ArrayList<Key>();
-		for(Object obj:objects){
-			keys.add(GaeMappingUtils.getKey(obj));
-		}
-		
-		Map<Key, Entity> entityMap = ds.get(keys);
-		
-		for(Object obj:objects){
-			GaeMappingUtils.fillModel(obj, entityMap.get(GaeMappingUtils.getKey(obj)));
-		}
-		
-		return entityMap.size();
+		return get(Arrays.asList(objects));
 	}
 
 	public <T> int get(Iterable<T> objects) {
@@ -1652,7 +1692,10 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 		Map<Key, Entity> entityMap = ds.get(keys);
 		
 		for(Object obj:objects){
-			GaeMappingUtils.fillModel(obj, entityMap.get(GaeMappingUtils.getKey(obj)));
+			Entity e = entityMap.get(GaeMappingUtils.getKey(obj));
+			if(e!=null){
+				GaeMappingUtils.fillModel(obj, e);
+			}
 		}
 		
 		return entityMap.size();
@@ -1720,44 +1763,13 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 
 	
 	public int save(Object... objects) {
-		List<Entity> entities = new ArrayList<Entity>();
-		for(Object obj:objects){
-			Class<?> clazz = obj.getClass();
-			ClassInfo info = ClassInfo.getClassInfo(clazz);
-			Field idField = info.getIdField();
-			
-			Entity entity;
-			Object idVal = Util.readField(obj, idField);
-			// id with null value means insert
-			if(idVal == null){
-				entity = GaeMappingUtils.createEntityInstance(idField, info, obj);
-			}
-			// id with not null value means update
-			else{
-				entity = GaeMappingUtils.createEntityInstanceForUpdate(idField, info, obj);			
-			}
-			
-			GaeMappingUtils.fillEntity(obj, entity);
-			entities.add(entity);			
-		}
-		
-		List<Key> generatedKeys = ds.put(entities);
-		
-		int i=0;
-		for(Object obj:objects){
-			Class<?> clazz = obj.getClass();
-			ClassInfo info = ClassInfo.getClassInfo(clazz);
-			Field idField = info.getIdField();
-			Object idVal = Util.readField(obj, idField);
-			if(idVal == null){
-				GaeMappingUtils.setIdFromKey(idField, obj, generatedKeys.get(i++));
-			}
-		}
-		return generatedKeys.size();
+		return save(Arrays.asList(objects));
 	}
 
 	public int save(Iterable<?> objects) {
-		List<Entity> entities = new ArrayList<Entity>();
+		List<Object> entities2Insert = new ArrayList<Object>();
+		List<Object> entities2Update = new ArrayList<Object>();
+
 		for(Object obj:objects){
 			Class<?> clazz = obj.getClass();
 			ClassInfo info = ClassInfo.getClassInfo(clazz);
@@ -1767,18 +1779,20 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 			Object idVal = Util.readField(obj, idField);
 			// id with null value means insert
 			if(idVal == null){
-				entity = GaeMappingUtils.createEntityInstance(idField, info, obj);
+				//entity = GaeMappingUtils.createEntityInstance(idField, info, obj);
+				entities2Insert.add(obj);
 			}
 			// id with not null value means update
 			else{
-				entity = GaeMappingUtils.createEntityInstanceForUpdate(idField, info, obj);			
+				entities2Update.add(obj);
+				//entity = GaeMappingUtils.createEntityInstanceForUpdate(idField, info, obj);			
 			}
 			
-			GaeMappingUtils.fillEntity(obj, entity);
-			entities.add(entity);			
+			//GaeMappingUtils.fillEntity(obj, entity);
+			//entities.add(entity);			
 		}
 		
-		List<Key> generatedKeys = ds.put(entities);
+		/*List<Key> generatedKeys = ds.put(entities);
 		
 		int i=0;
 		for(Object obj:objects){
@@ -1790,7 +1804,9 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 				GaeMappingUtils.setIdFromKey(idField, obj, generatedKeys.get(i++));
 			}
 		}
-		return generatedKeys.size();
+		return generatedKeys.size();*/
+		
+		return insert(entities2Insert) + update(entities2Update);
 	}
 	
 	private static String[] supportedOperators;
