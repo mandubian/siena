@@ -1680,6 +1680,12 @@ public class GaeTest extends BaseTest {
 	}
 
 	@Override
+	public void testBatchGetByKeysNonExisting() {
+		// TODO Auto-generated method stub
+		super.testBatchGetByKeysNonExisting();
+	}
+
+	@Override
 	public void testLimitStateless() {
 		// TODO Auto-generated method stub
 		super.testLimitStateless();
@@ -2007,6 +2013,12 @@ public class GaeTest extends BaseTest {
 	public void testBatchUpdateList() {
 		// TODO Auto-generated method stub
 		super.testBatchUpdateList();
+	}
+
+	@Override
+	public void testGetByKeyNonExisting() {
+		// TODO Auto-generated method stub
+		super.testGetByKeyNonExisting();
 	}
 
 	@Override

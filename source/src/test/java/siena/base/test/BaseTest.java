@@ -3313,6 +3313,15 @@ public abstract class BaseTest extends TestCase {
 		}		
 	}
 	
+	public void testBatchGetByKeysNonExisting() {
+		List<PersonStringID> res = pm.getByKeys(PersonStringID.class, "TESLA", "CURIE", "CHBOING");
+		
+		assertEquals(3, res.size());
+		assertEquals(StringID_TESLA, res.get(0));
+		assertEquals(StringID_CURIE, res.get(1));
+		assertNull(res.get(2));
+	}
+	
 	private PersonUUID getPersonUUID(String id) {
 		PersonUUID p = new PersonUUID();
 		p.id = id;
@@ -5130,6 +5139,11 @@ public abstract class BaseTest extends TestCase {
 			assertEquals(discs.get(i++), disc);
 		}
 		
+	}
+	
+	public void testGetByKeyNonExisting() {
+		PersonLongAutoID pers = getByKeyPersonLongAutoID(12345678L);
+		assertNull(pers);
 	}
 	
 	public void testGetByKeyUUID() {

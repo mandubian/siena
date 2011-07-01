@@ -19,6 +19,7 @@ package siena.gae;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -115,8 +116,11 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 		Key gkey = GaeMappingUtils.makeKey(clazz, key);
 		try {
 			Entity entity = ds.get(gkey);
-			T obj = Util.createObjectInstance(clazz);
-			GaeMappingUtils.fillModelAndKey(obj, entity);
+			T obj = null;
+			if(entity != null){
+				obj = Util.createObjectInstance(clazz);
+				GaeMappingUtils.fillModelAndKey(obj, entity);
+			}
 			
 			return obj;
 		} 
@@ -1402,19 +1406,7 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 	}
 
 	public <T> List<T> getByKeys(Class<T> clazz, Object... keys) {
-		List<Key> gaeKeys = new ArrayList<Key>();
-		for(Object key:keys){
-			gaeKeys.add(GaeMappingUtils.makeKey(clazz, key));
-		}
-		
-		Map<Key, Entity> entityMap = ds.get(gaeKeys);
-		List<T> models = new ArrayList<T>(entityMap.size());
-		
-		for(Object key:keys){
-			models.add(GaeMappingUtils.mapEntity(entityMap.get(GaeMappingUtils.makeKey(clazz, key)), clazz));
-		}
-		
-		return models;
+		return getByKeys(clazz, Arrays.asList(keys));		
 	}
 
 	public <T> List<T> getByKeys(Class<T> clazz, Iterable<?> keys) {
@@ -1426,7 +1418,12 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 		Map<Key, Entity> entityMap = ds.get(gaeKeys);
 		List<T> models = new ArrayList<T>(entityMap.size());
 		for(Object key:keys){
-			models.add(GaeMappingUtils.mapEntity(entityMap.get(GaeMappingUtils.makeKey(clazz, key)), clazz));
+			Entity entity = entityMap.get(GaeMappingUtils.makeKey(clazz, key));
+			T obj = null;
+			if(entity != null){
+				obj = GaeMappingUtils.mapEntity(entity, clazz);
+			}
+			models.add(obj);
 		}
 		
 		return models;
