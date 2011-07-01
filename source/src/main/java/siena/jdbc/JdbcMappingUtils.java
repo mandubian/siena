@@ -262,7 +262,7 @@ public class JdbcMappingUtils {
 			if(ann==null){
 				return (BigDecimal)value;
 			}else {
-				switch(ann.storateType()){
+				switch(ann.storageType()){
 				case DOUBLE:
 					return BigDecimal.valueOf((Double)value);
 				case STRING:

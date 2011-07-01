@@ -396,7 +396,7 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 						if(ann == null) {
 							value = (BigDecimal)value;
 						}else {
-							switch(ann.storateType()){
+							switch(ann.storageType()){
 							case DOUBLE:
 								value = ((BigDecimal)value).doubleValue();
 								break;

@@ -12,7 +12,6 @@ import java.util.regex.Pattern;
 
 import siena.ClassInfo;
 import siena.Id;
-import siena.QueryAggregated;
 import siena.QueryData;
 import siena.QueryFilter;
 import siena.QueryFilterSearch;
@@ -22,6 +21,7 @@ import siena.QueryOrder;
 import siena.SienaException;
 import siena.SienaRestrictedApiException;
 import siena.Util;
+import siena.core.QueryFilterEmbedded;
 import siena.core.options.QueryOptionOffset;
 import siena.core.options.QueryOptionPage;
 import siena.core.options.QueryOptionState;
@@ -201,6 +201,29 @@ public class GaeQueryUtils {
 					throw new SienaException(e);
 				}
 				break;
+			}else if(QueryFilterEmbedded.class.isAssignableFrom(filter.getClass())){
+				QueryFilterEmbedded qf = (QueryFilterEmbedded)filter;
+				
+				String propName = "";
+				int sz = qf.fields.size();
+				for(int i=0; i<sz; i++){
+					propName += ClassInfo.getSingleColumnName(qf.fields.get(i));
+					if(i < sz-1){
+						propName += qf.fieldSeparator;
+					}
+				}
+				
+				Object value = qf.value;
+				FilterOperator op = operators.get(qf.operator);
+				
+				// IN and NOT_EQUAL doesn't allow to use cursors
+				if(op == FilterOperator.IN || op == FilterOperator.NOT_EQUAL){
+					QueryOptionGaeContext gaeCtx = (QueryOptionGaeContext)query.option(QueryOptionGaeContext.ID);
+					gaeCtx.useCursor = false;
+					query.option(QueryOptionOffset.ID).activate();					
+				}
+				
+				q.addFilter(propName, op, value);
 			}
 		}
 		

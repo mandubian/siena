@@ -320,7 +320,7 @@ public class ClassInfo {
 		return field.isAnnotationPresent(Join.class);
 	}	
 	
-	public static boolean isListQuery(Field field) {
+	public static boolean isMany(Field field) {
 		return Many.class.isAssignableFrom(field.getType());
 	}	
 	

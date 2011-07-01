@@ -1,5 +1,6 @@
 package siena.gae;
 
+import java.io.IOException;
 import java.lang.reflect.Field;
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -14,6 +15,8 @@ import siena.SienaException;
 import siena.SienaRestrictedApiException;
 import siena.Util;
 import siena.core.DecimalPrecision;
+import siena.embed.Embedded;
+import siena.embed.JavaSerializer;
 import siena.embed.JsonSerializer;
 
 import com.google.appengine.api.datastore.Blob;
@@ -21,6 +24,7 @@ import com.google.appengine.api.datastore.Entity;
 import com.google.appengine.api.datastore.Key;
 import com.google.appengine.api.datastore.KeyFactory;
 import com.google.appengine.api.datastore.Text;
+import com.google.appengine.repackaged.org.antlr.runtime.tree.TreeFilter.fptr;
 
 public class GaeMappingUtils {
 	
@@ -420,10 +424,35 @@ public class GaeMappingUtils {
 							value = new Blob(Arrays.copyOf(arr, 1000000));
 					}
 					else if (ClassInfo.isEmbedded(field)) {
-						value = JsonSerializer.serialize(value).toString();
-						String s = (String) value;
-						if (s.length() > 500)
-							value = new Text(s);
+						Embedded embed = field.getAnnotation(Embedded.class);
+						switch(embed.mode()){
+						case SERIALIZE_JSON:
+							value = JsonSerializer.serialize(value).toString();
+							String s = (String) value;
+							if (s.length() > 500)
+								value = new Text(s);
+							break;
+						case SERIALIZE_JAVA:
+							// this embedding mode doesn't manage @EmbedIgnores
+							try {
+								byte[] b = JavaSerializer.serialize(value);
+								// if length is less than 1Mb, can store in a blob else???
+								if(b.length <= 1000000){
+									value = new Blob(b);
+								}else{
+									throw new SienaException("object can be java serialized because it's too large >1mb");
+								}								
+							}
+							catch(IOException ex) {
+								throw new SienaException(ex);
+							}
+							break;
+						case NATIVE:
+							GaeNativeSerializer.embed(entity, ClassInfo.getSingleColumnName(field), value);
+							// has set several new properties in entity so go to next field
+							continue;
+						}
+						
 					}
 					else if (ClassInfo.isAggregated(field)){
 						// can't save it now as it requires its parent key to be mapped
@@ -435,7 +464,7 @@ public class GaeMappingUtils {
 						if(ann == null) {
 							value = ((BigDecimal)value).toPlainString();
 						}else {
-							switch(ann.storateType()){
+							switch(ann.storageType()){
 							case DOUBLE:
 								value = ((BigDecimal)value).doubleValue();
 								break;
@@ -483,7 +512,12 @@ public class GaeMappingUtils {
 				} 
 				else if(ClassInfo.isAggregated(field)){
 					// doesn nothing for the time being
-				}				
+				}
+				else if(ClassInfo.isEmbedded(field) && field.getAnnotation(Embedded.class).mode() == Embedded.Mode.NATIVE){
+					Object value = GaeNativeSerializer.unembed(
+							field.getType(), ClassInfo.getSingleColumnName(field), entity);
+					Util.setField(obj, field, value);
+				}
 				else {
 					setFromObject(obj, field, entity.getProperty(property));
 				}
@@ -520,6 +554,11 @@ public class GaeMappingUtils {
 						}
 					}
 				} 
+				else if(ClassInfo.isEmbedded(field) && field.getAnnotation(Embedded.class).mode() == Embedded.Mode.NATIVE){
+					Object value = GaeNativeSerializer.unembed(
+								field.getType(), ClassInfo.getSingleColumnName(field), entity);
+					Util.setField(obj, field, value);
+				}
 				else if(ClassInfo.isAggregated(field)){
 					// doesn nothing for the time being
 				}
@@ -534,24 +573,43 @@ public class GaeMappingUtils {
 	
 	public static void setFromObject(Object object, Field f, Object value)
 			throws IllegalArgumentException, IllegalAccessException {
-		if(value instanceof Text)
-			value = ((Text) value).getValue();
-		else if(value instanceof Blob && f.getType() == byte[].class) {
-			value = ((Blob) value).getBytes();
-		}
-		else if(f.getType() == BigDecimal.class){
-			DecimalPrecision ann = f.getAnnotation(DecimalPrecision.class);
-			if(ann == null) {
-				value = new BigDecimal((String)value);
-			}else {
-				switch(ann.storateType()){
-				case DOUBLE:
-					value = BigDecimal.valueOf((Double)value);
-					break;
-				case STRING:
-				case NATIVE:
+		if(value != null){
+			if(Text.class.isAssignableFrom(value.getClass()))
+				value = ((Text) value).getValue();
+			else if(Blob.class.isAssignableFrom(value.getClass())) {
+				if(f.getType() == byte[].class) {
+					value = ((Blob) value).getBytes();
+				}
+				else {
+					Embedded embed = f.getAnnotation(Embedded.class);
+					if(embed != null) {
+						switch(embed.mode()){
+						case SERIALIZE_JSON: 
+							break;
+						case SERIALIZE_JAVA:
+							value = ((Blob) value).getBytes();
+							break;
+						case NATIVE:
+							// shouldn't happen
+							break;
+						}
+					}
+				}
+			}
+			else if(f.getType() == BigDecimal.class){
+				DecimalPrecision ann = f.getAnnotation(DecimalPrecision.class);
+				if(ann == null) {
 					value = new BigDecimal((String)value);
-					break;
+				}else {
+					switch(ann.storageType()){
+					case DOUBLE:
+						value = BigDecimal.valueOf((Double)value);
+						break;
+					case STRING:
+					case NATIVE:
+						value = new BigDecimal((String)value);
+						break;
+					}
 				}
 			}
 		}

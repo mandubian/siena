@@ -1,5 +1,7 @@
 package siena.base.test.model;
 
+import java.io.Serializable;
+
 import siena.Filter;
 import siena.Generator;
 import siena.Id;
@@ -9,8 +11,10 @@ import siena.embed.EmbeddedMap;
 
 @Table("embedded_models")
 @EmbeddedMap
-public class EmbeddedModel{
-    @Id(Generator.NONE)
+public class EmbeddedModel implements Serializable{
+ 	private static transient final long serialVersionUID = 2590813183461026436L;
+
+	@Id(Generator.NONE)
     public String id;
     
     @EmbedIgnore

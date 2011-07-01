@@ -32,7 +32,7 @@ import siena.base.test.model.BigDecimalModel;
 import siena.base.test.model.BigDecimalModelNoPrecision;
 import siena.base.test.model.BigDecimalStringModel;
 import siena.base.test.model.Contact;
-import siena.base.test.model.ContainerModel;
+import siena.base.test.model.EmbeddedContainerModel;
 import siena.base.test.model.DataTypes;
 import siena.base.test.model.DataTypes.EnumLong;
 import siena.base.test.model.Discovery;
@@ -115,7 +115,7 @@ public abstract class BaseTest extends TestCase {
 		classes.add(PolymorphicModel.class);
 		classes.add(EmbeddedModel.class);
 		classes.add(EmbeddedSubModel.class);
-		classes.add(ContainerModel.class);
+		classes.add(EmbeddedContainerModel.class);
 		classes.add(DiscoveryNoColumn.class);
 		classes.add(DiscoveryNoColumnMultipleKeys.class);
 		classes.add(DiscoveryLifeCycle.class);
@@ -5418,7 +5418,7 @@ public abstract class BaseTest extends TestCase {
 		embed2.setGamma(true);
 		pm.insert(embed2);
 		
-		ContainerModel container = new ContainerModel();
+		EmbeddedContainerModel container = new EmbeddedContainerModel();
 		container.id = "container";
 		container.embed = embed;
 		container.embeds = new ArrayList<EmbeddedModel>();
@@ -5426,7 +5426,7 @@ public abstract class BaseTest extends TestCase {
 		container.embeds.add(embed2);
 		pm.insert(container);
 
-		ContainerModel afterContainer = pm.getByKey(ContainerModel.class, container.id);
+		EmbeddedContainerModel afterContainer = pm.getByKey(EmbeddedContainerModel.class, container.id);
 		assertNotNull(afterContainer);
 		assertEquals(container.id, afterContainer.id);
 		assertNotNull(afterContainer.embed);
@@ -5590,12 +5590,12 @@ public abstract class BaseTest extends TestCase {
 		subEmbed.id = "subembed";
 		subEmbed.parent = embed;
 		
-		ContainerModel container = new ContainerModel();
+		EmbeddedContainerModel container = new EmbeddedContainerModel();
 		container.id = "container";
 		container.embed = embed;
 		pm.insert(container);
 		
-		ContainerModel afterContainer = pm.getByKey(ContainerModel.class, container.id);
+		EmbeddedContainerModel afterContainer = pm.getByKey(EmbeddedContainerModel.class, container.id);
 		assertNotNull(afterContainer);
 		assertEquals(container.id, afterContainer.id);
 		assertNotNull(afterContainer.embed);

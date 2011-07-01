@@ -227,14 +227,14 @@ public class DdlGenerator {
 				column.setSizeAndScale(19, 2);
 			}
 			else {
-				if(an.storateType() == DecimalPrecision.StorageType.NATIVE){
+				if(an.storageType() == DecimalPrecision.StorageType.NATIVE){
 					columnType = Types.DECIMAL;
 					column.setSizeAndScale(an.size(), an.scale());
-				}else if(an.storateType() == DecimalPrecision.StorageType.STRING) {
+				}else if(an.storageType() == DecimalPrecision.StorageType.STRING) {
 					columnType = Types.VARCHAR;
 					// should be an.size+"."+sign
 					column.setSize((an.size()+2)+"");
-				}else if(an.storateType() == DecimalPrecision.StorageType.DOUBLE) {
+				}else if(an.storageType() == DecimalPrecision.StorageType.DOUBLE) {
 					columnType = Types.DOUBLE;					
 				}else {
 					columnType = Types.DECIMAL;

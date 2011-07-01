@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import siena.core.QueryFilterEmbedded;
 import siena.core.options.QueryOption;
 import siena.core.options.QueryOptionFetchType;
 import siena.core.options.QueryOptionOffset;
@@ -140,11 +141,54 @@ public class BaseQueryData<T> implements QueryData<T> {
 		}
 		fieldName = fieldName.trim();
 		
-		Field field = Util.getField(clazz, fieldName);
-		if(field==null) {
-			throw new SienaException("Filter field '"+fieldName+"' not found"); 
+		// an embedded field can be a field containing "." or ":"
+		if(fieldName.contains(".")){
+			String[] parts = fieldName.split("\\.");
+			if(parts.length == 0) {
+				throw new SienaException("Filter field cannot have 0 fields to filter"); 
+			}
+			
+			List<Field> fields = new ArrayList<Field>();
+			Class<?> cl = clazz;
+			for(int i=0; i<parts.length; i++) {
+				String fName = parts[i];
+				Field f = Util.getField(cl, fName);
+				if(f==null) {
+					throw new SienaException("Filter field '"+fName+"' not found"); 
+				}
+				
+				fields.add(f);
+				cl = f.getType();
+			}
+						
+			filters.add(new QueryFilterEmbedded(fields, op, ".", value));
+		}else if(fieldName.contains(":")) {
+			String[] parts = fieldName.split("\\.");
+			if(parts.length == 0) {
+				throw new SienaException("Filter field cannot have 0 fields to filter"); 
+			}
+			
+			List<Field> fields = new ArrayList<Field>();
+			Class<?> cl = clazz;
+			for(int i=0; i<parts.length; i++) {
+				String fName = parts[i];
+				Field f = Util.getField(cl, fName);
+				if(f==null) {
+					throw new SienaException("Filter field '"+fName+"' not found"); 
+				}
+				
+				fields.add(f);
+				cl = f.getType();
+			}
+						
+			filters.add(new QueryFilterEmbedded(fields, op, ".", value));
+		}else {
+			Field field = Util.getField(clazz, fieldName);
+			if(field==null) {
+				throw new SienaException("Filter field '"+fieldName+"' not found"); 
+			}
+			filters.add(new QueryFilterSimple(field, op, value));
 		}
-		filters.add(new QueryFilterSimple(field, op, value));
 	}
 	
 	protected void addOrder(String fieldName) {

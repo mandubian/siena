@@ -15,6 +15,7 @@
  */
 package siena;
 
+import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.ParameterizedType;
@@ -29,6 +30,7 @@ import java.util.Iterator;
 import java.util.TimeZone;
 
 import siena.embed.Embedded;
+import siena.embed.JavaSerializer;
 import siena.embed.JsonSerializer;
 import siena.jdbc.JdbcPersistenceManager.JdbcClassInfo;
 
@@ -219,17 +221,39 @@ public class Util {
 			else if(Boolean.TYPE==type || Boolean.class==type) return number!=(Number)0 ? true:false;
 			else if(BigDecimal.class==type) return (BigDecimal)value;
 		} 
-		else if(String.class.isAssignableFrom(value.getClass()) && Json.class.isAssignableFrom(type)) {
+		
+		if(String.class.isAssignableFrom(value.getClass()) && Json.class.isAssignableFrom(type)) {
 			return Json.loads((String) value);
 		} 
-		else if(field.getAnnotation(Embedded.class) != null && String.class.isAssignableFrom(value.getClass())) {
-			Json data = Json.loads((String) value);
-			return JsonSerializer.deserialize(field, data);
+		
+		Embedded embed = field.getAnnotation(Embedded.class);
+		if(embed != null) {
+			switch(embed.mode()){
+			case SERIALIZE_JSON:
+				if(String.class.isAssignableFrom(value.getClass())) {
+					Json data = Json.loads((String) value);
+					return JsonSerializer.deserialize(field, data);
+				}
+				break;
+			case SERIALIZE_JAVA:
+				try {
+					return JavaSerializer.deserialize((byte[])value);
+				} catch (IOException e) {
+					throw new SienaException(e);
+				} catch (ClassNotFoundException e) {
+					throw new SienaException(e);
+				}
+			case NATIVE:
+				break;
+			}
+			
 		}
-		else if(String.class.isAssignableFrom(value.getClass())&& type.isEnum()) {
+		
+		if(String.class.isAssignableFrom(value.getClass())&& type.isEnum()) {
 			return Enum.valueOf((Class<Enum>) type, (String)value);
 		}
-		else if(String.class.isAssignableFrom(value.getClass())&& type != String.class) {
+		
+		if(String.class.isAssignableFrom(value.getClass())&& type != String.class) {
 			return fromString(field.getType(), (String)value, true);
 		}
 		return value;

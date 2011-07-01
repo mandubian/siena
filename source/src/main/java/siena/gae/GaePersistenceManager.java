@@ -123,7 +123,7 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 					Object aggObj = Util.readField(obj, f);
 					_deleteSingle(aggObj, keys, key, info, f);
 				}
-				else if(ClassInfo.isListQuery(f)){
+				else if(ClassInfo.isMany(f)){
 					Many<?> lq = (Many<?>)Util.readField(obj, f);
 					if(!lq.asList().isEmpty()){
 						_deleteMultiple(lq.asQuery().fetchKeys(), keys, key, info, f);
@@ -154,7 +154,7 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 						Object aggObj = Util.readField(obj, f);
 						_deleteSingle(aggObj, keys, key, info, f);
 					}
-					else if(ClassInfo.isListQuery(f)){
+					else if(ClassInfo.isMany(f)){
 						Many<?> lq = (Many<?>)Util.readField(obj, f);
 						if(!lq.asList().isEmpty()){
 							_deleteMultiple(lq.asQuery().fetchKeys(), keys, key, info, f);
@@ -257,7 +257,7 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 					//_insertSingle(aggObj, entity, info, f);
 					objectMap.put(f, Arrays.asList(aggObj));
 				}
-				else if(ClassInfo.isListQuery(f)){
+				else if(ClassInfo.isMany(f)){
 					Many<?> lq = (Many<?>)Util.readField(obj, f);
 					if(!lq.asList().isEmpty()){
 						//_insertMultiple(lq.elements(), entity, info, f);
@@ -318,7 +318,7 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 						Object aggObj = Util.readField(obj, f);
 						objectMap.put(f, Arrays.asList(aggObj));
 					}
-					else if(ClassInfo.isListQuery(f)){
+					else if(ClassInfo.isMany(f)){
 						Many<?> lq = (Many<?>)Util.readField(obj, f);
 						if(!lq.asList().isEmpty()){
 							objectMap.put(f, (List<Object>)lq.asList());
@@ -375,7 +375,7 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 								Object aggObj = Util.readField(obj, f);
 								recObjectMap.put(f, Arrays.asList(aggObj));
 							}
-							else if(ClassInfo.isListQuery(f)){
+							else if(ClassInfo.isMany(f)){
 								Many<?> lq = (Many<?>)Util.readField(obj, f);
 								if(!lq.asList().isEmpty()){
 									recObjectMap.put(f, (List<Object>)lq.asList());
@@ -427,7 +427,7 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 				Object aggObj = Util.readField(obj, f);
 				_buildUpdateList(entities, entities2Remove, aggObj, entity.getKey(), info, f);
 			}
-			else if(ClassInfo.isListQuery(f)){
+			else if(ClassInfo.isMany(f)){
 				Many4PM<?> lq = (Many4PM<?>)Util.readField(obj, f);
 				if(!lq.asList().isEmpty()){
 					for(Object elt : lq.asList()){
@@ -792,7 +792,7 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 				Util.setField(ancestor, f, cObj);
 			}
 			// todo manage joined one2many listquery
-			else if(ClassInfo.isListQuery(f)){
+			else if(ClassInfo.isMany(f)){
 				Many4PM<?> lq = (Many4PM<?>)Util.readField(ancestor, f);
 				// sets the sync flag to false to tell that it should be fetched when the listquery is accessed!
 				lq.setSync(false);
@@ -818,7 +818,7 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 			if(ClassInfo.isModel(fClazz)){
 				modelMap.put(f, fInfo);
 			}
-			else if(ClassInfo.isListQuery(f)){
+			else if(ClassInfo.isMany(f)){
 				Many4PM<?> lq = (Many4PM<?>)Util.readField(model, f);
 				// sets the sync flag to false to tell that it should be fetched when the listquery is accessed!
 				lq.setSync(false);
@@ -1720,17 +1720,20 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 			T obj = null;
 			if(entity != null){
 				obj = GaeMappingUtils.mapEntity(entity, clazz);
-				// aggregated management
-				if(!info.aggregatedFields.isEmpty()){
-					mapAggregated(obj);
+				if(obj != null){
+					// aggregated management
+					if(!info.aggregatedFields.isEmpty()){
+						mapAggregated(obj);
+					}
+					
+					// join management
+					if(!info.joinFields.isEmpty()){
+						mapJoins(obj);
+					}
+					
 				}
-				
-				// join management
-				if(!info.joinFields.isEmpty()){
-					mapJoins(obj);
-				}
-				models.add(obj);
 			}
+			models.add(obj);
 		}
 		
 		return models;

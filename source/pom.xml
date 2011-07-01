@@ -358,6 +358,7 @@
 								<exclude>**/BaseAsyncTest.java</exclude>
 								<exclude>**/BaseModelTest.java</exclude>
 								<exclude>**/BaseMassTest.java</exclude>
+								<exclude>**/BaseEmbeddedTest.java</exclude>
 								<exclude>**/TestAll.java</exclude>
 								<exclude>**/Person.java</exclude>
 								<exclude>**/Message.java</exclude>
@@ -395,6 +396,7 @@
 								<exclude>**/BaseAsyncTest.java</exclude>
 								<exclude>**/BaseModelTest.java</exclude>
 								<exclude>**/BaseMassTest.java</exclude>
+								<exclude>**/BaseEmbeddedTest.java</exclude>
 								<exclude>**/TestAll.java</exclude>
 								<exclude>**/Person.java</exclude>
 								<exclude>**/Message.java</exclude>
@@ -404,6 +406,7 @@
 								<include>**/GaeTest.java</include>
 								<include>**/GaeAsyncTest.java</include>
 								<include>**/GaeModelTest.java</include>
+								<include>**/GaeEmbeddedTest.java</include>
 								<!--include>**/GaeMassTest.java</include-->
 							</includes>
 						</configuration>
@@ -424,6 +427,7 @@
 								<exclude>**/BaseAsyncTest.java</exclude>
 								<exclude>**/BaseModelTest.java</exclude>
 								<exclude>**/BaseMassTest.java</exclude>
+								<exclude>**/BaseEmbeddedTest.java</exclude>
 								<exclude>**/DrizzleTest.java</exclude>
 								<exclude>**/TestAll.java</exclude>
 								<exclude>**/Person.java</exclude>
@@ -452,6 +456,7 @@
 								<exclude>**/BaseAsyncTest.java</exclude>
 								<exclude>**/BaseModelTest.java</exclude>
 								<exclude>**/BaseMassTest.java</exclude>
+								<exclude>**/BaseEmbeddedTest.java</exclude>
 								<exclude>**/TestAll.java</exclude>
 								<exclude>**/Person.java</exclude>
 								<exclude>**/Message.java</exclude>
@@ -478,6 +483,7 @@
 								<exclude>**/BaseAsyncTest.java</exclude>
 								<exclude>**/BaseModelTest.java</exclude>
 								<exclude>**/BaseMassTest.java</exclude>
+								<exclude>**/BaseEmbeddedTest.java</exclude>
 								<exclude>**/TestAll.java</exclude>
 								<exclude>**/Person.java</exclude>
 								<exclude>**/Message.java</exclude>
@@ -504,6 +510,7 @@
 								<exclude>**/BaseAsyncTest.java</exclude>
 								<exclude>**/BaseModelTest.java</exclude>
 								<exclude>**/BaseMassTest.java</exclude>
+								<exclude>**/BaseEmbeddedTest.java</exclude>
 								<exclude>**/TestAll.java</exclude>
 								<exclude>**/Person.java</exclude>
 								<exclude>**/Message.java</exclude>

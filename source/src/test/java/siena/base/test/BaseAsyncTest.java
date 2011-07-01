@@ -19,7 +19,7 @@ import siena.base.test.model.AutoInc;
 import siena.base.test.model.Contact;
 import siena.base.test.model.DataTypes;
 import siena.base.test.model.DataTypes.EnumLong;
-import siena.base.test.model.ContainerModel;
+import siena.base.test.model.EmbeddedContainerModel;
 import siena.base.test.model.Discovery;
 import siena.base.test.model.Discovery4Join;
 import siena.base.test.model.Discovery4Join2;
@@ -5617,12 +5617,12 @@ public abstract class BaseAsyncTest extends TestCase {
 		embed.beta = 123;
 		pm.insert(embed).get();
 		
-		ContainerModel container = new ContainerModel();
+		EmbeddedContainerModel container = new EmbeddedContainerModel();
 		container.id = "container";
 		container.embed = embed;
 		pm.insert(container).get();
 
-		ContainerModel afterContainer = pm.getByKey(ContainerModel.class, container.id).get();
+		EmbeddedContainerModel afterContainer = pm.getByKey(EmbeddedContainerModel.class, container.id).get();
 		assertNotNull(afterContainer);
 		assertEquals(container.id, afterContainer.id);
 		assertNotNull(afterContainer.embed);

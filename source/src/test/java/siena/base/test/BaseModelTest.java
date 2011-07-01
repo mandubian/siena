@@ -1073,7 +1073,11 @@ public abstract class BaseModelTest extends TestCase {
 		assertNull(godbis);
 		
 		List<AggregateChildModel> children = Model.batch(AggregateChildModel.class).getByKeys(adam1.id, adam2.id, eve.id, bob.id);
-		assertTrue(children.isEmpty());
+		assertEquals(4, children.size());
+		assertEquals(null, children.get(0));
+		assertEquals(null, children.get(1));
+		assertEquals(null, children.get(2));
+		assertEquals(null, children.get(3));
 	}
 	
 	public void testAggregateListQuerysFetch() {
