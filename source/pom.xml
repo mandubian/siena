@@ -285,15 +285,17 @@
 			<version>${drizzle.version}</version>                                                       
 		    <scope>test</scope>
 		</dependency>
+		
 		<!-- Jedis Dependencies -->
-                <dependency>
-                    <groupId>redis.clients</groupId>
-                    <artifactId>jedis</artifactId>
-                    <version>2.0.0</version>
-                    <type>jar</type>
-                    <scope>compile</scope>
-                </dependency>
-                <!-- Google App Engine Dependencies -->
+		<dependency>
+			<groupId>redis.clients</groupId>
+			<artifactId>jedis</artifactId>
+			<version>2.0.0</version>
+			<type>jar</type>
+			<scope>compile</scope>
+		</dependency>
+
+		<!-- Google App Engine Dependencies -->
 		<dependency>
 			<groupId>com.google.appengine</groupId>
 			<artifactId>appengine-tools-sdk</artifactId>
@@ -518,6 +520,32 @@
 							</excludes>
 							<includes>
 								<include>**/FusionTest.java</include>
+							</includes>
+						</configuration>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+		<profile>
+			<id>REDIS</id>
+			<build>
+				<plugins>
+					<!-- Test cases -->
+					<plugin>
+						<artifactId>maven-surefire-plugin</artifactId>
+						<configuration>
+							<excludes>
+								<exclude>**/BaseTest.java</exclude>
+								<exclude>**/BaseAsyncTest.java</exclude>
+								<exclude>**/BaseModelTest.java</exclude>
+								<exclude>**/BaseMassTest.java</exclude>
+								<exclude>**/TestAll.java</exclude>
+								<exclude>**/Person.java</exclude>
+								<exclude>**/Message.java</exclude>
+								<exclude>**/Discovery.java</exclude>
+							</excludes>
+							<includes>
+								<include>**/RedisTest.java</include>
 							</includes>
 						</configuration>
 					</plugin>
