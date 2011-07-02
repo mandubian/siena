@@ -35,7 +35,7 @@ import siena.core.async.PersistenceManagerAsync;
 import siena.core.batch.Batch;
 
 /**
- * @author Roch Delsalle <>
+ * @author Roch Delsalle <rdelsalle@gmail.com>
  * @author Pascal Voitot <pascal.voitot@mandubian.org>
  *
  */
@@ -47,6 +47,7 @@ public class RedisPersistenceManager implements PersistenceManager{
 	
 	private ThreadLocal<Jedis> currentJedis = new ThreadLocal<Jedis>();
 	
+        @Override
 	public void init(Properties p) {
 		props = p;
 		
@@ -84,44 +85,59 @@ public class RedisPersistenceManager implements PersistenceManager{
 	 * CRUD FUNCTIONS
 	 */
 	
-	public void insert(Object obj) {
-		try {
-			Class<?> clazz = obj.getClass();
-			ClassInfo info = ClassInfo.getClassInfo(clazz);
-			
-			final Map<String, String> map = new HashMap<String, String>();
-			
-			for(Field field:info.updateFields){
-				String fieldName = ClassInfo.getColumnNames(field)[0];
-				Object value = Util.readField(obj, field);
-				
-				map.put(fieldName, value.toString());
-			}
-			final String key = info.tableName+":"+Util.readField(obj, info.getIdField());
-			System.out.println("saving "+key+": "+map);
-			jedis().multi(new TransactionBlock() {
-	            public void execute() throws JedisException {
-	                del(key);
-	                hmset(key, map);
-	            }
-	        });
-		}finally {
-			returnJedis();
-		}
-	}
+        @Override
+        public void insert(Object obj) {
+            try {
+                Class<?> clazz = obj.getClass();
+                ClassInfo info = ClassInfo.getClassInfo(clazz);
+
+                final Map<String, String> map = new HashMap<String, String>();
+
+                for (Field field : info.updateFields) {
+                    String fieldName = ClassInfo.getColumnNames(field)[0];
+                    Object value = Util.readField(obj, field);
+
+                    map.put(fieldName, value.toString());
+                }
+                final String key = info.tableName + ":" + Util.readField(obj, info.getIdField());
+                System.out.println("saving " + key + ": " + map);
+                jedis().multi(new TransactionBlock() {
+
+                    @Override
+                    public void execute() throws JedisException {
+                        del(key);
+                        hmset(key, map);
+                    }
+                });
+            } finally {
+                returnJedis();
+            }
+        }
 	
+        @Override
 	public void get(Object obj) {
 		// TODO Auto-generated method stub
 		
 	}
 
-	
-
-
 	@Override
 	public void delete(Object obj) {
-		// TODO Auto-generated method stub
-		
+            try {
+                Class<?> clazz = obj.getClass();
+                ClassInfo info = ClassInfo.getClassInfo(clazz);
+
+                final String key = info.tableName + ":" + Util.readField(obj, info.getIdField());
+                System.out.println("deleting " + key);
+                jedis().multi(new TransactionBlock() {
+
+                    @Override
+                    public void execute() throws JedisException {
+                        del(key);
+                    }
+                });
+            } finally {
+                returnJedis();
+            }
 	}
 
 	@Override
@@ -162,6 +178,7 @@ public class RedisPersistenceManager implements PersistenceManager{
 		
 	}
 
+        @Override
 	public void closeConnection() {
 		returnJedis();
 	}
