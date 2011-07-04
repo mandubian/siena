@@ -3,7 +3,6 @@
  */
 package siena.core;
 
-import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -19,11 +18,6 @@ import siena.Query;
  *
  */
 public class BaseMany<T> implements Many4PM<T>{
-	public enum RelationMode {
-		ASSOCIATION,
-		AGGREGATION
-	};
-	
 	transient private static final long serialVersionUID = -1417704952199421178L;
 
 	transient protected PersistenceManager pm;
@@ -34,20 +28,27 @@ public class BaseMany<T> implements Many4PM<T>{
 	transient protected ProxyList<T> list;	
 	transient protected Query<T> query;
 	
-	public BaseMany(PersistenceManager pm, Class<T> clazz) {
+	public BaseMany(PersistenceManager pm, Class<T> clazz){
 		this.pm = pm;
 		this.clazz = clazz;
-		this.mode = RelationMode.ASSOCIATION;
 		list = new ProxyList<T>(this);
-		query = pm.createQuery(clazz);		
+		this.query = pm.createQuery(clazz);
 	}
 	
-	public BaseMany(PersistenceManager pm, Class<T> clazz, Object aggregator, Field field) {
+	public BaseMany(PersistenceManager pm, Class<T> clazz, RelationMode mode, Object obj, String fieldName) {
 		this.pm = pm;
 		this.clazz = clazz;
-		this.mode = RelationMode.AGGREGATION;
-		this.list = new ProxyList<T>(this);
-		this.query = pm.createQuery(clazz).aggregated(aggregator, field.getName());
+		this.mode = mode;
+		list = new ProxyList<T>(this);
+		switch(mode){
+		case AGGREGATION:
+			this.query = pm.createQuery(clazz).aggregated(obj, fieldName);
+			break;
+		case RELATION:
+			this.query = pm.createQuery(clazz).filter(fieldName, obj);
+			break;
+		}
+		query = pm.createQuery(clazz);		
 	}
 
 	public SyncList<T> asList() {
@@ -67,15 +68,15 @@ public class BaseMany<T> implements Many4PM<T>{
 		return list.elements2Remove;
 	}
 
-	public Many4PM<T> aggregationMode(Object aggregator, Field field) {
+	public Many4PM<T> aggregationMode(Object aggregator, String fieldName) {
 		this.mode = RelationMode.AGGREGATION;
-		this.query.release().aggregated(aggregator, field.getName());
+		this.query.release().aggregated(aggregator, fieldName);
 		return this;
 	}
 
-	public Many4PM<T> associationMode() {
-		this.mode = RelationMode.ASSOCIATION;
-		this.query.release();
+	public Many4PM<T> relationMode(Object owner, String fieldName) {
+		this.mode = RelationMode.RELATION;
+		this.query.release().filter(fieldName, owner);
 		return this;
 	}
 

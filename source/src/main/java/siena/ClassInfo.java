@@ -18,6 +18,7 @@ package siena;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.lang.reflect.ParameterizedType;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -32,6 +33,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import siena.core.Aggregated;
 import siena.core.InheritFilter;
 import siena.core.Many;
+import siena.core.One;
+import siena.core.Owned;
+import siena.core.RelationMode;
 import siena.core.lifecycle.LifeCyclePhase;
 import siena.core.lifecycle.LifeCycleUtils;
 import siena.embed.Embedded;
@@ -52,8 +56,19 @@ public class ClassInfo {
 	public List<Field> joinFields = new ArrayList<Field>();
 	public List<Field> queryAndAllFields = new ArrayList<Field>();
 	public List<Field> aggregatedFields = new ArrayList<Field>();
+	public List<Field> ownedFields = new ArrayList<Field>();
 
 	public Map<LifeCyclePhase, List<Method>> lifecycleMethods = new HashMap<LifeCyclePhase, List<Method>>();
+	public Map<Field, Map<FieldMapKeys, Object>> queryOwnedFieldMap = new HashMap<Field, Map<FieldMapKeys, Object>>();
+	public Map<Field, Map<FieldMapKeys, Object>> manyOwnedFieldMap = new HashMap<Field, Map<FieldMapKeys, Object>>();
+	public Map<Field, Map<FieldMapKeys, Object>> singleOwnedFieldMap = new HashMap<Field, Map<FieldMapKeys, Object>>();
+
+	public enum FieldMapKeys {
+		CLASS,
+		MODE,
+		FIELD,
+		FILTER
+	}
 	
 	protected ClassInfo(Class<?> clazz) {
 		this.clazz = clazz;
@@ -83,15 +98,216 @@ public class ClassInfo {
 				Class<?> type = field.getType();
 				if((field.getModifiers() & Modifier.TRANSIENT) == Modifier.TRANSIENT ||
 						(field.getModifiers() & Modifier.STATIC) == Modifier.STATIC ||
-						field.isSynthetic()){
+						field.isSynthetic() || type == Class.class){
 					continue;
 				}
 				
-				if(type == Class.class || type == Query.class){
+				if(type == Query.class){
+					Filter filter = field.getAnnotation(Filter.class);
+					Owned related = field.getAnnotation(Owned.class);
+					if(filter == null && related == null ) {
+						throw new SienaException("Found Query<T> field without @Filter or @Related annotation at "
+								+c.getName()+"."+field.getName());
+					}
+		
+					ParameterizedType pt = (ParameterizedType) field.getGenericType();
+					cl = (Class<?>) pt.getActualTypeArguments()[0];
+		
+					if(filter != null){
+						try {
+							Map<FieldMapKeys, Object> fieldMap = new HashMap<FieldMapKeys, Object>();
+							fieldMap.put(FieldMapKeys.CLASS, cl);
+							fieldMap.put(FieldMapKeys.FILTER, filter.value());
+							queryOwnedFieldMap.put(field, fieldMap);
+							ownedFields.add(field);
+						} catch (Exception e) {
+							throw new SienaException(e);
+						}
+					}
+					else if(related != null){
+						String as = related.mappedBy();
+						// if related.as not specified, tries to find the first field with this type
+						if("".equals(as) || as == null){
+							ClassInfo fieldInfo = ClassInfo.getClassInfo(cl); 
+							Field f = fieldInfo.getFirstFieldFromType(clazz);
+							if(f == null){
+								throw new SienaException("@Related without 'as' attribute and no field of type "
+										+ clazz.getName() + "found in class "+type.getName());
+							}
+							
+							as = ClassInfo.getSimplestColumnName(f);
+						}
+						try {
+							Map<FieldMapKeys, Object> fieldMap = new HashMap<FieldMapKeys, Object>();
+							fieldMap.put(FieldMapKeys.CLASS, cl);
+							fieldMap.put(FieldMapKeys.FILTER, as);
+							queryOwnedFieldMap.put(field, fieldMap);
+							ownedFields.add(field);
+						} catch (Exception e) {
+							throw new SienaException(e);
+						}
+					}
+					
+					queryAndAllFields.add(field);
+					
+					// query fields are not added to other kind of fields
+					continue;
+				}
+				else if(type == Many.class){
+					ParameterizedType pt = (ParameterizedType) field.getGenericType();
+					cl = (Class<?>) pt.getActualTypeArguments()[0];
+					
+					Aggregated agg = field.getAnnotation(Aggregated.class);
+					Filter filter = field.getAnnotation(Filter.class);
+					Owned related = field.getAnnotation(Owned.class);
+					if((agg!=null && filter!=null) || (agg!=null && related!=null)){
+						throw new SienaException("Found Many<T> field "
+								+ c.getName()+"."+field.getName() 
+								+ "with @Filter+@Aggregated or @Filter+@Related: this is not authorized");
+					}
+					if(agg != null){
+						try {
+							Map<FieldMapKeys, Object> fieldMap = new HashMap<FieldMapKeys, Object>();
+							fieldMap.put(FieldMapKeys.CLASS, cl);
+							fieldMap.put(FieldMapKeys.MODE, RelationMode.AGGREGATION);
+							manyOwnedFieldMap.put(field, fieldMap);
+							aggregatedFields.add(field);
+						} catch (Exception e) {
+							throw new SienaException(e);
+						}
+					}else if(filter != null){
+						try {
+							Field filterField = cl.getField(filter.value());
+							if(filterField == null){
+								throw new SienaException("@Filter error: Couldn't find field "
+										+ filter.value() 
+										+ "in class "+cl.getName());
+							}
+							Map<FieldMapKeys, Object> fieldMap = new HashMap<FieldMapKeys, Object>();
+							fieldMap.put(FieldMapKeys.CLASS, cl);
+							fieldMap.put(FieldMapKeys.MODE, RelationMode.RELATION);
+							fieldMap.put(FieldMapKeys.FIELD, filterField);
+							fieldMap.put(FieldMapKeys.FILTER, filter.value());
+							manyOwnedFieldMap.put(field, fieldMap);
+							ownedFields.add(field);
+						} catch (Exception e) {
+							throw new SienaException(e);
+						}
+					}else if(related != null) {
+						String as = related.mappedBy();
+						// if related.as not specified, tries to find the first field with this type
+						if("".equals(as) || as == null){
+							ClassInfo fieldInfo = ClassInfo.getClassInfo(cl); 
+							Field f = fieldInfo.getFirstFieldFromType(clazz);
+							if(f == null){
+								throw new SienaException("@Related without 'as' attribute and no field of type "
+										+ clazz.getName() + "found in class "+type.getName());
+							}
+							
+							as = ClassInfo.getSimplestColumnName(f);
+						}
+						try {
+							Field asField = cl.getField(as);
+							if(asField == null){
+								throw new SienaException("@Filter error: Couldn't find field "
+										+ as
+										+ "in class "+cl.getName());
+							}
+							
+							Map<FieldMapKeys, Object> fieldMap = new HashMap<FieldMapKeys, Object>();
+							fieldMap.put(FieldMapKeys.CLASS, cl);
+							fieldMap.put(FieldMapKeys.MODE, RelationMode.RELATION);
+							fieldMap.put(FieldMapKeys.FIELD, asField);
+							fieldMap.put(FieldMapKeys.FILTER, as);
+							manyOwnedFieldMap.put(field, fieldMap);
+							ownedFields.add(field);
+						} catch (Exception e) {
+							throw new SienaException(e);
+						}
+					}	
+					
+					queryAndAllFields.add(field);
+					
+					// query fields are not added to other kind of fields
+					continue;
+				}
+				else if(type == One.class){
+					ParameterizedType pt = (ParameterizedType) field.getGenericType();
+					cl = (Class<?>) pt.getActualTypeArguments()[0];
+					
+					Aggregated agg = field.getAnnotation(Aggregated.class);
+					Filter filter = field.getAnnotation(Filter.class);
+					Owned related = field.getAnnotation(Owned.class);
+					if((agg!=null && filter!=null) || (agg!=null && related!=null)){
+						throw new SienaException("Found One<T> field "
+								+ c.getName()+"."+field.getName() 
+								+ "with @Filter+@Aggregated or @Filter+@Related: this is not authorized");
+					}
+					if(agg != null){
+						try {
+							Map<FieldMapKeys, Object> fieldMap = new HashMap<FieldMapKeys, Object>();
+							fieldMap.put(FieldMapKeys.CLASS, cl);
+							fieldMap.put(FieldMapKeys.MODE, RelationMode.AGGREGATION);
+							singleOwnedFieldMap.put(field, fieldMap);
+							aggregatedFields.add(field);
+						} catch (Exception e) {
+							throw new SienaException(e);
+						}
+					}else if(filter != null){
+						try {
+							Field filterField = cl.getField(filter.value());
+							if(filterField == null){
+								throw new SienaException("@Filter error: Couldn't find field "
+										+ filter.value() 
+										+ "in class "+cl.getName());
+							}
+							Map<FieldMapKeys, Object> fieldMap = new HashMap<FieldMapKeys, Object>();
+							fieldMap.put(FieldMapKeys.CLASS, cl);
+							fieldMap.put(FieldMapKeys.MODE, RelationMode.RELATION);
+							fieldMap.put(FieldMapKeys.FIELD, filterField);
+							fieldMap.put(FieldMapKeys.FILTER, filter.value());
+							singleOwnedFieldMap.put(field, fieldMap);
+							ownedFields.add(field);
+						} catch (Exception e) {
+							throw new SienaException(e);
+						}
+					}else if(related != null) {
+						String as = related.mappedBy();
+						// if related.as not specified, tries to find the first field with this type
+						if("".equals(as) || as == null){
+							ClassInfo fieldInfo = ClassInfo.getClassInfo(cl); 
+							Field f = fieldInfo.getFirstFieldFromType(clazz);
+							if(f == null){
+								throw new SienaException("@Related without 'as' attribute and no field of type "
+										+ clazz.getName() + "found in class "+type.getName());
+							}
+							
+							as = ClassInfo.getSimplestColumnName(f);
+						}
+						try {
+							Field asField = cl.getField(as);
+							if(asField == null){
+								throw new SienaException("@Filter error: Couldn't find field "
+										+ as
+										+ "in class "+cl.getName());
+							}
+							
+							Map<FieldMapKeys, Object> fieldMap = new HashMap<FieldMapKeys, Object>();
+							fieldMap.put(FieldMapKeys.CLASS, cl);
+							fieldMap.put(FieldMapKeys.MODE, RelationMode.RELATION);
+							fieldMap.put(FieldMapKeys.FIELD, asField);
+							fieldMap.put(FieldMapKeys.FILTER, as);
+							singleOwnedFieldMap.put(field, fieldMap);
+							ownedFields.add(field);
+						} catch (Exception e) {
+							throw new SienaException(e);
+						}
+					}
+					
 					queryAndAllFields.add(field);
 					continue;
 				}
-						
+				
 				Id id = field.getAnnotation(Id.class);
 				if(id != null) {
 					// ONLY long ID can be auto_incremented
@@ -102,28 +318,23 @@ public class ClassInfo {
 						insertFields.add(field);
 					}
 					keys.add(field);
+					allFields.add(field);
+					queryAndAllFields.add(field);	
+					continue;
 				} 
-				else {
-					updateFields.add(field);
-					insertFields.add(field);
-				}
 				
 				if(isJoined(field)){
 					if (!ClassInfo.isModel(field.getType())){
 						throw new SienaException("Join not possible: Field "+field.getName()+" is not a relation field");
 					}
-					else joinFields.add(field);
+					
+					joinFields.add(field);					
 				}
 				
-				if(isAggregated(field)){
-					if (!isModel(field.getType()) && !Many.class.isAssignableFrom(type)){
-						throw new SienaException("Aggregation not possible: Field "+field.getName()+" is not a model neither a ListQuery");
-					}
-					else aggregatedFields.add(field);
-				}
-				
+				updateFields.add(field);
+				insertFields.add(field);
 				allFields.add(field);
-				queryAndAllFields.add(field);
+				queryAndAllFields.add(field);				
 			}
 			
 			for(Method m : c.getDeclaredMethods()){
@@ -221,6 +432,13 @@ public class ClassInfo {
 		return field.getName();
 	}
 
+	public static String getSimplestColumnName(Field field) {
+		Column c = field.getAnnotation(Column.class);
+		if(c != null && c.value().length > 0) return c.value()[0];
+		
+		return field.getName();
+	}
+	
 	public static String[] getColumnNamesWithPrefix(Field field, String prefix) {
 		Column c = field.getAnnotation(Column.class);
 		if(c != null && c.value().length > 0) {
@@ -324,6 +542,14 @@ public class ClassInfo {
 		return Many.class.isAssignableFrom(field.getType());
 	}	
 	
+	public static boolean isOne(Field field) {
+		return One.class.isAssignableFrom(field.getType());
+	}	
+	
+	public static boolean isOwned(Field field) {
+		return field.isAnnotationPresent(Owned.class);
+	}
+	
 	public static boolean isGenerated(Field field) {
 		Id id = field.getAnnotation(Id.class);
 		if(id != null) {
@@ -381,4 +607,13 @@ public class ClassInfo {
 		return lifecycleMethods.get(lcp);
 	}
 
+	public Field getFirstFieldFromType(Class<?> fieldType){
+		for(Field f: updateFields){
+			if(f.getType().isAssignableFrom(fieldType)){
+				return f;
+			}
+		}
+		
+		return null;
+	}
 }

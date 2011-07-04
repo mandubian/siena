@@ -9,8 +9,6 @@ import siena.base.test.model.AggregateChildModel;
 import siena.base.test.model.AggregateParentModel;
 import siena.base.test.model.TransactionAccountFrom;
 import siena.base.test.model.TransactionAccountFromModel;
-import siena.base.test.model.TransactionAccountTo;
-import siena.base.test.model.TransactionAccountToModel;
 import siena.gae.GaePersistenceManager;
 
 import com.google.appengine.tools.development.testing.LocalDatastoreServiceTestConfig;

@@ -32,6 +32,7 @@ import siena.QueryFilterSearch;
 import siena.QueryJoin;
 import siena.QueryOrder;
 import siena.core.Many4PM;
+import siena.core.One4PM;
 import siena.core.async.PersistenceManagerAsync;
 import siena.core.async.QueryAsync;
 import siena.core.batch.Batch;
@@ -662,6 +663,12 @@ public class MockPersistenceManager implements PersistenceManager {
 
 	@Override
 	public <T> Many4PM<T> createMany(Class<T> clazz) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public <T> One4PM<T> createOne(Class<T> clazz) {
 		// TODO Auto-generated method stub
 		return null;
 	}

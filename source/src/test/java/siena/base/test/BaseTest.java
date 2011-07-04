@@ -134,28 +134,9 @@ public abstract class BaseTest extends TestCase {
 				pm.createQuery(clazz).delete();			
 			}
 		}
-		
-//		pm.insert(UUID_TESLA);
-//		pm.insert(UUID_CURIE);
-//		pm.insert(UUID_EINSTEIN);
-//
-//		pm.insert(LongAutoID_TESLA);
-//		pm.insert(LongAutoID_CURIE);
-//		pm.insert(LongAutoID_EINSTEIN);
-//
-//		pm.insert(LongManualID_TESLA);
-//		pm.insert(LongManualID_CURIE);
-//		pm.insert(LongManualID_EINSTEIN);
-//
-//		pm.insert(StringID_TESLA);
-//		pm.insert(StringID_CURIE);
-//		pm.insert(StringID_EINSTEIN);
 
 		pm.insert(UUID_TESLA, UUID_CURIE, UUID_EINSTEIN);
 		pm.insert(LongAutoID_TESLA, LongAutoID_CURIE, LongAutoID_EINSTEIN);
-		//pm.insert(LongAutoID_TESLA);
-		//pm.insert(LongAutoID_CURIE);
-		//pm.insert(LongAutoID_EINSTEIN);
 		pm.insert(LongManualID_TESLA, LongManualID_CURIE, LongManualID_EINSTEIN);
 		pm.insert(StringID_TESLA, StringID_CURIE, StringID_EINSTEIN);
 	}

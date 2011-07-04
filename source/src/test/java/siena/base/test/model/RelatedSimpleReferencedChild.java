@@ -5,16 +5,16 @@ import siena.Id;
 import siena.Model;
 import siena.Query;
 
-public class AggregateChildModel extends Model {
+public class RelatedSimpleReferencedChild extends Model {
 	@Id(Generator.AUTO_INCREMENT)
 	public Long id;
 
 	public String name;
 	
-	public AggregateChildModel(){
+	public RelatedSimpleReferencedChild(){
 	}
 
-	public AggregateChildModel(String name){
+	public RelatedSimpleReferencedChild(String name){
 		this.name = name;
 	}
 	
@@ -26,18 +26,18 @@ public class AggregateChildModel extends Model {
 			return false;
 		if (getClass() != obj.getClass())
 			return false;
-		AggregateChildModel other = (AggregateChildModel) obj;
-		if (id == null && other.id != null || !id.equals(other.id)) {
+		RelatedSimpleReferencedChild other = (RelatedSimpleReferencedChild) obj;
+		if (id == null && other.id!=null || !id.equals(other.id)) {
 			return false;
 		}
-		if (name == null && other.name != null || !name.equals(other.name)) {
+		if (name == null && other.name!=null || !name.equals(other.name)) {
 			return false;
 		}
 		return true;
 	}
 	
-	public static Query<AggregateChildModel> all(){
-		return Model.all(AggregateChildModel.class);
+	public static Query<RelatedSimpleReferencedChild> all(){
+		return Model.all(RelatedSimpleReferencedChild.class);
 	}
 	
 	public String toString(){

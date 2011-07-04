@@ -1,7 +1,5 @@
 package siena.core;
 
-import java.util.List;
-
 import siena.Query;
 
 

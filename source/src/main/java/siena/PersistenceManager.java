@@ -20,6 +20,7 @@ import java.util.Map;
 import java.util.Properties;
 
 import siena.core.Many4PM;
+import siena.core.One4PM;
 import siena.core.async.PersistenceManagerAsync;
 import siena.core.batch.Batch;
 
@@ -75,6 +76,13 @@ public interface PersistenceManager {
 	 * @return A <code>Many4PM</code> object that lets make batch operations
 	 */
 	<T> Many4PM<T> createMany(Class<T> clazz);
+	
+	/**
+	 * Method for obtaining <code>One</code> implementations.
+	 * 
+	 * @return A <code>One</code> object that lets make batch operations
+	 */
+	<T> One4PM<T> createOne(Class<T> clazz);
 	
 	/**
 	 * This method fills all the fields of the given object using its primary key value

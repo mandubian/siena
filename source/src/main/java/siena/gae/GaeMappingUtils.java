@@ -24,7 +24,6 @@ import com.google.appengine.api.datastore.Entity;
 import com.google.appengine.api.datastore.Key;
 import com.google.appengine.api.datastore.KeyFactory;
 import com.google.appengine.api.datastore.Text;
-import com.google.appengine.repackaged.org.antlr.runtime.tree.TreeFilter.fptr;
 
 public class GaeMappingUtils {
 	
@@ -400,7 +399,8 @@ public class GaeMappingUtils {
 			Class<?> fieldClass = field.getType();
 			if (ClassInfo.isModel(fieldClass) 
 					&& !ClassInfo.isEmbedded(field)
-					&& !ClassInfo.isAggregated(field)) {
+					/*&& !ClassInfo.isAggregated(field)
+					&& !ClassInfo.isOwned(field)*/) {
 				if (value == null) {
 					entity.setProperty(property, null);
 				} else {
@@ -454,11 +454,16 @@ public class GaeMappingUtils {
 						}
 						
 					}
-					else if (ClassInfo.isAggregated(field)){
+					/*else if (ClassInfo.isAggregated(field)){
 						// can't save it now as it requires its parent key to be mapped
 						// so don't do anything for the time being
 						continue;
 					}
+					else if (ClassInfo.isOwned(field)){
+						// can't save it now as it requires its parent key to be mapped
+						// so don't do anything for the time being
+						continue;
+					}*/
 					else if (fieldClass == BigDecimal.class){
 						DecimalPrecision ann = field.getAnnotation(DecimalPrecision.class);
 						if(ann == null) {
@@ -500,7 +505,7 @@ public class GaeMappingUtils {
 			try {
 				Class<?> fieldClass = field.getType();
 				if (ClassInfo.isModel(fieldClass) && !ClassInfo.isEmbedded(field)) {
-					if(!ClassInfo.isAggregated(field)){
+					/*if(!ClassInfo.isAggregated(field)){*/
 						Key key = (Key) entity.getProperty(property);
 						if (key != null) {
 							Object value = Util.createObjectInstance(fieldClass);
@@ -508,11 +513,14 @@ public class GaeMappingUtils {
 							setIdFromKey(id, value, key);
 							Util.setField(obj, field, value);
 						}
-					}
+					/*}*/
 				} 
-				else if(ClassInfo.isAggregated(field)){
-					// doesn nothing for the time being
+				/*else if(ClassInfo.isAggregated(field)){
+					// does nothing for the time being
 				}
+				else if (ClassInfo.isOwned(field)){
+					// does nothing for the time being
+				}*/
 				else if(ClassInfo.isEmbedded(field) && field.getAnnotation(Embedded.class).mode() == Embedded.Mode.NATIVE){
 					Object value = GaeNativeSerializer.unembed(
 							field.getType(), ClassInfo.getSingleColumnName(field), entity);
@@ -544,7 +552,7 @@ public class GaeMappingUtils {
 				fieldClass = field.getType();
 				if (ClassInfo.isModel(fieldClass) 
 						&& !ClassInfo.isEmbedded(field)) {
-					if(!ClassInfo.isAggregated(field)){
+					/*if(!ClassInfo.isAggregated(field)){*/
 						key = (Key) entity.getProperty(property);
 						if (key != null) {
 							Object value = Util.createObjectInstance(fieldClass);
@@ -552,16 +560,19 @@ public class GaeMappingUtils {
 							setIdFromKey(id, value, key);
 							Util.setField(obj, field, value);
 						}
-					}
+					/*}*/
 				} 
 				else if(ClassInfo.isEmbedded(field) && field.getAnnotation(Embedded.class).mode() == Embedded.Mode.NATIVE){
 					Object value = GaeNativeSerializer.unembed(
 								field.getType(), ClassInfo.getSingleColumnName(field), entity);
 					Util.setField(obj, field, value);
 				}
-				else if(ClassInfo.isAggregated(field)){
-					// doesn nothing for the time being
+				/*else if(ClassInfo.isAggregated(field)){
+					// does nothing for the time being
 				}
+				else if (ClassInfo.isOwned(field)){
+					// does nothing for the time being
+				}*/
 				else {
 					setFromObject(obj, field, entity.getProperty(property));
 				}

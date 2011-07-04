@@ -42,9 +42,14 @@ public class PersistenceManagerLifeCycleWrapper implements PersistenceManager{
 	
 	@Override
 	public <T> Many4PM<T> createMany(Class<T> clazz) {
-			return pm.createMany(clazz);
+		return pm.createMany(clazz);
 	}
 	
+	@Override
+	public <T> One4PM<T> createOne(Class<T> clazz) {
+		return pm.createOne(clazz);
+	}
+
 	@Override
 	public void get(Object obj) {
 		ClassInfo ci = ClassInfo.getClassInfo(obj.getClass());
