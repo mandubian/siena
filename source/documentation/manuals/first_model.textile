@@ -18,7 +18,7 @@ bc.. public class Person extends Model {
 	
 p. 
 
-h3. <a name="model">Create an entity & Persist it</a>
+h3. <a name="insert">Create an entity & Persist it</a>
 
 bc.. Person bob = new Person();
 bob.firstName = "Bob";
@@ -27,34 +27,34 @@ bob.insert();
 
 p. 
 
-h3. <a name="usage1">Retrieve your entity using the get() function & update it</a>
+h3. <a name="update">Retrieve your entity using the get() function & update it</a>
 
 bc.. Person bob2 = new Person();
 bob2.id = bob.id;
-bob2.get();
+bob2.get(); // extracts bob and fills the fields firstName/lastName
 bob2.firstName = "bob2";
 bob2.update();
 
 p. 
 
-h3. <a name="usage2">Retrieve your entity by the name & update it</a>
+h3. <a name="update2">Retrieve your entity by the name & update it</a>
 
-bc.. Person bob2 = Model.all(Person.class).filter("firstName", "Bob").get();
-bob2.firstName = "bob2";
-bob2.update();
+bc.. Person bob3 = Model.all(Person.class).filter("firstName", "Bob").get();
+bob3.firstName = "bob3";
+bob3.update();
 
 p. 
 
-h3. <a name="usage3">Retrieve your entity by the id directly & delete it</a>
+h3. <a name="delete">Retrieve your entity by the id directly & delete it</a>
 
-bc.. Person bob3 = Model.getByKey(Person.class, bob.id);
-bob3.delete();
+bc.. Person bob4 = Model.getByKey(Person.class, bob.id);
+bob4.delete();
 
 p. 
 
 ==<br/>==
 
-h2. <a>To be noted</a>
+h2. <a name="to_be_noted">To be noted</a>
 
 * ==<b>class Person extends Model</b>==
 
@@ -66,3 +66,69 @@ It allows to identify the primary key or the unique identifier in your model.
 
 bq. Want to know more about @Id options, go "there":./id_options.textile 
  
+
+==<br/>==
+
+h2. <a name="go_further">Go a bit Further</a>
+
+h3. Make your model class a bit more complete
+
+
+bc.. public class Person extends Model {
+
+	@Id
+	public Long id;
+	
+	public String firstName;
+	
+	public String lastName;
+
+	public Person(String firstName, String lastName){
+		this.firstName = firstName;
+		this.lastName = lastName;
+        }
+
+	public Person(){
+	}
+
+	public Person(Long id){
+		this.id = id;
+	}
+
+	public static Query<Person> all() {
+		return Model.all(Person.class);
+	}
+}
+
+p. 
+
+* ==<b>Person(String firstName, String lastName)</b>==
+This is a specific constructor allowing to construct in an elegant way your models when you need to insert them into the datastore.
+
+
+bc.. Person bob = new Person("Bob", "Smith"); 
+bob.insert();
+
+p. 
+
+* ==<b>Person() default constructor</b>==
+If you define specific constructor as herebefore, it's *mandatory to define
+  a default constructor* because Siena requires it to instantiate your models.
+  
+
+* ==<b>Person(Long id)</b>==
+This is a specific constructor which is useful to retrieve models from the datastore.
+
+bc.. Person bob2 = new Person(bob.id); 
+bob2.get();
+
+p. 
+
+* ==<b>public Person all()</b>==
+This function is a simpler version of the @Model.all(Class<?>)@ function. 
+It gives access to the very important query features.
+It is just a convenience and is not required at all because you can call directly Model.all(Person.class) in your code.
+
+bc.. Person bob3 = Person.all().filter("firstName", "Bob").get();
+
+p.
