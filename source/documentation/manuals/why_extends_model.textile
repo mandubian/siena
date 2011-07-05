@@ -3,7 +3,7 @@ h1. Why a Siena should extend siena.Model class?
 Extending the siena.Model class is not mandatory in Siena but it is strongly advised.
 Some people don't like this way of doing since its blocks the single __extends__ slot provided by Java language. 
 
-bq. __So Why extending Model?__
+p(note). *__So Why extending Model?__*
 
 h2. __Model is the class providing the__ "Active Record Pattern":http://en.wikipedia.org/wiki/Active_record_pattern
 
@@ -18,6 +18,7 @@ Model brings the following functions:
 p. 
  
 h2. __Model provides access to advanced utilities : Query/Batch/Async__
+
 There are 4 static functions provided by siena.Model:
 
 * @static <R> Query<R> all(Class<R> clazz)@
