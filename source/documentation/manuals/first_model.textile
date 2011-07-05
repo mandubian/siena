@@ -39,7 +39,7 @@ p.
 
 h3. <a name="usage2">Retrieve your entity by the name & update it</a>
 
-bc.. Person bob2 = Person.all().filter("firstName", "Bob").get();
+bc.. Person bob2 = Person.all(Person.class).filter("firstName", "Bob").get();
 bob2.firstName = "bob2";
 bob2.update();
 
