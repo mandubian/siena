@@ -124,11 +124,11 @@ bob2.get();
 
 p. 
 
-* ==<b>public Person all()</b>==
+* ==<b>public static Person all()</b>==
 This function is a simpler version of the @Model.all(Class<?>)@ function. 
 It gives access to the very important query features.
 It is just a convenience and is not required at all because you can call directly Model.all(Person.class) in your code.
 
 bc.. Person bob3 = Person.all().filter("firstName", "Bob").get();
 
-p.
+p. 
