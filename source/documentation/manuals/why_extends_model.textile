@@ -6,13 +6,17 @@ Some people don't like this way of doing since its blocks the single __extends__
 __So Why extending Model?__
 * __Model is the class providing the__ "Active Record Pattern":http://en.wikipedia.org/wiki/Active_record_pattern with the following functions:
 
-|@bob.get();@|retrieves your model from the datastore based on the id field value|
-|@bob.insert();@|persists your model into the datastore|
-|@bob.update();@|updates your model in the datastore|
-|@bob.delete();@|deletes your model from the datastore|
-|@bob.save();@|inserts or updates your model into the datastore|
+|@get();@|retrieves your model from the datastore based on the id field value|
+|@insert();@|persists your model into the datastore|
+|@update();@|updates your model in the datastore|
+|@delete();@|deletes your model from the datastore|
+|@save();@|inserts or updates your model into the datastore|
 
 p. 
  
-* __Model provides access to Query/Batch/Async functions__
+* __Model provides access to advanced utilities : Query/Batch/Async__
+There are 4 static functions provided by siena.Model:
 
+* @static <R> Query<R> all(Class<R> clazz)@
+
+This gives access to the extended query features allowing to perform complicated query on your models to extract bunch of entities from the datastore by filtering, ordering, paginating, searching...
