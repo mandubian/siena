@@ -1,4 +1,4 @@
-h1. Why a Siena should extend siena.Model class?
+h1. Why a Siena Model should extend siena.Model class?
 
 Extending the siena.Model class is not mandatory in Siena but it is strongly advised.
 Some people don't like this way of doing since its blocks the single __extends__ slot provided by Java language. 
@@ -24,3 +24,12 @@ There are 4 static functions provided by siena.Model:
 * @static <R> Query<R> all(Class<R> clazz)@
 
 This gives access to the extended query features allowing to perform complicated query on your models to extract bunch of entities from the datastore by filtering, ordering, paginating, searching...
+
+You can overload this function in your class in a simpler form following:
+
+bc.. public static Query<YourClass> all() {
+    return Model.all(YourClass.class);
+}
+
+p. 
+
