@@ -73,7 +73,6 @@ h2. <a name="go_further">Go a bit Further</a>
 
 h3. Make your model class a bit more complete
 
-
 bc.. public class Person extends Model {
 
 	@Id
@@ -105,7 +104,6 @@ p.
 * ==<b>Person(String firstName, String lastName)</b>==
 This is a specific constructor allowing to construct in an elegant way your models when you need to insert them into the datastore.
 
-
 bc.. Person bob = new Person("Bob", "Smith"); 
 bob.insert();
 
@@ -124,7 +122,7 @@ bob2.get();
 
 p. 
 
-* ==<b>public static Person all()</b>==
+* ==<b>public static Query<Person> all()</b>==
 This function is a simpler version of the @Model.all(Class<?>)@ function. 
 It gives access to the very important query features.
 It is just a convenience and is not required at all because you can call directly Model.all(Person.class) in your code.
