@@ -14,6 +14,7 @@ import java.util.List;
 public interface Many4PM<T> extends Many<T> {
 	Many4PM<T> setSync(boolean isSync);
 	List<T> asList2Remove();
+	List<T> asList2Add();
 	Many4PM<T> aggregationMode(Object aggregator, String fieldName);
 	Many4PM<T> relationMode(Object owner, String fieldName);
 }

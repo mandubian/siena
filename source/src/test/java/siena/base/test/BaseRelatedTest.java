@@ -99,7 +99,6 @@ public abstract class BaseRelatedTest extends TestCase {
 	public void testRelatedSimpleOwnedUpdate() {
 		RelatedSimpleOwnedChild adam1 = new RelatedSimpleOwnedChild("adam1");
 		RelatedSimpleOwnedChild adam2 = new RelatedSimpleOwnedChild("adam2");
-		
 		RelatedSimpleOwnedParent god = new RelatedSimpleOwnedParent("god");
 		god.child.set(adam1);
 		god.insert();
@@ -116,6 +115,29 @@ public abstract class BaseRelatedTest extends TestCase {
 
 		assertEquals(god, godbis2);
 		assertEquals(adam2, godbis2.child.get());
+		adam1.get();
+		assertNull(adam1.owner);
+	}
+	
+	public void testRelatedSimpleOwnedUpdate2null() {
+		RelatedSimpleOwnedChild adam1 = new RelatedSimpleOwnedChild("adam1");
+		
+		RelatedSimpleOwnedParent god = new RelatedSimpleOwnedParent("god");
+		god.child.set(adam1);
+		god.insert();
+
+		assertNotNull(god.id);
+		assertEquals(god.id, adam1.owner.id);
+		
+		RelatedSimpleOwnedParent godbis = Model.getByKey(RelatedSimpleOwnedParent.class, god.id);
+		
+		god.child.set(null);
+		god.update();
+
+		RelatedSimpleOwnedParent godbis2 = Model.getByKey(RelatedSimpleOwnedParent.class, godbis.id);
+
+		assertEquals(god, godbis2);
+		assertNull(godbis2.child.get());
 	}
 	
 	public void testRelatedSeveralQuery() {
@@ -390,6 +412,83 @@ public abstract class BaseRelatedTest extends TestCase {
 		
 		RelatedManyChild child57 = RelatedManyChild.all().filter("id", adams.get(57).id).get();		
 		assertNull(child57.owner);
+
+	}
+	
+	public void testRelatedManyCascadeUpdateManyAddEnd() {
+		RelatedManyParent god = new RelatedManyParent("god");		
+		List<RelatedManyChild> adams = new ArrayList<RelatedManyChild>();
+		for(int i=0; i<100; i++){
+			RelatedManyChild adam = new RelatedManyChild("adam"+i);
+			god.children.asList().add(adam);
+			adams.add(adam);
+		}
+		god.insert();
+
+		assertNotNull(god.id);
+		for(int i=0; i<100; i++){
+			assertNotNull(adams.get(i).id);
+			assertEquals(god.id, adams.get(i).owner.id);
+		}
+		
+		// add 
+		RelatedManyChild adam100 = new RelatedManyChild("adam100");
+		god.children.asList().add(adam100);
+		god.update();
+		
+		RelatedManyParent godbis = Model.all(RelatedManyParent.class).filter("name", god.name).get();
+		
+		List<RelatedManyChild> children = godbis.children.asList();
+		for(int i=0; i<101; i++){
+			if(i<100){
+				assertEquals(adams.get(i), children.get(i));
+			}else {
+				assertEquals(adam100, children.get(i));
+			}
+		}
+		
+		RelatedManyChild child100 = RelatedManyChild.all().filter("id", adam100.id).get();		
+		assertEquals(god.id, child100.owner.id);
+
+	}
+	
+	public void testRelatedManyCascadeUpdateManyAddMiddle() {
+		// THIS TEST IS WEIRD...
+		// if you add a item in the middle of the list, it will go at the end when you fetch it
+		// due to the ordering by ID when calling asList()
+		RelatedManyParent god = new RelatedManyParent("god");		
+		List<RelatedManyChild> adams = new ArrayList<RelatedManyChild>();
+		for(int i=0; i<100; i++){
+			RelatedManyChild adam = new RelatedManyChild("adam"+i);
+			god.children.asList().add(adam);
+			adams.add(adam);
+		}
+		god.insert();
+
+		assertNotNull(god.id);
+		for(int i=0; i<100; i++){
+			assertNotNull(adams.get(i).id);
+			assertEquals(god.id, adams.get(i).owner.id);
+		}
+		
+		// add 
+		RelatedManyChild adam_chboing = new RelatedManyChild("adam_chboing");
+		god.children.asList().add(57, adam_chboing);
+		god.update();
+		
+		RelatedManyParent godbis = Model.all(RelatedManyParent.class).filter("name", god.name).get();
+		
+		List<RelatedManyChild> children = godbis.children.asList();
+		for(int i=0; i<101; i++){
+			if(i<100){
+				assertEquals(adams.get(i), children.get(i));
+			}else {
+				assertEquals(adam_chboing, children.get(i));
+			}
+		}
+		
+		RelatedManyChild adam_chboing_bis = RelatedManyChild.all().filter("id", adam_chboing.id).get();		
+		assertEquals(god.id, adam_chboing_bis.owner.id);
 
 	}
 }

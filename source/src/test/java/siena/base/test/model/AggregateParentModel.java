@@ -6,6 +6,7 @@ import siena.Model;
 import siena.Query;
 import siena.core.Aggregated;
 import siena.core.Many;
+import siena.core.One;
 
 public class AggregateParentModel extends Model {
 	
@@ -15,7 +16,7 @@ public class AggregateParentModel extends Model {
 	public String name;
 	
 	@Aggregated
-	public AggregateChildModel child;
+	public One<AggregateChildModel> child;
 	
 	@Aggregated
 	public Many<AggregateChildModel> children;

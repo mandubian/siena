@@ -491,6 +491,10 @@ public abstract class Model {
 			return ((Many4PM<T>)createMany()).asList2Remove();
 		}
 
+		public List<T> asList2Add() {
+			return ((Many4PM<T>)createMany()).asList2Add();
+		}
+
 		public Many4PM<T> aggregationMode(Object aggregator, String fieldName) {
 			return this.many.aggregationMode(aggregator, fieldName);
 		}

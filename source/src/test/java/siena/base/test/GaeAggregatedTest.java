@@ -8,7 +8,7 @@ import siena.gae.GaePersistenceManager;
 import com.google.appengine.tools.development.testing.LocalDatastoreServiceTestConfig;
 import com.google.appengine.tools.development.testing.LocalServiceTestHelper;
 
-public class GaeRelatedTest extends BaseRelatedTest{
+public class GaeAggregatedTest extends BaseAggregatedTest{
 	private final LocalServiceTestHelper helper =
         new LocalServiceTestHelper(new LocalDatastoreServiceTestConfig());
 
@@ -33,100 +33,96 @@ public class GaeRelatedTest extends BaseRelatedTest{
     }
 
 	@Override
-	public void testRelatedSimpleReference() {
+	public void testAggregate() {
 		// TODO Auto-generated method stub
-		super.testRelatedSimpleReference();
+		super.testAggregate();
 	}
 
 	@Override
-	public void testRelatedSimpleOwned() {
+	public void testAggregateUpdate() {
 		// TODO Auto-generated method stub
-		super.testRelatedSimpleOwned();
+		super.testAggregateUpdate();
 	}
 
 	@Override
-	public void testRelatedSimpleOwnedNull() {
+	public void testAggregateSave() {
 		// TODO Auto-generated method stub
-		super.testRelatedSimpleOwnedNull();
+		super.testAggregateSave();
 	}
 
 	@Override
-	public void testRelatedSimpleOwnedUpdate() {
+	public void testAggregateDelete() {
 		// TODO Auto-generated method stub
-		super.testRelatedSimpleOwnedUpdate();
+		super.testAggregateDelete();
 	}
 
 	@Override
-	public void testRelatedSimpleOwnedUpdate2null() {
+	public void testAggregateListQuerysFetch() {
 		// TODO Auto-generated method stub
-		super.testRelatedSimpleOwnedUpdate2null();
+		super.testAggregateListQuerysFetch();
 	}
 
 	@Override
-	public void testRelatedSeveralQuery() {
+	public void testAggregateListQuerysFetchLimit() {
 		// TODO Auto-generated method stub
-		super.testRelatedSeveralQuery();
+		super.testAggregateListQuerysFetchLimit();
 	}
 
 	@Override
-	public void testRelatedSeveralQueryLotsPaginate() {
+	public void testAggregateListQuerysFetchLimitOffset() {
 		// TODO Auto-generated method stub
-		super.testRelatedSeveralQueryLotsPaginate();
+		super.testAggregateListQuerysFetchLimitOffset();
 	}
 
 	@Override
-	public void testRelatedSeveralQueryNoAs() {
+	public void testAggregateListQuerysFetchKeys() {
 		// TODO Auto-generated method stub
-		super.testRelatedSeveralQueryNoAs();
+		super.testAggregateListQuerysFetchKeys();
 	}
 
 	@Override
-	public void testRelatedManyOldInsertWay() {
+	public void testAggregateListQuerysFetchKeysLimit() {
 		// TODO Auto-generated method stub
-		super.testRelatedManyOldInsertWay();
+		super.testAggregateListQuerysFetchKeysLimit();
 	}
 
 	@Override
-	public void testRelatedManyCascadeInsert() {
+	public void testAggregateListQuerysFetchKeysLimitOffset() {
 		// TODO Auto-generated method stub
-		super.testRelatedManyCascadeInsert();
+		super.testAggregateListQuerysFetchKeysLimitOffset();
 	}
 
 	@Override
-	public void testRelatedManyCascadeInsertFetch() {
+	public void testAggregateListQueryDelete() {
 		// TODO Auto-generated method stub
-		super.testRelatedManyCascadeInsertFetch();
+		super.testAggregateListQueryDelete();
 	}
 
 	@Override
-	public void testRelatedManyCascadeInsertMany() {
+	public void testAggregateListQueryGet() {
 		// TODO Auto-generated method stub
-		super.testRelatedManyCascadeInsertMany();
+		super.testAggregateListQueryGet();
 	}
 
 	@Override
-	public void testRelatedManyCascadeUpdateMany() {
+	public void testAggregateListQueryCount() {
 		// TODO Auto-generated method stub
-		super.testRelatedManyCascadeUpdateMany();
+		super.testAggregateListQueryCount();
 	}
 
 	@Override
-	public void testRelatedManyCascadeUpdateManyRemove() {
+	public void testAggregateListQueryFilter() {
 		// TODO Auto-generated method stub
-		super.testRelatedManyCascadeUpdateManyRemove();
+		super.testAggregateListQueryFilter();
 	}
 
 	@Override
-	public void testRelatedManyCascadeUpdateManyAddEnd() {
+	public void testAggregateListQueryOrder() {
 		// TODO Auto-generated method stub
-		super.testRelatedManyCascadeUpdateManyAddEnd();
+		super.testAggregateListQueryOrder();
 	}
 
-	@Override
-	public void testRelatedManyCascadeUpdateManyAddMiddle() {
-		// TODO Auto-generated method stub
-		super.testRelatedManyCascadeUpdateManyAddMiddle();
-	}
+
 	
 
 }

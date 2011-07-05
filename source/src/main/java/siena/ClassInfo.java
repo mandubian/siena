@@ -106,7 +106,7 @@ public class ClassInfo {
 					Filter filter = field.getAnnotation(Filter.class);
 					Owned related = field.getAnnotation(Owned.class);
 					if(filter == null && related == null ) {
-						throw new SienaException("Found Query<T> field without @Filter or @Related annotation at "
+						throw new SienaException("Found Query<T> field without @Filter or @Owned annotation at "
 								+c.getName()+"."+field.getName());
 					}
 		
@@ -131,7 +131,7 @@ public class ClassInfo {
 							ClassInfo fieldInfo = ClassInfo.getClassInfo(cl); 
 							Field f = fieldInfo.getFirstFieldFromType(clazz);
 							if(f == null){
-								throw new SienaException("@Related without 'as' attribute and no field of type "
+								throw new SienaException("@Owned without 'as' attribute and no field of type "
 										+ clazz.getName() + "found in class "+type.getName());
 							}
 							
@@ -163,7 +163,7 @@ public class ClassInfo {
 					if((agg!=null && filter!=null) || (agg!=null && related!=null)){
 						throw new SienaException("Found Many<T> field "
 								+ c.getName()+"."+field.getName() 
-								+ "with @Filter+@Aggregated or @Filter+@Related: this is not authorized");
+								+ "with @Filter+@Owned or @Filter+@Owned: this is not authorized");
 					}
 					if(agg != null){
 						try {
@@ -200,7 +200,7 @@ public class ClassInfo {
 							ClassInfo fieldInfo = ClassInfo.getClassInfo(cl); 
 							Field f = fieldInfo.getFirstFieldFromType(clazz);
 							if(f == null){
-								throw new SienaException("@Related without 'as' attribute and no field of type "
+								throw new SienaException("@Owned without 'as' attribute and no field of type "
 										+ clazz.getName() + "found in class "+type.getName());
 							}
 							
@@ -241,7 +241,7 @@ public class ClassInfo {
 					if((agg!=null && filter!=null) || (agg!=null && related!=null)){
 						throw new SienaException("Found One<T> field "
 								+ c.getName()+"."+field.getName() 
-								+ "with @Filter+@Aggregated or @Filter+@Related: this is not authorized");
+								+ "with @Filter+@Aggregated or @Filter+@Owned: this is not authorized");
 					}
 					if(agg != null){
 						try {
@@ -278,7 +278,7 @@ public class ClassInfo {
 							ClassInfo fieldInfo = ClassInfo.getClassInfo(cl); 
 							Field f = fieldInfo.getFirstFieldFromType(clazz);
 							if(f == null){
-								throw new SienaException("@Related without 'as' attribute and no field of type "
+								throw new SienaException("@Owned without 'as' attribute and no field of type "
 										+ clazz.getName() + "found in class "+type.getName());
 							}
 							
@@ -323,12 +323,22 @@ public class ClassInfo {
 					continue;
 				} 
 				
-				if(isJoined(field)){
-					if (!ClassInfo.isModel(field.getType())){
-						throw new SienaException("Join not possible: Field "+field.getName()+" is not a relation field");
+				if(ClassInfo.isModel(type)){
+					if(isJoined(field)){
+						joinFields.add(field);
+					}else if(isOwned(field)){
+						throw new SienaException("@Owned not possible on Field '"+field.getName()+"' without @One/@Many");
+					}else if(isAggregated(field)){
+						throw new SienaException("@Aggregated not possible on Field '"+field.getName()+"' without @One/@Many");
 					}
-					
-					joinFields.add(field);					
+				}else {
+					if(isJoined(field)){
+						throw new SienaException("@Join not possible: Field "+field.getName()+" is not a relation field");
+					}else if(isOwned(field)){
+						throw new SienaException("@Owned not possible: Field "+field.getName()+" is not a relation field");
+					}else if(isAggregated(field)){
+						throw new SienaException("@Aggregated not possible: Field "+field.getName()+" is not a relation field");
+					}
 				}
 				
 				updateFields.add(field);

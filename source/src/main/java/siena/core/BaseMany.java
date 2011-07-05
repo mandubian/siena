@@ -67,6 +67,10 @@ public class BaseMany<T> implements Many4PM<T>{
 	public List<T> asList2Remove() {
 		return list.elements2Remove;
 	}
+	
+	public List<T> asList2Add() {
+		return list.elements2Add;
+	}
 
 	public Many4PM<T> aggregationMode(Object aggregator, String fieldName) {
 		this.mode = RelationMode.AGGREGATION;
@@ -84,7 +88,8 @@ public class BaseMany<T> implements Many4PM<T>{
 		transient protected Many<V> many;
 		transient protected List<V> elements;
 		transient protected List<V> elements2Remove;
-		
+		transient protected List<V> elements2Add;
+
 		// isSync set to true by default because when you begin you generally want to add new elements
 		transient protected boolean isSync = true;
 
@@ -92,33 +97,44 @@ public class BaseMany<T> implements Many4PM<T>{
 			this.many = many;
 			this.elements = new ArrayList<V>();
 			this.elements2Remove = new ArrayList<V>();
+			this.elements2Add = new ArrayList<V>();
 		}
 		
 		public boolean add(V e) {
+			elements2Add.add(e);
 			return elements.add(e);
 		}
 
 		public void add(int index, V element) {
+			elements2Add.add(element);
 			elements.add(index, element);
 		}
 
 		public boolean addAll(Collection<? extends V> c) {
+			elements2Add.addAll(c);
 			return elements.addAll(c);
 		}
 
 		public boolean addAll(int index, Collection<? extends V> c) {
+			elements2Add.addAll(c);
 			return elements.addAll(index, c);
 		}
 
 		public <F extends V> boolean addAll(F... c) {
-			return elements.addAll(Arrays.asList(c));
+			List<F> l = Arrays.asList(c);
+			elements2Add.addAll(l);
+			return elements.addAll(l);
 		}
 
 		public <F extends V> boolean addAll(int index, F... c) {
-			return elements.addAll(index, Arrays.asList(c));
+			List<F> l = Arrays.asList(c);
+			elements2Add.addAll(l);
+			return elements.addAll(index, l);
 		}
 
 		public void clear() {
+			elements2Add.clear();
+			elements2Remove.addAll(elements);
 			elements.clear();
 		}
 
@@ -210,6 +226,7 @@ public class BaseMany<T> implements Many4PM<T>{
 		public SyncList<V> forceSync() {
 			elements = many.asQuery().fetch();
 			elements2Remove.clear();
+			elements2Add.clear();
 			isSync = true;
 			return this;
 		}
