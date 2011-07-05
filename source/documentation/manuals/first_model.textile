@@ -1,0 +1,95 @@
+h1. Write your first Siena model
+
+You've never written a model, here is the simplest model:
+
+h2. <a name="code">The Code first</a>
+
+h3. <a name="model">The Model</a>
+
+bc.. public class Person extends Model {
+
+	@Id
+	public Long id;
+	
+	public String firstName;
+	
+	public String lastName;
+		
+	public Person() {
+	}
+	
+	public Person(Long id) {
+		this.id = id;
+	}
+	
+	public Person(String firstName, String lastName) {
+		this.firstName = firstName;
+		this.lastName = lastName;
+	}
+	
+	public Person all() {
+		return Model.all(Person.class);
+	}
+}
+	
+p. 
+
+h3. <a name="model">Create an entity & Persist it</a>
+
+bc.. Person bob = new Person("Bob", "Smith");
+bob.insert(); 
+
+p. 
+
+h3. <a name="usage1">Retrieve your entity using the get() function & update it</a>
+
+bc.. Person bob2 = new Person(bob.id);
+bob2.get();
+bob2.firstName = "bob2";
+bob2.update();
+
+p. 
+
+h3. <a name="usage2">Retrieve your entity by the name & update it</a>
+
+bc.. Person bob2 = Person.all().filter("firstName", "Bob").get();
+bob2.firstName = "bob2";
+bob2.update();
+
+p. 
+
+h3. <a name="usage3">Retrieve your entity by the id directly & delete it</a>
+
+bc.. Person bob3 = Model.getByKey(Person.class, bob.id);
+bob3.delete();
+
+p. 
+
+==<br/>==
+
+h2. <a>To be noted</a>
+
+* ==<b>class Person extends Model</b>==
+
+bq. Want to know why extending siena.Model is advised, go "there":./why_extends_model.textile
+
+ 
+* ==<b>@Id annotation</b>==
+It allows to identify the primary key or the unique identifier in your model.
+
+bq. Want to know more about @Id options, go "there":./id_options.textile 
+ 
+* ==<b>Person() default constructor</b>==
+If you define specific constructor as in the code sample, it's *mandatory to define
+  a default constructor* because Siena requires it to instantiate your models.
+  
+* ==<b>Person(String firstName, String lastName)</b>==
+This is a specific constructor allowing to construct in an elegant way your models when you need to insert them into the datastore.
+
+* ==<b>Person(Long id)</b>==
+This is a specific constructor which is useful to retrieve models from the datastore.
+
+* ==<b>public Person all()</b>==
+This function is a simpler version of the @Model.all(Class<?>)@ function. 
+It gives access to the very important query features.
+It is just a convenience and is not required at all because you can call directly Model.all(Person.class) in your code.
