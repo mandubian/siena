@@ -25,11 +25,11 @@ There are 4 static functions provided by siena.Model:
 
 This gives access to the extended query features allowing to perform complicated query on your models to extract bunch of entities from the datastore by filtering, ordering, paginating, searching...
 
-You can overload this function in your class in a simpler form following:
+You can overload this function in your class in a simpler form:
 
 bc.. public static Query<YourClass> all() {
     return Model.all(YourClass.class);
 }
 
-p. 
+p. It's not mandatory and you can call @Model.all(YourClass.class)@ instead of it.
 
