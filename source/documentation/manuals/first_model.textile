@@ -14,36 +14,23 @@ bc.. public class Person extends Model {
 	public String firstName;
 	
 	public String lastName;
-		
-	public Person() {
-	}
-	
-	public Person(Long id) {
-		this.id = id;
-	}
-	
-	public Person(String firstName, String lastName) {
-		this.firstName = firstName;
-		this.lastName = lastName;
-	}
-	
-	public Person all() {
-		return Model.all(Person.class);
-	}
 }
 	
 p. 
 
 h3. <a name="model">Create an entity & Persist it</a>
 
-bc.. Person bob = new Person("Bob", "Smith");
+bc.. Person bob = new Person();
+bob.firstName = "Bob";
+bob.lastName = "Smith"
 bob.insert(); 
 
 p. 
 
 h3. <a name="usage1">Retrieve your entity using the get() function & update it</a>
 
-bc.. Person bob2 = new Person(bob.id);
+bc.. Person bob2 = new Person();
+bob2.id = bob.id;
 bob2.get();
 bob2.firstName = "bob2";
 bob2.update();
@@ -79,17 +66,3 @@ It allows to identify the primary key or the unique identifier in your model.
 
 bq. Want to know more about @Id options, go "there":./id_options.textile 
  
-* ==<b>Person() default constructor</b>==
-If you define specific constructor as in the code sample, it's *mandatory to define
-  a default constructor* because Siena requires it to instantiate your models.
-  
-* ==<b>Person(String firstName, String lastName)</b>==
-This is a specific constructor allowing to construct in an elegant way your models when you need to insert them into the datastore.
-
-* ==<b>Person(Long id)</b>==
-This is a specific constructor which is useful to retrieve models from the datastore.
-
-* ==<b>public Person all()</b>==
-This function is a simpler version of the @Model.all(Class<?>)@ function. 
-It gives access to the very important query features.
-It is just a convenience and is not required at all because you can call directly Model.all(Person.class) in your code.
