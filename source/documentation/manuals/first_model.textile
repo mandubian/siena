@@ -64,7 +64,7 @@ bq. Want to know why extending siena.Model is advised, go "there":./why_extends_
 * ==<b>@Id annotation</b>==
 It allows to identify the primary key or the unique identifier in your model.
 
-bq. Want to know more about @Id options, go "there":./annotation_@Id.textile 
+bq. Want to know more about @Id options, go "there":./annotation_Id.textile 
  
 
 ==<br/>==
