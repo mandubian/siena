@@ -149,5 +149,8 @@ p.
 This is just a utility function simplifiying the retrieval of a Person by its ID or by its name. It makes your code clearer and decorrelating from Siena also.
 
 bc. Person bob3 = Person.all().filter("firstName", "Bob").get();
+
 becomes:
+
 bc. Person bob3 = Person.findByFirstName("Bob");
+
