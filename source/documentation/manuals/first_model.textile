@@ -73,7 +73,7 @@ h2. <a name="go_further">Go a bit Further</a>
 
 h3. Make your model class a bit more "attractive"
 
-bq. Siena implements the "active record pattern"|http://en.wikipedia.org/wiki/Active_record_pattern which aims at considering the model as the center of the persistence mechanism and not just a data container as in the "Data Access Object (DAO) pattern"|http://en.wikipedia.org/wiki/Data_access_object where the model contains only the data and the DAO the business logic to "CRUDify" your entities. 
+bq. Siena implements the <a href="http://en.wikipedia.org/wiki/Active_record_pattern">active record pattern</a> which aims at considering the model as the center of the persistence mechanism and not just a data container as in the <a href="http://en.wikipedia.org/wiki/Data_access_object">Data Access Object (DAO) pattern</a> where the model contains only the data and the DAO the business logic to "CRUDify" your entities. 
 So, in Siena, your model contains both the data and the business logic. Briefly, the model knows itself and what to do to manage itself. I really like the "human aspect" of this design.
 So you can make your class a bit more interesting than just a data structure aka POJO in Java as you generally do when using JPA/Hibernate.
 
@@ -113,7 +113,7 @@ bc.. public class Person extends Model {
 	}
 }
 
-p. 
+p. Some explanations:
 
 * ==<b>Person(String firstName, String lastName)</b>==
 This is a specific constructor allowing to construct in an elegant way your models when you need to insert them into the datastore.
@@ -124,8 +124,7 @@ bob.insert();
 p. 
 
 * ==<b>Person() default constructor</b>==
-If you define specific constructor as herebefore, it's *mandatory to define
-  a default constructor* because Siena requires it to instantiate your models.
+p(note). *Note* If you define specific constructor as herebefore, it's *mandatory to define a default constructor* because Siena requires it to instantiate your models.
   
 
 * ==<b>Person(Long id)</b>==
