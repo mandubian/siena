@@ -18,7 +18,7 @@ bc.. public class Person extends Model {
 	
 p. 
 
-h3. <a name="insert">Create an entity & Persist it</a>
+h3. <a name="model_insert">Create an entity & Persist it</a>
 
 bc.. Person bob = new Person();
 bob.firstName = "Bob";
@@ -27,7 +27,7 @@ bob.insert();
 
 p. 
 
-h3. <a name="update">Retrieve your entity using the get() function & update it</a>
+h3. <a name="model_update">Retrieve your entity using the get() function & update it</a>
 
 bc.. Person bob2 = new Person();
 bob2.id = bob.id;
@@ -37,7 +37,7 @@ bob2.update();
 
 p. 
 
-h3. <a name="update2">Retrieve your entity by the name & update it</a>
+h3. <a name="model_update2">Retrieve your entity by the name & update it</a>
 
 bc.. Person bob3 = Model.all(Person.class).filter("firstName", "Bob").get();
 bob3.firstName = "bob3";
@@ -45,7 +45,7 @@ bob3.update();
 
 p. 
 
-h3. <a name="delete">Retrieve your entity by the id directly & delete it</a>
+h3. <a name="model_delete">Retrieve your entity by the id directly & delete it</a>
 
 bc.. Person bob4 = Model.getByKey(Person.class, bob.id);
 bob4.delete();
@@ -71,7 +71,7 @@ bq. Want to know more about @Id options, go "there":./id_options.textile
 
 h2. <a name="go_further">Go a bit Further</a>
 
-h3. Make your model class a bit more "self-aware"
+h3. <a name="go_further_self_aware">Make your model class a bit more __"self-aware"__</a>
 
 bq. Siena implements the <a href="http://en.wikipedia.org/wiki/Active_record_pattern">Active Record pattern</a> which aims at considering the model as the center of the persistence mechanism and not just a data container as in the <a href="http://en.wikipedia.org/wiki/Data_access_object">Data Access Object (DAO) pattern</a> where the model contains only the data and the DAO the business logic to "CRUDify" your entities. 
 So, in Siena, your model contains both the data and the business logic. Briefly, the model knows itself and what to do to manage itself. I really like the "human aspect" of this design.
@@ -153,4 +153,73 @@ bc. Person bob3 = Person.all().filter("firstName", "Bob").get();
 becomes:
 
 bc. Person bob3 = Person.findByFirstName("Bob");
+
+==<br/>==
+
+h3. <a name="go_further_private">Modify your model to look like a real POJO with setter/getters</a>
+
+Some people don't like the __public__ modifier for class fields since it gives direct access to the data without any control on it and without being able to change the behavior of the accessors which is sometimes useful and also safer when you want to distribute your code or extend it. That's why the traditional way is to expose the class fields with the well known getter/setter accessors which pollute most of our Java code.
+
+You can naturally do it in Siena and you class would then look like:
+
+
+bc.. public class Person extends Model {
+
+	@Id
+	private Long id;
+	
+	private String firstName;
+	
+	private String lastName;
+
+	public Person(String firstName, String lastName){
+		this.firstName = firstName;
+		this.lastName = lastName;
+        }
+
+	public Person(){
+	}
+
+	public Person(Long id){
+		this.id = id;
+	}
+
+	public static Query<Person> all() {
+		return Model.all(Person.class);
+	}
+
+	public static Person findById(Long id) {
+		return Model.getByKey(Person.class, id);
+	}
+
+	public static Person findByFirstName(String firstName){
+		return all().filter("firstName", firstName).get();
+	}
+
+	public getId() {
+		return id;
+	}
+
+	public setId(Long id){
+		this.id = id;
+	}
+
+	public getFirstName(){
+		return firstName;
+	}
+
+	public setFirstName(String firstName){
+		this.firstName = firstName;
+	}
+
+	public getLastName(){
+		return lastName;
+	}
+
+	public setLastName(String lastName){
+		this.lastName = lastName;
+	}
+}
+
+p(note). *Note* Nevertheless if your model is just meant to represent some structured data, using __public__ modifier is not something bad at all and makes your code really clear.
 
