@@ -343,7 +343,8 @@ p.
 
 h3. <a name="query_fetch_paginate">Iterate through the persons per page of 10</a>
 
-bc.. // this feature is interesting when you have thousands of entities because you can iterate on all entities while Siena takes care of just fetching the entities 10 by 10.
+bc.. // this feature is interesting when you have thousands of entities because you can iterate on all entities 
+// while Siena takes care of just fetching the entities 10 by 10.
 Iterate<Person> iter = query.iterPerPage(10);
 
 for(Person person: iter) {
