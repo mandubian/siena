@@ -10,19 +10,8 @@ import junit.framework.TestCase;
 import siena.Model;
 import siena.PersistenceManager;
 import siena.PersistenceManagerFactory;
-import siena.Query;
 import siena.base.test.model.AggregateChildModel;
 import siena.base.test.model.AggregateParentModel;
-import siena.base.test.model.RelatedManyChild;
-import siena.base.test.model.RelatedSeveralQueryChild;
-import siena.base.test.model.RelatedSeveralQueryNoAsChild;
-import siena.base.test.model.RelatedManyParent;
-import siena.base.test.model.RelatedSeveralQueryParent;
-import siena.base.test.model.RelatedSeveralQueryNoAsParent;
-import siena.base.test.model.RelatedSimpleOwnedParent;
-import siena.base.test.model.RelatedSimpleOwnedChild;
-import siena.base.test.model.RelatedSimpleReferencedChild;
-import siena.base.test.model.RelatedSimpleReferencedParent;
 
 public abstract class BaseAggregatedTest extends TestCase {
 	
@@ -103,7 +92,7 @@ public abstract class BaseAggregatedTest extends TestCase {
 		god.insert();
 		
 		assertNotNull(god.id);
-		assertNotNull(god.child.id);
+		assertNotNull(god.child.get().id);
 		
 		god.name = "goddy";
 		adam1.name = "adammy";
@@ -136,13 +125,13 @@ public abstract class BaseAggregatedTest extends TestCase {
 		AggregateChildModel bob = new AggregateChildModel("bob");
 
 		AggregateParentModel god = new AggregateParentModel("god");
-		god.child = adam1;
+		god.child.set(adam1);
 		god.children.asList().addAll(Arrays.asList(adam2, eve, bob));
 				
 		god.save();
 		
 		assertNotNull(god.id);
-		assertNotNull(god.child.id);
+		assertNotNull(god.child.get().id);
 		
 		AggregateParentModel god1 = 
 			Model.getByKey(AggregateParentModel.class, god.id);
@@ -185,13 +174,13 @@ public abstract class BaseAggregatedTest extends TestCase {
 		AggregateChildModel bob = new AggregateChildModel("bob");
 
 		AggregateParentModel god = new AggregateParentModel("god");
-		god.child = adam1;
+		god.child.set(adam1);
 		god.children.asList().addAll(Arrays.asList(adam2, eve, bob));
 				
 		god.insert();
 		
 		assertNotNull(god.id);
-		assertNotNull(god.child.id);
+		assertNotNull(god.child.get().id);
 		
 		god.delete();
 		
@@ -217,13 +206,13 @@ public abstract class BaseAggregatedTest extends TestCase {
 		AggregateChildModel eve = new AggregateChildModel("eve");
 
 		AggregateParentModel god = new AggregateParentModel("god");
-		god.child = eve;
+		god.child.set(eve);
 		god.children.asList().addAll(adams);
 				
 		god.insert();
 		
 		assertNotNull(god.id);
-		assertNotNull(god.child.id);
+		assertNotNull(god.child.get().id);
 		
 		// get aggregated one2many
 		AggregateParentModel godbis = AggregateParentModel.all().filter("name", "god").get();
@@ -257,13 +246,13 @@ public abstract class BaseAggregatedTest extends TestCase {
 
 		AggregateParentModel god = new AggregateParentModel();
 		god.name = "god";
-		god.child = eve;
+		god.child.set(eve);
 		god.children.asList().addAll(adams);
 				
 		god.insert();
 		
 		assertNotNull(god.id);
-		assertNotNull(god.child.id);
+		assertNotNull(god.child.get().id);
 		
 		// get aggregated one2many
 		AggregateParentModel godbis = AggregateParentModel.all().filter("name", "god").get();
@@ -297,13 +286,13 @@ public abstract class BaseAggregatedTest extends TestCase {
 
 		AggregateParentModel god = new AggregateParentModel();
 		god.name = "god";
-		god.child = eve;
+		god.child.set(eve);
 		god.children.asList().addAll(adams);
 				
 		god.insert();
 		
 		assertNotNull(god.id);
-		assertNotNull(god.child.id);
+		assertNotNull(god.child.get().id);
 		
 		// get aggregated one2many
 		AggregateParentModel godbis = AggregateParentModel.all().filter("name", "god").get();
@@ -337,13 +326,13 @@ public abstract class BaseAggregatedTest extends TestCase {
 
 		AggregateParentModel god = new AggregateParentModel();
 		god.name = "god";
-		god.child = eve;
+		god.child.set(eve);
 		god.children.asList().addAll(adams);
 				
 		god.insert();
 		
 		assertNotNull(god.id);
-		assertNotNull(god.child.id);
+		assertNotNull(god.child.get().id);
 		
 		// get aggregated one2many
 		AggregateParentModel godbis = AggregateParentModel.all().filter("name", "god").get();
@@ -379,13 +368,13 @@ public abstract class BaseAggregatedTest extends TestCase {
 
 		AggregateParentModel god = new AggregateParentModel();
 		god.name = "god";
-		god.child = eve;
+		god.child.set(eve);
 		god.children.asList().addAll(adams);
 				
 		god.insert();
 		
 		assertNotNull(god.id);
-		assertNotNull(god.child.id);
+		assertNotNull(god.child.get().id);
 		
 		// get aggregated one2many
 		AggregateParentModel godbis = AggregateParentModel.all().filter("name", "god").get();
@@ -421,13 +410,13 @@ public abstract class BaseAggregatedTest extends TestCase {
 
 		AggregateParentModel god = new AggregateParentModel();
 		god.name = "god";
-		god.child = eve;
+		god.child.set(eve);
 		god.children.asList().addAll(adams);
 				
 		god.insert();
 		
 		assertNotNull(god.id);
-		assertNotNull(god.child.id);
+		assertNotNull(god.child.get().id);
 		
 		// get aggregated one2many
 		AggregateParentModel godbis = AggregateParentModel.all().filter("name", "god").get();
@@ -463,13 +452,13 @@ public abstract class BaseAggregatedTest extends TestCase {
 
 		AggregateParentModel god = new AggregateParentModel();
 		god.name = "god";
-		god.child = eve;
+		god.child.set(eve);
 		god.children.asList().addAll(adams);
 				
 		god.insert();
 		
 		assertNotNull(god.id);
-		assertNotNull(god.child.id);
+		assertNotNull(god.child.get().id);
 		
 		// get aggregated one2many
 		AggregateParentModel godbis = AggregateParentModel.all().filter("name", "god").get();
@@ -496,13 +485,13 @@ public abstract class BaseAggregatedTest extends TestCase {
 
 		AggregateParentModel god = new AggregateParentModel();
 		god.name = "god";
-		god.child = eve;
+		god.child.set(eve);
 		god.children.asList().addAll(adams);
 				
 		god.insert();
 		
 		assertNotNull(god.id);
-		assertNotNull(god.child.id);
+		assertNotNull(god.child.get().id);
 		
 		// get aggregated one2many
 		AggregateParentModel godbis = AggregateParentModel.all().filter("name", "god").get();
@@ -525,13 +514,13 @@ public abstract class BaseAggregatedTest extends TestCase {
 
 		AggregateParentModel god = new AggregateParentModel();
 		god.name = "god";
-		god.child = eve;
+		god.child.set(eve);
 		god.children.asList().addAll(adams);
 				
 		god.insert();
 		
 		assertNotNull(god.id);
-		assertNotNull(god.child.id);
+		assertNotNull(god.child.get().id);
 		
 		// get aggregated one2many
 		AggregateParentModel godbis = AggregateParentModel.all().filter("name", "god").get();
@@ -554,13 +543,13 @@ public abstract class BaseAggregatedTest extends TestCase {
 
 		AggregateParentModel god = new AggregateParentModel();
 		god.name = "god";
-		god.child = eve;
+		god.child.set(eve);
 		god.children.asList().addAll(adams);
 				
 		god.insert();
 		
 		assertNotNull(god.id);
-		assertNotNull(god.child.id);
+		assertNotNull(god.child.get().id);
 		
 		AggregateParentModel godbis = AggregateParentModel.all().filter("name", "god").get();
 		AggregateChildModel adam47 = godbis.children.asQuery().filter("name", "adam47").get();
@@ -585,13 +574,13 @@ public abstract class BaseAggregatedTest extends TestCase {
 
 		AggregateParentModel god = new AggregateParentModel();
 		god.name = "god";
-		god.child = eve;
+		god.child.set(eve);
 		god.children.asList().addAll(adams);
 				
 		god.insert();
 		
 		assertNotNull(god.id);
-		assertNotNull(god.child.id);
+		assertNotNull(god.child.get().id);
 		
 		AggregateParentModel godbis = AggregateParentModel.all().filter("name", "god").get();
 
