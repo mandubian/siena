@@ -111,6 +111,10 @@ bc.. public class Person extends Model {
 	public static Person findByFirstName(String firstName){
 		return all().filter("firstName", firstName).get();
 	}
+	
+	public String toString() {
+		return "id:"+id+" - firstName:"+firstName+" - lastName:"+lastName;
+	}
 }
 
 p. Some explanations:
@@ -130,6 +134,9 @@ p(note). *Note* If you define specific constructor as herebefore, it's *mandator
 
 * ==<b>Person(Long id)</b>==
 This is a specific constructor which is useful to retrieve models from the datastore.
+
+* ==<b>String toString()</b>==
+No comment
 
 bc.. Person bob2 = new Person(bob.id); 
 bob2.get();
@@ -225,3 +232,136 @@ bc.. public class Person extends Model {
 
 p(note). *Note* Nevertheless if your model is just meant to represent some structured data, using __public__ modifier is not something bad at all and makes your code really clear.
 
+h2. <a name="query">A glance at the possibilities of Queries? </a>
+
+You can get a query on your class using the @all(Class<?>)@ function:
+
+bc. Query<Person> query = Model.all(Person.class);
+
+The Query<T> allows to perform all basic operations on entities:
+* fetch (potentially by keys only)
+* iterate
+* delete
+* update
+* ...
+using:
+* filters,
+* orders, 
+* pagination
+* ...
+
+p(note). *Note* The *Query<T>* object is reusable (and stateless by default) so if you need to perform several queries at the row, don't hesitate to reuse the same query object.
+
+bq. Query<T> provides lots of features so if you want to know more, go <a href="./query.textile">there</a>.
+
+Here is just a few examples to give a few ideas:
+
+h3. <a name="query_insert">Insert a few persons into the datastore to be able to query them.</a>
+
+bc.. List<Person> persons = new ArrayList<Person>();
+for(int i=0; i<100; i++){
+	persons.add(new Person("Bob"+i, "Smith"+i));
+}
+
+Model.batch(Person.class).insert(persons);
+
+p. Here you see something new: the *Batch* is a useful feature introduced of Siena v1.0.0 which allows to manipulate entities in batch. We will not explain it here so just note it exists.
+
+bq. If you want to know more about Batch<T>, go <a href="./batch.textile">there</a>.
+ 
+h3. <a name="query_fetch">Fetch all persons in one query</a>
+
+bc.. Query<Person> query = Person.all();
+List<Person> allPersons = query.fetch();
+
+p. 
+
+h3. <a name="query_fetch">Fetch the first 10 persons</a>
+
+bc.. // Note we reuse the same query created before
+List<Person> persons_0_10 = query.fetch(10);
+
+p. 
+
+h3. <a name="query_fetch_offset">Fetch 10 persons beginning at the 25th</a>
+
+bc.. List<Person> persons_25_35 = query.fetch(10, 25);
+// You can also write
+List<Person> persons_25_35_bis = query.limit(10).offset(25).fetch();
+
+p. 
+
+h3. <a name="query_fetch_paginate">Fetch the persons by page of 10</a>
+
+bc.. // the first 10 persons 
+List<Person> persons_by_10 = query.paginate(10).fetch();
+// the persons from 10 to 20
+persons_by_10 = query.nextPage().fetch();
+// the persons from 20 to 30
+persons_by_10 = query.nextPage().fetch();
+// Again the persons from 20 to 30
+persons_by_10 = query.nextPage().fetch();
+
+// NOW GO BACK 
+// the persons from 10 to 20
+persons_by_10 = query.previousPage().fetch();
+// GO BACK the persons from 0 to 10
+persons_by_10 = query.previousPage().fetch();
+// GO BACK again and retrieve NO person as it is the beginning
+persons_by_10 = query.previousPage().fetch();
+assert persons_by_10.isEmpty();
+
+p. 
+
+h3. <a name="query_fetch_filter_fetch">Fetch the person created after "bob18"</a>
+
+bc.. List<Person> persons_sup_18 = query.filter("id>", persons.get(18).id).fetch();
+
+p. 
+
+h3. <a name="query_fetch_filter_get">Fetch the person created with name "Bob67"</a>
+
+bc.. Person bob67 = query.filter("firstName", "Bob67").get();
+
+p. 
+
+h3. <a name="query_fetch_paginate">Iterate through the persons</a>
+
+bc.. Iterate<Person> iter = query.iter();
+
+for(Person person: iter) {
+System.out.println(person);
+}
+
+while(iter.iterator().hasNext()){
+System.out.println(iter.next());
+}
+
+p. 
+
+h3. <a name="query_fetch_paginate">Iterate through the persons per page of 10</a>
+
+bc.. // this feature is interesting when you have thousands of entities because you can iterate on all entities while Siena takes care of just fetching the entities 10 by 10.
+Iterate<Person> iter = query.iterPerPage(10);
+
+for(Person person: iter) {
+System.out.println(person);
+}
+
+while(iter.iterator().hasNext()){
+System.out.println(iter.next());
+}
+
+p. 
+
+h3. <a name="query_count">Count the number of persons with firstName "Bob6x"</a>
+
+bc.. int count = query.filter("id>=", persons.get(60).id).filter("id<", persons.get(70).id).count();
+
+p. 
+
+h3. <a name="query_fetch_delete">Delete the person created after "bob18"</a>
+
+bc.. int nb_deleted = query.filter("id>", persons.get(18).id).delete();
+
+p. 
