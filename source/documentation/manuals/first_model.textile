@@ -156,9 +156,11 @@ bc. Person bob3 = Person.findByFirstName("Bob");
 
 ==<br/>==
 
-h3. <a name="go_further_private">Modify your model to look like a real POJO with setter/getters</a>
+h3. <a name="go_further_private">Modify your model into a classical POJO with setter/getters</a>
 
-Some people don't like the __public__ modifier for class fields since it gives direct access to the data without any control on it and without being able to change the behavior of the accessors which is sometimes useful and also safer when you want to distribute your code or extend it. That's why the traditional way is to expose the class fields with the well known getter/setter accessors which pollute most of our Java code.
+Some people don't like the __public__ modifier for class fields since it gives direct access to the data without any control on it and without being able to change the behavior of the accessors which is sometimes useful and also safer when you want to distribute your code or extend it. 
+
+That's why the traditional way is to expose the class fields with the well known getter/setter accessors which pollute most of our Java code.
 
 You can naturally do it in Siena and you class would then look like:
 
