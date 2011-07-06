@@ -146,7 +146,7 @@ bc.. Person bob3 = Person.all().filter("firstName", "Bob").get();
 p. 
 
 * ==<b>static Person findById(Long id)</b>== and ==<b>static Person findByFirstName(String firstName)</b>==
-This is just a utility function simplifiying the retrieval of a Person by its ID or by its name. It makes your code clearer and decorrelating from Siena also.
+These are just utility functions simplifiying the retrieval of a Person by its ID or by its name. It makes your code clearer and uncorrelated from Siena also.
 
 bc. Person bob3 = Person.all().filter("firstName", "Bob").get();
 
