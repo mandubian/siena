@@ -135,9 +135,6 @@ p(note). *Note* If you define specific constructor as herebefore, it's *mandator
 * ==<b>Person(Long id)</b>==
 This is a specific constructor which is useful to retrieve models from the datastore.
 
-* ==<b>String toString()</b>==
-No comment
-
 bc.. Person bob2 = new Person(bob.id); 
 bob2.get();
 
@@ -160,6 +157,9 @@ bc. Person bob3 = Person.all().filter("firstName", "Bob").get();
 becomes:
 
 bc. Person bob3 = Person.findByFirstName("Bob");
+
+* ==<b>String toString()</b>==
+No comment
 
 ==<br/>==
 
@@ -244,7 +244,9 @@ The Query<T> allows to perform all basic operations on entities:
 * delete
 * update
 * ...
+
 using:
+
 * filters,
 * orders, 
 * pagination
@@ -252,7 +254,7 @@ using:
 
 p(note). *Note* The *Query<T>* object is reusable (and stateless by default) so if you need to perform several queries at the row, don't hesitate to reuse the same query object.
 
-bq. Query<T> provides lots of features so if you want to know more, go <a href="./query.textile">there</a>.
+bq. <b>Query<T> provides lots of features so if you want to know more, go <a href="./query.textile">there</a>.</b>
 
 Here is just a few examples to give a few ideas:
 
@@ -267,7 +269,7 @@ Model.batch(Person.class).insert(persons);
 
 p. Here you see something new: the *Batch* is a useful feature introduced of Siena v1.0.0 which allows to manipulate entities in batch. We will not explain it here so just note it exists.
 
-bq. If you want to know more about Batch<T>, go <a href="./batch.textile">there</a>.
+bq. <b>If you want to know more about Batch<T>, go <a href="./batch.textile">there</a>.</b>
  
 h3. <a name="query_fetch">Fetch all persons in one query</a>
 
@@ -360,7 +362,7 @@ bc.. int count = query.filter("id>=", persons.get(60).id).filter("id<", persons.
 
 p. 
 
-h3. <a name="query_fetch_delete">Delete the person created after "bob18"</a>
+h3. <a name="query_fetch_delete">Delete the persons created after "bob18"</a>
 
 bc.. int nb_deleted = query.filter("id>", persons.get(18).id).delete();
 
