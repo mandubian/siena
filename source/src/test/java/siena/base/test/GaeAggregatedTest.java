@@ -57,6 +57,18 @@ public class GaeAggregatedTest extends BaseAggregatedTest{
 	}
 
 	@Override
+	public void testAggregateDeleteChild() {
+		// TODO Auto-generated method stub
+		super.testAggregateDeleteChild();
+	}
+
+	@Override
+	public void testAggregateAddChild() {
+		// TODO Auto-generated method stub
+		super.testAggregateAddChild();
+	}
+
+	@Override
 	public void testAggregateListQuerysFetch() {
 		// TODO Auto-generated method stub
 		super.testAggregateListQuerysFetch();

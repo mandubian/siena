@@ -43,9 +43,16 @@ public class AggregateParentModel extends Model {
 		if (!name.equals(other.name)) {
 			return false;
 		}
-		if (!child.equals(other.child)) {
-			return false;
+		if (child.get()==null) {
+			if(other.child.get() != null) {
+				return false;
+			}
+		}else {
+			 if(!child.get().equals(other.child.get())) {
+				 return false;
+			 }
 		}
+		
 		return true;
 	}
 	

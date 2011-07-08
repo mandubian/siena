@@ -259,50 +259,12 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 			Map<Field, List<Object>> objectMap = new HashMap<Field, List<Object>>();
 			keyMap.put(entity.getKey(), objectMap);
 			_populateAggregateFieldMap(objectMap, info, obj);
-			/*for(Field f: info.aggregatedFields){
-				if(ClassInfo.isOne(f)){
-					One<?> one = (One<?>)Util.readField(obj, f);
-					objectMap.put(f, (List<Object>)Arrays.asList(one.get()));
-				}
-				else if(ClassInfo.isMany(f)){
-					Many<?> lq = (Many<?>)Util.readField(obj, f);
-					if(!lq.asList().isEmpty()){
-						objectMap.put(f, (List<Object>)lq.asList());
-					}
-				}
-			}*/
-			
 			_insertMultipleMapFromParent(keyMap, Arrays.asList(info));
 		}
 		
 		if(!info.ownedFields.isEmpty()){
 			List<Object> relObjects = new ArrayList<Object>();
 			_populateOwnedList(relObjects, info, obj);
-			/*for(Field f: info.ownedFields){
-				if(ClassInfo.isOne(f)){
-					// set the owner field in the child object using the content of the one
-					One<?> relObj = (One<?>)Util.readField(obj, f);
-					Map<FieldMapKeys, Object> m = info.singleOwnedFieldMap.get(f);
-					if(m != null){
-						Field asField = (Field)m.get(FieldMapKeys.FIELD);
-						Object oneObj = relObj.get();
-						if(oneObj != null){
-							Util.setField(oneObj, asField, obj);
-							relObjects.add(oneObj);
-						}
-					}
-				}
-				else if(ClassInfo.isMany(f)){
-					Many<?> lq = (Many<?>)Util.readField(obj, f);
-					if(!lq.asList().isEmpty()){
-						Field asField = (Field)info.manyOwnedFieldMap.get(f).get(FieldMapKeys.FIELD);
-						for(Object relObj: lq.asList()){
-							Util.setField(relObj, asField, obj);
-							relObjects.add(relObj);
-						}
-					}
-				}
-			}*/
 			
 			// uses save because we don't know if the objects where already saved or not
 			save(relObjects);
@@ -425,13 +387,18 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 	public void _populateAggregateFieldMap(Map<Field, List<Object>> map, ClassInfo info, Object obj){
 		for(Field f: info.aggregatedFields){
 			if(ClassInfo.isOne(f)){
-				One<?> one = (One<?>)Util.readField(obj, f);
-				map.put(f, (List<Object>)Arrays.asList(one.get()));
+				One4PM<?> one = (One4PM<?>)Util.readField(obj, f);
+				Object oneObj = one.get();
+				if(oneObj != null){
+					map.put(f, (List<Object>)Arrays.asList(oneObj));
+				}
+				// resets flag anyway
+				one.setModified(false);
 			}
 			else if(ClassInfo.isMany(f)){
-				Many<?> lq = (Many<?>)Util.readField(obj, f);
+				Many4PM<?> lq = (Many4PM<?>)Util.readField(obj, f);
 				if(!lq.asList().isEmpty()){
-					map.put(f, (List<Object>)lq.asList());
+					map.put(f, (List<Object>)lq.asList2Add());
 				}
 			}
 		}
@@ -453,13 +420,14 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 				}
 			}
 			else if(ClassInfo.isMany(f)){
-				Many<?> lq = (Many<?>)Util.readField(obj, f);
+				Many4PM<?> lq = (Many4PM<?>)Util.readField(obj, f);
 				if(!lq.asList().isEmpty()){
 					Field asField = (Field)info.manyOwnedFieldMap.get(f).get(FieldMapKeys.FIELD);
-					for(Object relObj: lq.asList()){
+					for(Object relObj: lq.asList2Add()){
 						Util.setField(relObj, asField, obj);
 						relObjects.add(relObj);
 					}
+					lq.asList2Add().clear();
 				}
 			}
 		}
@@ -467,42 +435,101 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 
 	
 	public void update(Object obj) {
-		List<Entity> entities = new ArrayList<Entity>(); 
-		List<Key> entities2Remove = new ArrayList<Key>(); 
-		List<Object> objects2Save = new ArrayList<Object>(); 
-		_buildUpdateList(entities, entities2Remove, objects2Save, obj, null, null, null);
+		HashMap<PersistenceType, List<Entity>> entitiesMap = new HashMap<PersistenceType, List<Entity>>(); 
+		HashMap<PersistenceType, List<Object>> objectsMap = new HashMap<PersistenceType, List<Object>>(); 
+		HashMap<PersistenceType, List<Key>> keysMap = new HashMap<PersistenceType, List<Key>>(); 
+
+		_buildUpdateMaps(entitiesMap, objectsMap, keysMap, obj, null, null, null);
 		
 		// saves the updated owned objects
-		if(!objects2Save.isEmpty()){
-			save(objects2Save);
+		List<Object> objs = objectsMap.get(PersistenceType.SAVE);
+		if(objs!=null && !objs.isEmpty()){
+			save(objs);
 		}
 		
 		// saves the updated aggregated objects
-		if(!entities.isEmpty()){
+		List<Entity> entities = entitiesMap.get(PersistenceType.INSERT);
+		if(entities!=null && !entities.isEmpty()){
+			List<Key> generatedKeys = ds.put(entities);
+			
+			int i=0;
+			for(Object elt:objectsMap.get(PersistenceType.INSERT)){
+				Class<?> clazz = elt.getClass();
+				ClassInfo info = ClassInfo.getClassInfo(clazz);
+				Field idField = info.getIdField();
+				GaeMappingUtils.setIdFromKey(idField, elt, generatedKeys.get(i));
+			}
+		}
+
+		// saves the updated aggregated objects
+		entities = entitiesMap.get(PersistenceType.UPDATE);
+		if(entities!=null && !entities.isEmpty()){
 			ds.put(entities);
 		}
 
 		// removes the deleted aggregated objects
-		if(!entities2Remove.isEmpty()){
-			ds.delete(entities2Remove);
+		List<Key> keys = keysMap.get(PersistenceType.DELETE);
+		if(keys!=null && !keys.isEmpty()){
+			ds.delete(keys);
 		}
 	}
 	
-	private void _buildUpdateList(List<Entity> entities, List<Key> entities2Remove, List<Object> objects2Save, Object obj, Key parentKey, ClassInfo parentInfo, Field parentField){
+	public enum PersistenceType {
+		INSERT,
+		UPDATE,
+		SAVE,
+		DELETE
+	}
+	
+	//private void _buildUpdateList(List<Entity> entities2Insert, List<Object> objects2Insert, List<Entity> entities2Update, List<Key> entities2Remove, List<Object> objects2Save, Object obj, Key parentKey, ClassInfo parentInfo, Field parentField){
+	private void _buildUpdateMaps(
+			HashMap<PersistenceType, List<Entity>> entitiesMap, 
+			HashMap<PersistenceType, List<Object>> objectsMap, 
+			HashMap<PersistenceType, List<Key>> keysMap,
+			Object obj, Key parentKey, ClassInfo parentInfo, Field parentField){
 		Class<?> clazz = obj.getClass();
 		ClassInfo info = ClassInfo.getClassInfo(clazz);
 		Field idField = info.getIdField();
 		
 		Entity entity;
-		if(parentKey == null){
-			entity = GaeMappingUtils.createEntityInstanceForUpdate(idField, info, obj);
-		}else {
-			entity = GaeMappingUtils.createEntityInstanceForUpdateFromParent(
-					idField, info, obj, parentKey, parentInfo, parentField);
-		}
-		GaeMappingUtils.fillEntity(obj, entity);		
-		entities.add(entity);
 		
+		Object idVal = Util.readField(obj, idField);
+		// id with null value means insert
+		if(idVal == null){
+			if(parentKey==null){
+				entity = GaeMappingUtils.createEntityInstance(idField, info, obj);
+			}else {
+				entity = GaeMappingUtils.createEntityInstanceFromParent(idField, info, obj, parentKey, parentInfo, parentField);
+			}
+			GaeMappingUtils.fillEntity(obj, entity);		
+			List<Entity> entities2Insert = entitiesMap.get(PersistenceType.INSERT);
+			if(entities2Insert == null){
+				entities2Insert = new ArrayList<Entity>();
+				entitiesMap.put(PersistenceType.INSERT, entities2Insert);
+			}
+			entities2Insert.add(entity);
+			List<Object> objects2Insert = objectsMap.get(PersistenceType.INSERT);
+			if(objects2Insert == null){
+				objects2Insert = new ArrayList<Object>();
+				objectsMap.put(PersistenceType.INSERT, objects2Insert);
+			}
+			objects2Insert.add(obj);
+		}else {
+			if(parentKey == null){
+				entity = GaeMappingUtils.createEntityInstanceForUpdate(idField, info, obj);
+			}else {
+				entity = GaeMappingUtils.createEntityInstanceForUpdateFromParent(
+						idField, info, obj, parentKey, parentInfo, parentField);
+			}
+			GaeMappingUtils.fillEntity(obj, entity);		
+			List<Entity> entities2Update = entitiesMap.get(PersistenceType.UPDATE);
+			if(entities2Update == null){
+				entities2Update = new ArrayList<Entity>();
+				entitiesMap.put(PersistenceType.UPDATE, entities2Update);
+			}
+			entities2Update.add(entity);
+		}
+
 		for(Field f: info.ownedFields){
 			// doesn't do anything with One<T>
 			if(ClassInfo.isOne(f)){
@@ -519,13 +546,18 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 						}
 						// resets modified flag
 						relObj.setModified(false);
+						List<Object> objects2Save = objectsMap.get(PersistenceType.SAVE);
+						if(objects2Save == null){
+							objects2Save = new ArrayList<Object>();
+						}
 						objects2Save.add(prevObj);
-					}
-					Object oneObj = relObj.get();
-					if(oneObj != null){
-						Util.setField(oneObj, asField, obj);
-						objects2Save.add(oneObj);
-					}
+						
+						Object oneObj = relObj.get();
+						if(oneObj != null){
+							Util.setField(oneObj, asField, obj);
+							objects2Save.add(oneObj);
+						}
+					}					
 				}
 			}else if(ClassInfo.isMany(f)){
 				Many4PM<?> lq = (Many4PM<?>)Util.readField(obj, f);
@@ -535,26 +567,67 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 					Field asField = (Field)info.manyOwnedFieldMap.get(f).get(FieldMapKeys.FIELD);
 					for(Object elt : lq.asList2Remove()){
 						Util.setField(elt, asField, null);
+						List<Object> objects2Save = objectsMap.get(PersistenceType.SAVE);
+						if(objects2Save == null){
+							objects2Save = new ArrayList<Object>();
+							objectsMap.put(PersistenceType.SAVE, objects2Save);
+						}
 						objects2Save.add(elt);
 					}					
+					lq.asList2Remove().clear();
 				}
 				if(!lq.asList2Add().isEmpty()){
 					Field asField = (Field)info.manyOwnedFieldMap.get(f).get(FieldMapKeys.FIELD);
 					for(Object elt : lq.asList2Add()){
 						Util.setField(elt, asField, obj);
+						List<Object> objects2Save = objectsMap.get(PersistenceType.SAVE);
+						if(objects2Save == null){
+							objects2Save = new ArrayList<Object>();
+							objectsMap.put(PersistenceType.SAVE, objects2Save);
+						}
 						objects2Save.add(elt);
+						// TODO CLEAN ADD LIST
+						//lq.asList2Add().clear();
 					}
 				}
 			}
 		}			
 		
 		for(Field f: info.aggregatedFields){
-			if(ClassInfo.isModel(f.getType())){
-				Object aggObj = Util.readField(obj, f);
-				_buildUpdateList(entities, entities2Remove, objects2Save, aggObj, entity.getKey(), info, f);
+			if(ClassInfo.isOne(f)){
+				One4PM<?> one = (One4PM<?>)Util.readField(obj, f);
+				if(one.isModified()){
+					// deletes previous object
+					Object prevObj =one.getPrev();
+					if(prevObj != null){
+						Class<?> delClazz = prevObj.getClass();
+						ClassInfo delInfo = ClassInfo.getClassInfo(delClazz);
+						Field delIdField = delInfo.getIdField();
+
+						Key delKey = GaeMappingUtils.makeKeyFromParent(
+									delIdField, delInfo, prevObj, entity.getKey(), info, f);
+						
+						List<Key> key2Remove = keysMap.get(PersistenceType.DELETE);
+						if(key2Remove == null){
+							key2Remove = new ArrayList<Key>();
+							keysMap.put(PersistenceType.DELETE, key2Remove);
+						}
+						key2Remove.add(delKey);
+					}
+					// resets modified flag
+					one.setModified(false);
+					
+					Object oneObj = one.get();
+					if(oneObj != null){
+						_buildUpdateMaps(entitiesMap, objectsMap, keysMap, oneObj, entity.getKey(), info, f);
+					}
+				}
+				
 			}
 			else if(ClassInfo.isMany(f)){
 				Many4PM<?> lq = (Many4PM<?>)Util.readField(obj, f);
+				// do not update all objects, would be crazy :)
+				// UPDATE IS THE RESPONSABILITY OF THE CODER
 				/*if(!lq.asList().isEmpty()){
 					for(Object elt : lq.asList()){
 						_buildUpdateList(entities, entities2Remove, objects2Save, elt, entity.getKey(), info, f);
@@ -571,13 +644,21 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 
 						delKey = GaeMappingUtils.makeKeyFromParent(
 									delIdField, delInfo, elt, entity.getKey(), info, f);
-						entities2Remove.add(delKey);
+						
+						List<Key> key2Remove = keysMap.get(PersistenceType.DELETE);
+						if(key2Remove == null){
+							key2Remove = new ArrayList<Key>();
+							keysMap.put(PersistenceType.DELETE, key2Remove);
+						}
+						key2Remove.add(delKey);
 					}
+					lq.asList2Remove().clear();
 				}
 				if(!lq.asList2Add().isEmpty()){
 					for(Object elt : lq.asList2Add()){
-						_buildUpdateList(entities, entities2Remove, objects2Save, elt, entity.getKey(), info, f);
+						_buildUpdateMaps(entitiesMap, objectsMap, keysMap, elt, entity.getKey(), info, f);
 					}
+					lq.asList2Add().clear();
 				}
 			}
 		}
@@ -589,7 +670,7 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 		ClassInfo info = ClassInfo.getClassInfo(clazz);
 		Field idField = info.getIdField();
 		
-		Entity entity;
+		//Entity entity;
 		Object idVal = Util.readField(obj, idField);
 		// id with null value means insert
 		if(idVal == null){
@@ -963,8 +1044,8 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 		Class<?> clazz = model.getClass();
 		ClassInfo info = ClassInfo.getClassInfo(clazz);
 		
-		Map<Field, ClassInfo> modelMap = new HashMap<Field, ClassInfo>();
-		boolean hasOneMany = false;
+		//Map<Field, ClassInfo> modelMap = new HashMap<Field, ClassInfo>();
+		//boolean hasOneMany = false;
 		
 		// we scan the aggregatedfields to find potential one/many
 		// if there is a listquery, we don't try to use the KINDLESS request
@@ -978,14 +1059,14 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 				// sets the sync flag to false to tell that it should be fetched when the one is accessed!
 				one.setSync(false);
 				
-				hasOneMany = true;
+				//hasOneMany = true;
 			}
 			else if(ClassInfo.isMany(f)){
 				Many4PM<?> lq = (Many4PM<?>)Util.readField(model, f);
 				// sets the sync flag to false to tell that it should be fetched when the many is accessed!
 				lq.setSync(false);
 				
-				hasOneMany = true;
+				//hasOneMany = true;
 			}
 		}
 			
@@ -1924,29 +2005,53 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 	}
 
 	public <T> int update(Iterable<T> objects) {
-		List<Entity> entities = new ArrayList<Entity>();
-		List<Key> entities2Remove = new ArrayList<Key>(); 
-		List<Object> objects2Save = new ArrayList<Object>(); 
-
+		HashMap<PersistenceType, List<Entity>> entitiesMap = new HashMap<PersistenceType, List<Entity>>(); 
+		HashMap<PersistenceType, List<Object>> objectsMap = new HashMap<PersistenceType, List<Object>>(); 
+		HashMap<PersistenceType, List<Key>> keysMap = new HashMap<PersistenceType, List<Key>>(); 
+		
 		for(Object obj:objects){
-			_buildUpdateList(entities, entities2Remove, objects2Save, obj, null, null, null);
-		}
-				
+			_buildUpdateMaps(entitiesMap, objectsMap, keysMap, obj, null, null, null);
+		}		
+
+		int nb = 0;
 		// saves the updated owned objects
-		if(!objects2Save.isEmpty()){
-			save(objects2Save);
+		List<Object> objs = objectsMap.get(PersistenceType.SAVE);
+		if(objs!=null && !objs.isEmpty()){
+			nb += save(objs);			
 		}
 		
-		// updates the aggregated objects
-		int nb = 0;
-		if(!entities.isEmpty()){
+		// saves the updated aggregated objects
+		List<Entity> entities = entitiesMap.get(PersistenceType.INSERT);
+		if(entities!=null && !entities.isEmpty()){
 			List<Key> generatedKeys = ds.put(entities);
-			nb = generatedKeys.size();
+			
+			int i=0;
+			for(Object elt:objectsMap.get(PersistenceType.INSERT)){
+				Class<?> clazz = elt.getClass();
+				ClassInfo info = ClassInfo.getClassInfo(clazz);
+				Field idField = info.getIdField();
+				GaeMappingUtils.setIdFromKey(idField, elt, generatedKeys.get(i));
+			}
+			
+			nb += generatedKeys.size();
 		}
-		// deletes the aggregated objects
-		if(!entities2Remove.isEmpty()){
-			ds.delete(entities2Remove);
+
+		// saves the updated aggregated objects
+		entities = entitiesMap.get(PersistenceType.UPDATE);
+		if(entities!=null && entities.isEmpty()){
+			ds.put(entitiesMap.get(PersistenceType.UPDATE));
+			
+			nb += entities.size();
 		}
+
+		// removes the deleted aggregated objects
+		List<Key> keys = keysMap.get(PersistenceType.DELETE);
+		if(keys!=null && !keys.isEmpty()){
+			ds.delete(keys);
+			
+			nb += keys.size();
+		}
+		
 		return nb;
 	}
 

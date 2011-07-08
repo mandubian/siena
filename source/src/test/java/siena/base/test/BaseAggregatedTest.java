@@ -96,8 +96,11 @@ public abstract class BaseAggregatedTest extends TestCase {
 		
 		god.name = "goddy";
 		adam1.name = "adammy";
+		adam1.save();
 		bob.name = "bobby";
+		bob.save();
 		eve.name = "evvy";
+		eve.save();
 		
 		god.update();
 		
@@ -137,7 +140,7 @@ public abstract class BaseAggregatedTest extends TestCase {
 			Model.getByKey(AggregateParentModel.class, god.id);
 		
 		assertNotNull(god1);
-		assertEquals(adam1, god1.child);
+		assertEquals(adam1, god1.child.get());
 		List<AggregateChildModel> children = god1.children.asQuery().fetch();
 		assertEquals(adam2, children.get(0));
 		assertEquals(eve, children.get(1));
@@ -193,6 +196,59 @@ public abstract class BaseAggregatedTest extends TestCase {
 		assertEquals(null, children.get(1));
 		assertEquals(null, children.get(2));
 		assertEquals(null, children.get(3));
+	}
+	
+	public void testAggregateDeleteChild() {
+		AggregateChildModel adam1 = new AggregateChildModel("adam1");
+		AggregateChildModel adam2 = new AggregateChildModel("adam2");	
+		AggregateChildModel eve = new AggregateChildModel("eve");
+		AggregateChildModel bob = new AggregateChildModel("bob");
+
+		AggregateParentModel god = new AggregateParentModel("god");
+		god.child.set(adam1);
+		god.children.asList().addAll(Arrays.asList(adam2, eve, bob));
+				
+		god.insert();
+		
+		assertNotNull(god.id);
+		assertNotNull(god.child.get().id);
+		
+		god.children.asList().remove(eve);
+		god.update();
+		
+		AggregateParentModel godbis = AggregateParentModel.all().filter("name", "god").get();
+		assertEquals(god, godbis);
+		List<AggregateChildModel> children = godbis.children.asList();
+		assertEquals(adam2, children.get(0));
+		assertEquals(bob, children.get(1));
+	}
+	
+	public void testAggregateAddChild() {
+		AggregateChildModel adam1 = new AggregateChildModel("adam1");
+		AggregateChildModel adam2 = new AggregateChildModel("adam2");	
+		AggregateChildModel eve = new AggregateChildModel("eve");
+		AggregateChildModel bob = new AggregateChildModel("bob");
+		AggregateChildModel eve2 = new AggregateChildModel("eve2");
+
+		AggregateParentModel god = new AggregateParentModel("god");
+		god.child.set(adam1);
+		god.children.asList().addAll(Arrays.asList(adam2, eve, bob));
+				
+		god.insert();
+		
+		assertNotNull(god.id);
+		assertNotNull(god.child.get().id);
+		
+		god.children.asList().add(eve2);
+		god.update();
+		
+		AggregateParentModel godbis = AggregateParentModel.all().filter("name", "god").get();
+		assertEquals(god, godbis);
+		List<AggregateChildModel> children = godbis.children.asList();
+		assertEquals(adam2, children.get(0));
+		assertEquals(eve, children.get(1));
+		assertEquals(bob, children.get(2));
+		assertEquals(eve2, children.get(3));
 	}
 	
 	public void testAggregateListQuerysFetch() {
