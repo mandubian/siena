@@ -23,7 +23,6 @@ import siena.Query;
 import siena.QueryFilterSearch;
 import siena.SienaException;
 import siena.Util;
-import siena.jdbc.JdbcPersistenceManager.JdbcClassInfo;
 import siena.jdbc.h2.FullText;
 
 public class H2PersistenceManager extends JdbcPersistenceManager {

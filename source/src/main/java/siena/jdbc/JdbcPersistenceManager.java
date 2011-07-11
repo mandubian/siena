@@ -39,8 +39,6 @@ import java.util.Properties;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.apache.commons.lang.NotImplementedException;
-
 import siena.AbstractPersistenceManager;
 import siena.ClassInfo;
 import siena.Generator;
@@ -1449,7 +1447,7 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 	}
 
 	public <T> PersistenceManagerAsync async() {
-		throw new NotImplementedException();
+		throw new SienaException("Not Implemented");
 	}
 
 	public int insert(Object... objects) {
@@ -1781,7 +1779,7 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 	}
 
 	public <T> int update(Query<T> query, Map<String, ?> fieldValues) {
-		throw new NotImplementedException("update not implemented for JDBC yet");
+		throw new SienaException("Not Implemented");
 	}
 
 

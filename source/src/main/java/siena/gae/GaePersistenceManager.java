@@ -25,8 +25,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
-import org.apache.commons.lang.NotImplementedException;
-
 import siena.AbstractPersistenceManager;
 import siena.ClassInfo;
 import siena.Query;
@@ -1466,7 +1464,7 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 	}
 
 	public <T> int update(Query<T> query, Map<String, ?> fieldValues) {
-		throw new NotImplementedException("update not implemented for GAE yet");
+		throw new SienaException("update not implemented for GAE yet");
 	}
 
 	
