@@ -30,11 +30,15 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
+import javax.management.relation.Relation;
+
 import siena.core.Aggregated;
+import siena.core.Aggregator;
 import siena.core.InheritFilter;
 import siena.core.Many;
 import siena.core.One;
 import siena.core.Owned;
+import siena.core.Owner;
 import siena.core.RelationMode;
 import siena.core.lifecycle.LifeCyclePhase;
 import siena.core.lifecycle.LifeCycleUtils;
@@ -59,10 +63,14 @@ public class ClassInfo {
 	public List<Field> ownedFields = new ArrayList<Field>();
 
 	public Map<LifeCyclePhase, List<Method>> lifecycleMethods = new HashMap<LifeCyclePhase, List<Method>>();
-	public Map<Field, Map<FieldMapKeys, Object>> queryOwnedFieldMap = new HashMap<Field, Map<FieldMapKeys, Object>>();
-	public Map<Field, Map<FieldMapKeys, Object>> manyOwnedFieldMap = new HashMap<Field, Map<FieldMapKeys, Object>>();
-	public Map<Field, Map<FieldMapKeys, Object>> singleOwnedFieldMap = new HashMap<Field, Map<FieldMapKeys, Object>>();
+	public Map<Field, Map<FieldMapKeys, Object>> queryFieldMap = new HashMap<Field, Map<FieldMapKeys, Object>>();
+	public Map<Field, Map<FieldMapKeys, Object>> manyFieldMap = new HashMap<Field, Map<FieldMapKeys, Object>>();
+	public Map<Field, Map<FieldMapKeys, Object>> oneFieldMap = new HashMap<Field, Map<FieldMapKeys, Object>>();
 
+	// this aggregator field is the field identified as containing the aggregator
+	// there can be only ONE aggregator in a class
+	public Field aggregator = null;
+	
 	public enum FieldMapKeys {
 		CLASS,
 		MODE,
@@ -96,8 +104,26 @@ public class ClassInfo {
 			for (Field field : c.getDeclaredFields()) {
 				if(removedFields.contains(field.getName())) continue;
 				Class<?> type = field.getType();
-				if((field.getModifiers() & Modifier.TRANSIENT) == Modifier.TRANSIENT ||
-						(field.getModifiers() & Modifier.STATIC) == Modifier.STATIC ||
+				
+				/*if(isAggregator(field)){
+					// only one @Aggregator per model outside the one from Model
+					if(aggregator != null){
+						if(c != Model.class){
+							throw new SienaException("Found 2 @Aggregator fields in your model which is forbidden");
+						}						
+					}
+					else {
+						if(type != Relation.class){
+							throw new SienaException("Found @Aggregator field not with type siena.core.Relation which is forbidden");
+						}
+						aggregator = field;
+					}
+					continue;
+				}*/
+				
+				int modifiers = field.getModifiers();
+				if((modifiers & Modifier.TRANSIENT) == Modifier.TRANSIENT ||
+						(modifiers & Modifier.STATIC) == Modifier.STATIC ||
 						field.isSynthetic() || type == Class.class){
 					continue;
 				}
@@ -118,7 +144,7 @@ public class ClassInfo {
 							Map<FieldMapKeys, Object> fieldMap = new HashMap<FieldMapKeys, Object>();
 							fieldMap.put(FieldMapKeys.CLASS, cl);
 							fieldMap.put(FieldMapKeys.FILTER, filter.value());
-							queryOwnedFieldMap.put(field, fieldMap);
+							queryFieldMap.put(field, fieldMap);
 							ownedFields.add(field);
 						} catch (Exception e) {
 							throw new SienaException(e);
@@ -141,7 +167,7 @@ public class ClassInfo {
 							Map<FieldMapKeys, Object> fieldMap = new HashMap<FieldMapKeys, Object>();
 							fieldMap.put(FieldMapKeys.CLASS, cl);
 							fieldMap.put(FieldMapKeys.FILTER, as);
-							queryOwnedFieldMap.put(field, fieldMap);
+							queryFieldMap.put(field, fieldMap);
 							ownedFields.add(field);
 						} catch (Exception e) {
 							throw new SienaException(e);
@@ -170,7 +196,7 @@ public class ClassInfo {
 							Map<FieldMapKeys, Object> fieldMap = new HashMap<FieldMapKeys, Object>();
 							fieldMap.put(FieldMapKeys.CLASS, cl);
 							fieldMap.put(FieldMapKeys.MODE, RelationMode.AGGREGATION);
-							manyOwnedFieldMap.put(field, fieldMap);
+							manyFieldMap.put(field, fieldMap);
 							aggregatedFields.add(field);
 						} catch (Exception e) {
 							throw new SienaException(e);
@@ -188,7 +214,7 @@ public class ClassInfo {
 							fieldMap.put(FieldMapKeys.MODE, RelationMode.RELATION);
 							fieldMap.put(FieldMapKeys.FIELD, filterField);
 							fieldMap.put(FieldMapKeys.FILTER, filter.value());
-							manyOwnedFieldMap.put(field, fieldMap);
+							manyFieldMap.put(field, fieldMap);
 							ownedFields.add(field);
 						} catch (Exception e) {
 							throw new SienaException(e);
@@ -219,7 +245,7 @@ public class ClassInfo {
 							fieldMap.put(FieldMapKeys.MODE, RelationMode.RELATION);
 							fieldMap.put(FieldMapKeys.FIELD, asField);
 							fieldMap.put(FieldMapKeys.FILTER, as);
-							manyOwnedFieldMap.put(field, fieldMap);
+							manyFieldMap.put(field, fieldMap);
 							ownedFields.add(field);
 						} catch (Exception e) {
 							throw new SienaException(e);
@@ -248,7 +274,7 @@ public class ClassInfo {
 							Map<FieldMapKeys, Object> fieldMap = new HashMap<FieldMapKeys, Object>();
 							fieldMap.put(FieldMapKeys.CLASS, cl);
 							fieldMap.put(FieldMapKeys.MODE, RelationMode.AGGREGATION);
-							singleOwnedFieldMap.put(field, fieldMap);
+							oneFieldMap.put(field, fieldMap);
 							aggregatedFields.add(field);
 						} catch (Exception e) {
 							throw new SienaException(e);
@@ -266,7 +292,7 @@ public class ClassInfo {
 							fieldMap.put(FieldMapKeys.MODE, RelationMode.RELATION);
 							fieldMap.put(FieldMapKeys.FIELD, filterField);
 							fieldMap.put(FieldMapKeys.FILTER, filter.value());
-							singleOwnedFieldMap.put(field, fieldMap);
+							oneFieldMap.put(field, fieldMap);
 							ownedFields.add(field);
 						} catch (Exception e) {
 							throw new SienaException(e);
@@ -297,7 +323,7 @@ public class ClassInfo {
 							fieldMap.put(FieldMapKeys.MODE, RelationMode.RELATION);
 							fieldMap.put(FieldMapKeys.FIELD, asField);
 							fieldMap.put(FieldMapKeys.FILTER, as);
-							singleOwnedFieldMap.put(field, fieldMap);
+							oneFieldMap.put(field, fieldMap);
 							ownedFields.add(field);
 						} catch (Exception e) {
 							throw new SienaException(e);
@@ -544,6 +570,10 @@ public class ClassInfo {
 		return field.isAnnotationPresent(Aggregated.class);
 	}
 	
+	public static boolean isAggregator(Field field) {
+		return field.isAnnotationPresent(Aggregator.class);
+	}
+	
 	public static boolean isJoined(Field field) {
 		return field.isAnnotationPresent(Join.class);
 	}	
@@ -558,6 +588,10 @@ public class ClassInfo {
 	
 	public static boolean isOwned(Field field) {
 		return field.isAnnotationPresent(Owned.class);
+	}
+	
+	public static boolean isOwner(Field field) {
+		return field.isAnnotationPresent(Owner.class);
 	}
 	
 	public static boolean isGenerated(Field field) {

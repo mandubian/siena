@@ -22,9 +22,11 @@ import java.util.List;
 import java.util.Map;
 
 import siena.ClassInfo.FieldMapKeys;
+import siena.core.Aggregator;
 import siena.core.Many4PM;
 import siena.core.One;
 import siena.core.One4PM;
+import siena.core.Relation;
 import siena.core.RelationMode;
 import siena.core.SyncList;
 import siena.core.async.ModelAsync;
@@ -52,7 +54,14 @@ import siena.core.options.QueryOptionState;
 public abstract class Model {
 
 	transient private PersistenceManager persistenceManager;
-	transient private Object relation;
+	
+	// this is a technical field used by Siena to represent a relation
+	// between this model and another one. For ex, it will be used to
+	// identify the ancestor in an aggregation relation
+	// has transient modifier to prevent serialization FOR THE TIME BEING
+	// TODO IS THE TRANSIENT REQUIRED OR CAN IT BE A PB?
+	@Aggregator
+	private Relation relation;
 	
 	public Model() {
 		init();
@@ -100,14 +109,6 @@ public abstract class Model {
 	public ModelAsync async() {
 		return new ModelAsync(this);
 	}
-	
-	public Object getRelation() {
-		return relation;
-	}
-
-	public void setRelation(Object relation) {
-		this.relation = relation;
-	}
 
 	public boolean equals(Object that) {
 		if(this == that) { return true; }
@@ -152,9 +153,9 @@ public abstract class Model {
 		
 		// Takes into account superclass fields for inheritance!!!!
 		ClassInfo info = ClassInfo.getClassInfo(clazz);
-		for(Field field:info.queryOwnedFieldMap.keySet()){
+		for(Field field:info.queryFieldMap.keySet()){
 			try {
-				Map<FieldMapKeys, Object> map = info.queryOwnedFieldMap.get(field);
+				Map<FieldMapKeys, Object> map = info.queryFieldMap.get(field);
 				Util.setField(this, field, 
 						new ProxyQuery((Class<?>)map.get(FieldMapKeys.CLASS), (String)map.get(FieldMapKeys.FILTER), this));
 			} catch (Exception e) {
@@ -162,9 +163,9 @@ public abstract class Model {
 			}
 		}
 		
-		for(Field field:info.manyOwnedFieldMap.keySet()){
+		for(Field field:info.manyFieldMap.keySet()){
 			try {
-				Map<FieldMapKeys, Object> map = info.manyOwnedFieldMap.get(field);
+				Map<FieldMapKeys, Object> map = info.manyFieldMap.get(field);
 				RelationMode mode = (RelationMode)map.get(FieldMapKeys.MODE);
 				switch(mode){
 				case AGGREGATION:
@@ -183,9 +184,9 @@ public abstract class Model {
 			}
 		}
 		
-		for(Field field:info.singleOwnedFieldMap.keySet()){
+		for(Field field:info.oneFieldMap.keySet()){
 			try {
-				Map<FieldMapKeys, Object> map = info.singleOwnedFieldMap.get(field);
+				Map<FieldMapKeys, Object> map = info.oneFieldMap.get(field);
 				RelationMode mode = (RelationMode)map.get(FieldMapKeys.MODE);
 				switch(mode){
 				case AGGREGATION:

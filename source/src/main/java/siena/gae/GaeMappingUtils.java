@@ -8,13 +8,17 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
+
 import siena.ClassInfo;
 import siena.Id;
 import siena.Json;
+import siena.Query;
+import siena.QueryAggregated;
 import siena.SienaException;
 import siena.SienaRestrictedApiException;
 import siena.Util;
 import siena.core.DecimalPrecision;
+import siena.core.Relation;
 import siena.embed.Embedded;
 import siena.embed.JavaSerializer;
 import siena.embed.JsonSerializer;
@@ -739,5 +743,45 @@ public class GaeMappingUtils {
 			}
 		}
 		return list;
+	}
+	
+	public static <T> T mapRelation(Query<T> query, T obj, ClassInfo info) {
+		List<QueryAggregated> aggregs = query.getAggregatees();
+		if(aggregs.isEmpty()){
+			return obj;
+		}
+		else if(aggregs.size() == 1){
+			QueryAggregated aggreg = aggregs.get(0);
+			
+			Relation rel = 
+				new Relation(Relation.Type.AGGREGATION, aggreg.aggregator, aggreg.field);
+			Util.setField(obj, info.aggregator, rel);
+			
+			return obj;
+		}
+		else {
+			throw new SienaException("Only one aggregation per query allowed");
+		}
+	}
+
+	public static <T> List<T> mapRelations(Query<T> query, List<T> objs, ClassInfo info) {
+		List<QueryAggregated> aggregs = query.getAggregatees();
+		if(aggregs.isEmpty()){
+			return objs;
+		}
+		else if(aggregs.size() == 1){
+			QueryAggregated aggreg = aggregs.get(0);
+			
+			Relation rel = 
+				new Relation(Relation.Type.AGGREGATION, aggreg.aggregator, aggreg.field);
+			for(T obj: objs){
+				Util.setField(obj, info.aggregator, rel);
+			}
+			
+			return objs;
+		}
+		else {
+			throw new SienaException("Only one aggregation per query allowed");
+		}
 	}
 }

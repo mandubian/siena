@@ -411,7 +411,7 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 			if(ClassInfo.isOne(f)){
 				// set the owner field in the child object using the content of the one
 				One<?> relObj = (One<?>)Util.readField(obj, f);
-				Map<FieldMapKeys, Object> m = info.singleOwnedFieldMap.get(f);
+				Map<FieldMapKeys, Object> m = info.oneFieldMap.get(f);
 				if(m != null){
 					Field asField = (Field)m.get(FieldMapKeys.FIELD);
 					Object oneObj = relObj.get();
@@ -424,7 +424,7 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 			else if(ClassInfo.isMany(f)){
 				Many4PM<?> lq = (Many4PM<?>)Util.readField(obj, f);
 				if(!lq.asList().isEmpty()){
-					Field asField = (Field)info.manyOwnedFieldMap.get(f).get(FieldMapKeys.FIELD);
+					Field asField = (Field)info.manyFieldMap.get(f).get(FieldMapKeys.FIELD);
 					for(Object relObj: lq.asList2Add()){
 						Util.setField(relObj, asField, obj);
 						relObjects.add(relObj);
@@ -537,7 +537,7 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 			if(ClassInfo.isOne(f)){
 				// set the owner field in the child object using the content of the one
 				One4PM<?> relObj = (One4PM<?>)Util.readField(obj, f);
-				Map<FieldMapKeys, Object> m = info.singleOwnedFieldMap.get(f);
+				Map<FieldMapKeys, Object> m = info.oneFieldMap.get(f);
 				if(m != null){
 					Field asField = (Field)m.get(FieldMapKeys.FIELD);
 					if(relObj.isModified()){
@@ -566,7 +566,7 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 				
 				// when you remove an element from a Many<T>, it just removes the link
 				if(!lq.asList2Remove().isEmpty()){
-					Field asField = (Field)info.manyOwnedFieldMap.get(f).get(FieldMapKeys.FIELD);
+					Field asField = (Field)info.manyFieldMap.get(f).get(FieldMapKeys.FIELD);
 					for(Object elt : lq.asList2Remove()){
 						Util.setField(elt, asField, null);
 						List<Object> objects2Save = objectsMap.get(PersistenceType.SAVE);
@@ -579,7 +579,7 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 					lq.asList2Remove().clear();
 				}
 				if(!lq.asList2Add().isEmpty()){
-					Field asField = (Field)info.manyOwnedFieldMap.get(f).get(FieldMapKeys.FIELD);
+					Field asField = (Field)info.manyFieldMap.get(f).get(FieldMapKeys.FIELD);
 					for(Object elt : lq.asList2Add()){
 						Util.setField(elt, asField, obj);
 						List<Object> objects2Save = objectsMap.get(PersistenceType.SAVE);
@@ -1135,10 +1135,12 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 
 	
 	protected <T> T map(Query<T> query, Entity entity) {
-		Class<?> clazz = query.getQueriedClass();
-		@SuppressWarnings("unchecked")
-		T result = (T)GaeMappingUtils.mapEntity(entity, clazz);
+		Class<T> clazz = query.getQueriedClass();
+		T result = GaeMappingUtils.mapEntity(entity, clazz);
 		ClassInfo info = ClassInfo.getClassInfo(clazz);
+		
+		// maps model relations to be able to associate children to aggregators
+		GaeMappingUtils.mapRelation(query, result, info);
 		
 		// related fields (Many<T> management mainly)
 		if(!info.ownedFields.isEmpty()){
@@ -1159,9 +1161,12 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 	
 	@SuppressWarnings("unchecked")
 	protected <T> List<T> map(Query<T> query, List<Entity> entities) {
-		Class<?> clazz = query.getQueriedClass();
-		List<T> results = (List<T>) GaeMappingUtils.mapEntities(entities, clazz);
+		Class<T> clazz = query.getQueriedClass();
+		List<T> results = GaeMappingUtils.mapEntities(entities, clazz);
 		ClassInfo info = ClassInfo.getClassInfo(clazz);
+		
+		// maps model relations to be able to associate children to aggregators
+		GaeMappingUtils.mapRelations(query, results, info);
 		
 		// related fields (Many<T> management mainly)
 		if(!info.ownedFields.isEmpty()){
@@ -1180,7 +1185,19 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 		return results;
 	}
 
+	protected <T> List<T> mapKeysOnly(Query<T> query, List<Entity> entities) {
+		Class<T> clazz = query.getQueriedClass();
+		List<T> results = GaeMappingUtils.mapEntitiesKeysOnly(entities, clazz);
+		ClassInfo info = ClassInfo.getClassInfo(clazz);
+		
+		// maps model relations to be able to associate children to aggregators
+		GaeMappingUtils.mapRelations(query, results, info);
+		
+		// DOESN'T MANAGE OWNED/AGGREGATED/JOIN fields
+		return results;
+	}
 
+	
 	private <T> List<T> doFetchList(Query<T> query, int limit, int offset) {
 		QueryOptionGaeContext gaeCtx = (QueryOptionGaeContext)query.option(QueryOptionGaeContext.ID);
 		if(gaeCtx==null){
@@ -1271,7 +1288,7 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 							gaeCtx.noMoreDataAfter = false;
 						}
 					}
-					return GaeMappingUtils.mapEntitiesKeysOnly(entities, query.getQueriedClass());
+					return mapKeysOnly(query, entities);
 				}
 			case NORMAL:
 			default:
@@ -1343,7 +1360,7 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 							gaeCtx.realOffset+=entities.size();
 						}											
 						
-						return GaeMappingUtils.mapEntitiesKeysOnly(entities, query.getQueriedClass());
+						return mapKeysOnly(query, entities);
 					}
 				case NORMAL:
 				default:
@@ -1438,7 +1455,7 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 						}
 						//}
 						
-						return GaeMappingUtils.mapEntitiesKeysOnly(entities, query.getQueriedClass());
+						return mapKeysOnly(query, entities);
 					}
 				case NORMAL:
 				default:
