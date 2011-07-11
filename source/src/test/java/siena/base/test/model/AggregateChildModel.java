@@ -27,10 +27,13 @@ public class AggregateChildModel extends Model {
 		if (getClass() != obj.getClass())
 			return false;
 		AggregateChildModel other = (AggregateChildModel) obj;
-		if (id == null && other.id != null || !id.equals(other.id)) {
+		if ((id == null && other.id != null) || !id.equals(other.id)) {
 			return false;
 		}
-		if (name == null && other.name != null || !name.equals(other.name)) {
+		if (name == null && other.name != null){
+			return false;
+		}
+		if(!name.equals(other.name)){
 			return false;
 		}
 		return true;

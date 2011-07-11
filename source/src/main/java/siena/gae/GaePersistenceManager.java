@@ -398,7 +398,9 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 			else if(ClassInfo.isMany(f)){
 				Many4PM<?> lq = (Many4PM<?>)Util.readField(obj, f);
 				if(!lq.asList().isEmpty()){
-					map.put(f, (List<Object>)lq.asList2Add());
+					map.put(f, new ArrayList<Object>((List<Object>)lq.asList2Add()));
+					// clears list2adds
+					lq.asList2Add().clear();
 				}
 			}
 		}
@@ -586,9 +588,8 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 							objectsMap.put(PersistenceType.SAVE, objects2Save);
 						}
 						objects2Save.add(elt);
-						// TODO CLEAN ADD LIST
-						//lq.asList2Add().clear();
 					}
+					lq.asList2Add().clear();
 				}
 			}
 		}			

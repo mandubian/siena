@@ -52,7 +52,8 @@ import siena.core.options.QueryOptionState;
 public abstract class Model {
 
 	transient private PersistenceManager persistenceManager;
-
+	transient private Object relation;
+	
 	public Model() {
 		init();
 	}
@@ -100,6 +101,14 @@ public abstract class Model {
 		return new ModelAsync(this);
 	}
 	
+	public Object getRelation() {
+		return relation;
+	}
+
+	public void setRelation(Object relation) {
+		this.relation = relation;
+	}
+
 	public boolean equals(Object that) {
 		if(this == that) { return true; }
 		if(that == null || that.getClass() != this.getClass()) { return false; }
