@@ -8,28 +8,24 @@ package siena.core;
  *
  */
 public class Relation {
-	public enum Type {
-		AGGREGATION
-	}
-	
-	public Type 	type;
-	public Object 	target;
-	public Object	discriminator;	
+	public RelationMode mode;
+	public Object 		target;
+	public Object		discriminator;	
 	
 	public Relation(){
 	}
 	
-	public Relation(Type type){
-		this.type = type;
+	public Relation(RelationMode mode){
+		this.mode = mode;
 	}
 	
-	public Relation(Type type, Object target){
-		this.type = type;
+	public Relation(RelationMode mode, Object target){
+		this.mode = mode;
 		this.target = target;		
 	}
 
-	public Relation(Type type, Object target, Object discriminator){
-		this.type = type;
+	public Relation(RelationMode mode, Object target, Object discriminator){
+		this.mode = mode;
 		this.target = target;		
 		this.discriminator = discriminator;
 	}

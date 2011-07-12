@@ -37,6 +37,21 @@ public abstract class BaseAggregatedTest extends TestCase {
 		}
 
 	}
+	
+	public void testAggregateMostSimple() {
+		AggregateParentModel god = new AggregateParentModel("god");
+		god.insert();
+		assertNotNull(god.id);
+		
+		AggregateChildModel adam1 = new AggregateChildModel("adam1");
+		adam1.aggregate(god, "child");
+		adam1.insert();
+		
+		assertNotNull(adam1.id);
+		assertNotNull(adam1.getRelation());
+
+	}
+
 	public void testAggregate() {
 		AggregateChildModel adam1 = new AggregateChildModel("adam1");
 		AggregateChildModel adam2 = new AggregateChildModel("adam2");	

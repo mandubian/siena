@@ -110,6 +110,29 @@ public abstract class Model {
 		return new ModelAsync(this);
 	}
 
+	public boolean hasRelation(RelationMode mode) {
+		if(mode == RelationMode.AGGREGATION){
+			return Util.readField(
+					this, ClassInfo.getClassInfo(this.getClass()).aggregator) != null;
+		}
+		return false;
+	}
+	
+	public Model setRelation(Relation relation){
+		Util.setField(this, ClassInfo.getClassInfo(this.getClass()).aggregator, relation);
+		
+		return this;
+	}
+	
+	public Relation getRelation(){
+		return (Relation)Util.readField(this, 
+					ClassInfo.getClassInfo(this.getClass()).aggregator);
+	}
+	
+	public Model aggregate(Object aggregator, String fieldName){
+		return setRelation(new Relation(RelationMode.AGGREGATION, aggregator, fieldName));
+	}
+	
 	public boolean equals(Object that) {
 		if(this == that) { return true; }
 		if(that == null || that.getClass() != this.getClass()) { return false; }
@@ -523,31 +546,31 @@ public abstract class Model {
 	class ProxyOne<T> implements One4PM<T> {
 		
 		private Class<T> 		clazz;
-		private Model 			obj;
+		private Model 			ancestor;
 		private One4PM<T> 		one;
 		private RelationMode 	mode;
 		private Field			field;	
 
-		public ProxyOne(Class<T> clazz, Model obj, RelationMode mode, Field field) {
+		public ProxyOne(Class<T> clazz, Model ancestor, RelationMode mode, Field field) {
 			this.clazz = clazz;
-			this.obj = obj;
+			this.ancestor = ancestor;
 			this.mode = mode;
 			this.field = field;
 		}
 
 		private One4PM<T> createOne() {
 			if(this.one == null){
-				this.one = obj.getPersistenceManager().createOne(clazz);
+				this.one = ancestor.getPersistenceManager().createOne(clazz);
 			}
 			//else if(((QueryOptionState)this.listQuery.asQuery().option(QueryOptionState.ID)).isStateless()){
 			//	this.listQuery.asQuery().release();				
 			//}
 			switch(mode){
 			case AGGREGATION:
-				aggregationMode(obj, ClassInfo.getSimplestColumnName(field));
+				aggregationMode(ancestor, ClassInfo.getSimplestColumnName(field));
 				break;
 			case RELATION:
-				relationMode(obj, ClassInfo.getSimplestColumnName(field));				
+				relationMode(ancestor, ClassInfo.getSimplestColumnName(field));				
 				break;
 			}
 			

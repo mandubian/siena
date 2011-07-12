@@ -33,6 +33,12 @@ public class GaeAggregatedTest extends BaseAggregatedTest{
     }
 
 	@Override
+	public void testAggregateMostSimple() {
+		// TODO Auto-generated method stub
+		super.testAggregateMostSimple();
+	}
+
+	@Override
 	public void testAggregate() {
 		// TODO Auto-generated method stub
 		super.testAggregate();

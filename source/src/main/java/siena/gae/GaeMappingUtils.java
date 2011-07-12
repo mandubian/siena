@@ -8,7 +8,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
-
 import siena.ClassInfo;
 import siena.Id;
 import siena.Json;
@@ -19,6 +18,7 @@ import siena.SienaRestrictedApiException;
 import siena.Util;
 import siena.core.DecimalPrecision;
 import siena.core.Relation;
+import siena.core.RelationMode;
 import siena.embed.Embedded;
 import siena.embed.JavaSerializer;
 import siena.embed.JsonSerializer;
@@ -754,7 +754,7 @@ public class GaeMappingUtils {
 			QueryAggregated aggreg = aggregs.get(0);
 			
 			Relation rel = 
-				new Relation(Relation.Type.AGGREGATION, aggreg.aggregator, aggreg.field);
+				new Relation(RelationMode.AGGREGATION, aggreg.aggregator, aggreg.field.getName());
 			Util.setField(obj, info.aggregator, rel);
 			
 			return obj;
@@ -773,7 +773,7 @@ public class GaeMappingUtils {
 			QueryAggregated aggreg = aggregs.get(0);
 			
 			Relation rel = 
-				new Relation(Relation.Type.AGGREGATION, aggreg.aggregator, aggreg.field);
+				new Relation(RelationMode.AGGREGATION, aggreg.aggregator, aggreg.field.getName());
 			for(T obj: objs){
 				Util.setField(obj, info.aggregator, rel);
 			}

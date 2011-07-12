@@ -73,6 +73,7 @@ public class ClassInfo {
 	// this aggregator field is the field identified as containing the aggregator
 	// there can be only ONE aggregator in a class
 	public Field aggregator = null;
+	public boolean hasAggregator = false;
 	
 	public enum FieldMapKeys {
 		CLASS,
@@ -131,7 +132,8 @@ public class ClassInfo {
 						if(type != Relation.class){
 							throw new SienaException("Found @Aggregator field not with type siena.core.Relation which is forbidden");
 						}
-						aggregator = field;
+						aggregator = field;						
+						hasAggregator = true;
 					}
 					continue;
 				}

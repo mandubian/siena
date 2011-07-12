@@ -36,6 +36,8 @@ import siena.core.Many;
 import siena.core.Many4PM;
 import siena.core.One;
 import siena.core.One4PM;
+import siena.core.Relation;
+import siena.core.RelationMode;
 import siena.core.async.PersistenceManagerAsync;
 import siena.core.options.QueryOptionFetchType;
 import siena.core.options.QueryOptionOffset;
@@ -233,26 +235,46 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 	}
 
 	public void insert(Object obj) {
-		_insertSingle(obj, null, null, null);	
+		_insertSingle(obj, null, null, null, null);	
 	}
 	
-	private void _insertSingle(Object obj, final Entity parent, final ClassInfo parentInfo, final Field field) {
+	
+	private void _insertSingle2(Object obj) {
+		Class<?> clazz = obj.getClass();
+		ClassInfo info = ClassInfo.getClassInfo(clazz);
+		Field idField = info.getIdField();
+		final Entity entity;
+		
+		if(info.hasAggregator){
+			Relation rel = (Relation)Util.readField(obj, info.aggregator);
+			if(rel != null){
+				GaeMappingUtils.makeKey(clazz, value)
+			}
+		}
+	}
+	
+	private void _insertSingle(Object obj, final Entity parentEntity, final Object parentObj, final ClassInfo parentInfo, final Field field) {
 		Class<?> clazz = obj.getClass();
 		ClassInfo info = ClassInfo.getClassInfo(clazz);
 		Field idField = info.getIdField();
 		final Entity entity;
 		
 		// first put the entity to have its ID at least!
-		if(parent==null){
+		if(parentEntity==null){
 			entity = GaeMappingUtils.createEntityInstance(idField, info, obj);
 			GaeMappingUtils.fillEntity(obj, entity);
 			ds.put(entity);
 			GaeMappingUtils.setIdFromKey(idField, obj, entity.getKey());
 		}else {
-			entity = GaeMappingUtils.createEntityInstanceFromParent(idField, info, obj, parent.getKey(), parentInfo, field);
+			entity = GaeMappingUtils.createEntityInstanceFromParent(idField, info, obj, 
+					parentEntity.getKey(), parentInfo, field);
 			GaeMappingUtils.fillEntity(obj, entity);
 			ds.put(entity);
 			GaeMappingUtils.setIdFromKey(idField, obj, entity.getKey());
+			
+			// creates the aggregation relation
+			Relation rel = new Relation(RelationMode.AGGREGATION, parentObj, field);
+			Util.setField(obj, info.aggregator, rel);
 		}
 		
 		if(info.hasAggregatedFields){
@@ -272,11 +294,11 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 		}
 	}
 	
-	private int _insertMultiple(Object[] objects, final Entity parentEntity, final ClassInfo parentInfo, final Field field) {
-		return _insertMultiple(Arrays.asList(objects), parentEntity, parentInfo, field);
+	private int _insertMultiple(Object[] objects, final Entity parentEntity, final Object parentObj, final ClassInfo parentInfo, final Field field) {
+		return _insertMultiple(Arrays.asList(objects), parentEntity, parentObj, parentInfo, field);
 	}
 	
-	private int _insertMultiple(Iterable<?> objects, final Entity parentEntity, final ClassInfo parentInfo, final Field field) {
+	private int _insertMultiple(Iterable<?> objects, final Entity parentEntity, final Object parentObj, final ClassInfo parentInfo, final Field field) {
 		List<Entity> entities = new ArrayList<Entity>();
 		if(parentEntity==null){
 			for(Object obj:objects){
@@ -314,6 +336,10 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 			Field idField = info.getIdField();
 			GaeMappingUtils.setIdFromKey(idField, obj, generatedKeys.get(i));
 			
+			// creates the aggregation relation
+			Relation rel = new Relation(RelationMode.AGGREGATION, parentObj, field);
+			Util.setField(obj, info.aggregator, rel);
+
 			if(info.hasAggregatedFields){
 				infos.add(info);
 				Map<Field, List<Object>> objectMap = new HashMap<Field, List<Object>>();		
@@ -442,10 +468,10 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 		ClassInfo info = ClassInfo.getClassInfo(clazz);
 		
 		if(!info.hasAggregatedFields && !info.hasOwnedFields){
-			_simpleUpdate(obj, info, null, null, null);
+			_updateSimple(obj, info, null, null, null);
 		}
 		else {
-			_complexUpdate(obj, info, null, null, null);
+			_updateComplex(obj, null, null, null);
 		}
 		
 	}
@@ -457,7 +483,7 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 		DELETE
 	}
 	
-	private void _simpleUpdate(Object obj, ClassInfo info, Key parentKey, ClassInfo parentInfo, Field parentField){
+	private <T> void _updateSimple(T obj, ClassInfo info, Key parentKey, ClassInfo parentInfo, Field parentField){
 		Entity entity;
 		Field idField = info.getIdField();
 		
@@ -485,47 +511,72 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 		}
 	}
 	
-	private void _complexUpdate(Object obj, ClassInfo info, Key parentKey, ClassInfo parentInfo, Field parentField){
+	private <T> void _updateSimpleMultiple(Iterable<T> objs, Key parentKey, ClassInfo parentInfo, Field parentField){
+		List<Entity> entities = new ArrayList<Entity>();
+		
+		ClassInfo info = null;  
+		Field idField = null;
+		
+		for(T obj: objs){
+			if(info == null){
+				info = ClassInfo.getClassInfo(obj.getClass());
+				idField = info.getIdField();
+			}
+			
+			Entity entity; 
+			Object idVal = Util.readField(obj, idField);
+			// id with null value means insert
+			if(idVal == null){
+				if(parentKey==null){
+					entity = GaeMappingUtils.createEntityInstance(idField, info, obj);
+				}else {
+					entity = GaeMappingUtils.createEntityInstanceFromParent(idField, info, obj, parentKey, parentInfo, parentField);
+				}
+				GaeMappingUtils.fillEntity(obj, entity);
+			}else {
+				if(parentKey == null){
+					entity = GaeMappingUtils.createEntityInstanceForUpdate(idField, info, obj);
+				}else {
+					entity = GaeMappingUtils.createEntityInstanceForUpdateFromParent(
+							idField, info, obj, parentKey, parentInfo, parentField);
+				}
+				GaeMappingUtils.fillEntity(obj, entity);
+			}
+			
+			entities.add(entity);
+		}
+		
+		if(!entities.isEmpty()){
+			ds.put(entities);
+		}
+	}
+	
+	private <T> int _updateComplex(T obj, Key parentKey, ClassInfo parentInfo, Field parentField){
 		HashMap<PersistenceType, List<Entity>> entitiesMap = new HashMap<PersistenceType, List<Entity>>(); 
 		HashMap<PersistenceType, List<Object>> objectsMap = new HashMap<PersistenceType, List<Object>>(); 
 		HashMap<PersistenceType, List<Key>> keysMap = new HashMap<PersistenceType, List<Key>>(); 
 
-		_buildUpdateMaps(entitiesMap, objectsMap, keysMap, obj, null, null, null);
+		_updateBuildMaps(entitiesMap, objectsMap, keysMap, obj, null, null, null);
 		
-		// saves the updated owned objects
-		List<Object> objs = objectsMap.get(PersistenceType.SAVE);
-		if(objs!=null && !objs.isEmpty()){
-			save(objs);
-		}
-		
-		// saves the updated aggregated objects
-		List<Entity> entities = entitiesMap.get(PersistenceType.INSERT);
-		if(entities!=null && !entities.isEmpty()){
-			List<Key> generatedKeys = ds.put(entities);
-			
-			int i=0;
-			for(Object elt:objectsMap.get(PersistenceType.INSERT)){
-				Field idField = ClassInfo.getClassInfo(elt.getClass()).getIdField();
-				GaeMappingUtils.setIdFromKey(idField, elt, generatedKeys.get(i));
-			}
-		}
-
-		// saves the updated aggregated objects
-		entities = entitiesMap.get(PersistenceType.UPDATE);
-		if(entities!=null && !entities.isEmpty()){
-			ds.put(entities);
-		}
-
-		// removes the deleted aggregated objects
-		List<Key> keys = keysMap.get(PersistenceType.DELETE);
-		if(keys!=null && !keys.isEmpty()){
-			ds.delete(keys);
-		}
+		return _updateManageMaps(entitiesMap, objectsMap, keysMap);
 	}
 
 	
+	private <T> int _updateComplexMultiple(Iterable<T> objs, Key parentKey, ClassInfo parentInfo, Field parentField){
+		HashMap<PersistenceType, List<Entity>> entitiesMap = new HashMap<PersistenceType, List<Entity>>(); 
+		HashMap<PersistenceType, List<Object>> objectsMap = new HashMap<PersistenceType, List<Object>>(); 
+		HashMap<PersistenceType, List<Key>> keysMap = new HashMap<PersistenceType, List<Key>>(); 
+
+		for(Object obj:objs){
+			_updateBuildMaps(entitiesMap, objectsMap, keysMap, obj, null, null, null);
+		}
+		
+		return _updateManageMaps(entitiesMap, objectsMap, keysMap);
+	}
+
+
 	//private void _buildUpdateList(List<Entity> entities2Insert, List<Object> objects2Insert, List<Entity> entities2Update, List<Key> entities2Remove, List<Object> objects2Save, Object obj, Key parentKey, ClassInfo parentInfo, Field parentField){
-	private void _buildUpdateMaps(
+	private static void _updateBuildMaps(
 			HashMap<PersistenceType, List<Entity>> entitiesMap, 
 			HashMap<PersistenceType, List<Object>> objectsMap, 
 			HashMap<PersistenceType, List<Key>> keysMap,
@@ -661,7 +712,7 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 					
 					Object oneObj = one.get();
 					if(oneObj != null){
-						_buildUpdateMaps(entitiesMap, objectsMap, keysMap, oneObj, entity.getKey(), info, f);
+						_updateBuildMaps(entitiesMap, objectsMap, keysMap, oneObj, entity.getKey(), info, f);
 					}
 				}
 				
@@ -698,14 +749,62 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 				}
 				if(!lq.asList2Add().isEmpty()){
 					for(Object elt : lq.asList2Add()){
-						_buildUpdateMaps(entitiesMap, objectsMap, keysMap, elt, entity.getKey(), info, f);
+						_updateBuildMaps(entitiesMap, objectsMap, keysMap, elt, entity.getKey(), info, f);
 					}
 					lq.asList2Add().clear();
 				}
 			}
 		}
-
 	}
+	
+	
+	private int _updateManageMaps(
+			HashMap<PersistenceType, List<Entity>> entitiesMap, 
+			HashMap<PersistenceType, List<Object>> objectsMap, 
+			HashMap<PersistenceType, List<Key>> keysMap){
+
+		int nb = 0;
+		// saves the updated owned objects
+		List<Object> objs = objectsMap.get(PersistenceType.SAVE);
+		if(objs!=null && !objs.isEmpty()){
+			nb += save(objs);			
+		}
+		
+		// saves the updated aggregated objects
+		List<Entity> entities = entitiesMap.get(PersistenceType.INSERT);
+		if(entities!=null && !entities.isEmpty()){
+			List<Key> generatedKeys = ds.put(entities);
+			
+			int i=0;
+			for(Object elt:objectsMap.get(PersistenceType.INSERT)){
+				Class<?> clazz = elt.getClass();
+				ClassInfo info = ClassInfo.getClassInfo(clazz);
+				Field idField = info.getIdField();
+				GaeMappingUtils.setIdFromKey(idField, elt, generatedKeys.get(i));
+			}
+			
+			nb += generatedKeys.size();
+		}
+
+		// saves the updated aggregated objects
+		entities = entitiesMap.get(PersistenceType.UPDATE);
+		if(entities!=null && !entities.isEmpty()){
+			ds.put(entitiesMap.get(PersistenceType.UPDATE));
+			
+			nb += entities.size();
+		}
+
+		// removes the deleted aggregated objects
+		List<Key> keys = keysMap.get(PersistenceType.DELETE);
+		if(keys!=null && !keys.isEmpty()){
+			ds.delete(keys);
+			
+			nb += keys.size();
+		}
+		
+		return nb;
+	}
+	
 	
 	public void save(Object obj) {
 		Class<?> clazz = obj.getClass();
@@ -1200,7 +1299,6 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 		return result;
 	}
 	
-	@SuppressWarnings("unchecked")
 	protected <T> List<T> map(Query<T> query, List<Entity> entities) {
 		Class<T> clazz = query.getQueriedClass();
 		List<T> results = GaeMappingUtils.mapEntities(entities, clazz);
@@ -1934,32 +2032,11 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 		
 		return generatedKeys.size();*/
 		
-		return _insertMultiple(objects, null, null, null);
+		return _insertMultiple(objects, null, null, null, null);
 	}
 
 	public int insert(Iterable<?> objects) {
-		/*List<Entity> entities = new ArrayList<Entity>();
-		for(Object obj:objects){
-			Class<?> clazz = obj.getClass();
-			ClassInfo info = ClassInfo.getClassInfo(clazz);
-			Field idField = info.getIdField();
-			Entity entity = GaeMappingUtils.createEntityInstance(idField, info, obj);
-			GaeMappingUtils.fillEntity(obj, entity);
-			entities.add(entity);
-		}
-				
-		List<Key> generatedKeys = ds.put(entities);
-		
-		int i=0;
-		for(Object obj:objects){
-			Class<?> clazz = obj.getClass();
-			ClassInfo info = ClassInfo.getClassInfo(clazz);
-			Field idField = info.getIdField();
-			GaeMappingUtils.setIdFromKey(idField, obj, generatedKeys.get(i++));
-		}
-		return generatedKeys.size();*/
-		
-		return _insertMultiple(objects, null, null, null);
+		return _insertMultiple(objects, null, null, null, null);
 	}
 
 	public int delete(Object... models) {
@@ -2064,54 +2141,7 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 	}
 
 	public <T> int update(Iterable<T> objects) {
-		HashMap<PersistenceType, List<Entity>> entitiesMap = new HashMap<PersistenceType, List<Entity>>(); 
-		HashMap<PersistenceType, List<Object>> objectsMap = new HashMap<PersistenceType, List<Object>>(); 
-		HashMap<PersistenceType, List<Key>> keysMap = new HashMap<PersistenceType, List<Key>>(); 
-		
-		for(Object obj:objects){
-			_buildUpdateMaps(entitiesMap, objectsMap, keysMap, obj, null, null, null);
-		}		
-
-		int nb = 0;
-		// saves the updated owned objects
-		List<Object> objs = objectsMap.get(PersistenceType.SAVE);
-		if(objs!=null && !objs.isEmpty()){
-			nb += save(objs);			
-		}
-		
-		// saves the updated aggregated objects
-		List<Entity> entities = entitiesMap.get(PersistenceType.INSERT);
-		if(entities!=null && !entities.isEmpty()){
-			List<Key> generatedKeys = ds.put(entities);
-			
-			int i=0;
-			for(Object elt:objectsMap.get(PersistenceType.INSERT)){
-				Class<?> clazz = elt.getClass();
-				ClassInfo info = ClassInfo.getClassInfo(clazz);
-				Field idField = info.getIdField();
-				GaeMappingUtils.setIdFromKey(idField, elt, generatedKeys.get(i));
-			}
-			
-			nb += generatedKeys.size();
-		}
-
-		// saves the updated aggregated objects
-		entities = entitiesMap.get(PersistenceType.UPDATE);
-		if(entities!=null && !entities.isEmpty()){
-			ds.put(entitiesMap.get(PersistenceType.UPDATE));
-			
-			nb += entities.size();
-		}
-
-		// removes the deleted aggregated objects
-		List<Key> keys = keysMap.get(PersistenceType.DELETE);
-		if(keys!=null && !keys.isEmpty()){
-			ds.delete(keys);
-			
-			nb += keys.size();
-		}
-		
-		return nb;
+		return _updateComplexMultiple(objects, null, null, null);
 	}
 
 	public <T> int update(Query<T> query, Map<String, ?> fieldValues) {
@@ -2132,7 +2162,6 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 			ClassInfo info = ClassInfo.getClassInfo(clazz);
 			Field idField = info.getIdField();
 			
-			Entity entity;
 			Object idVal = Util.readField(obj, idField);
 			// id with null value means insert
 			if(idVal == null){

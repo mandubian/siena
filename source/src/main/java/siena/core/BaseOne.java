@@ -3,8 +3,10 @@
  */
 package siena.core;
 
+import siena.ClassInfo;
 import siena.PersistenceManager;
 import siena.Query;
+import siena.Util;
 
 /**
  * @author mandubian <pascal.voitot@mandubian.org>
@@ -15,24 +17,25 @@ public class BaseOne<T> implements One4PM<T>{
 	transient protected PersistenceManager pm;
 	transient protected Class<T> clazz;
 	
-	protected RelationMode mode;
+	protected Relation relation;
 
 	transient protected Query<T> query;
-	transient protected T obj;
+	transient protected T target;
 	transient protected boolean isSync = true;
 	transient protected boolean isModified = false;
-	transient protected T prevObj;
+	transient protected T prevTarget;
 
 	public BaseOne(PersistenceManager pm, Class<T> clazz){
 		this.pm = pm;
 		this.clazz = clazz;
 		this.query = pm.createQuery(clazz);
+		this.relation = new Relation();
 	}
 
 	public BaseOne(PersistenceManager pm, Class<T> clazz, RelationMode mode, Object obj, String fieldName) {
 		this.pm = pm;
 		this.clazz = clazz;
-		this.mode = mode;
+		this.relation = new Relation(mode, obj, fieldName);
 		switch(mode){
 		case AGGREGATION:
 			this.query = pm.createQuery(clazz).aggregated(obj, fieldName);
@@ -46,12 +49,24 @@ public class BaseOne<T> implements One4PM<T>{
 	
 	public T get() {
 		sync();
-		return obj;
+		return target;
 	}
 
 	public void set(T obj) {
-		this.prevObj = this.obj;
-		this.obj = obj;
+		this.prevTarget = this.target;
+
+		this.target = obj;
+		
+		// sets relation on target object
+		if(this.target != null){
+			Util.setField(this.target, ClassInfo.getClassInfo(clazz).aggregator, this.relation);
+		}
+
+		// resets relation on previous object
+		if(this.prevTarget != null){
+			Util.setField(this.prevTarget, ClassInfo.getClassInfo(clazz).aggregator, null);
+		}
+		
 		isModified = true;
 	}
 
@@ -63,7 +78,7 @@ public class BaseOne<T> implements One4PM<T>{
 	}
 
 	public One<T> forceSync() {
-		obj = query.get();
+		target = query.get();
 		isSync = true;
 		isModified = false;
 		return this;
@@ -84,17 +99,23 @@ public class BaseOne<T> implements One4PM<T>{
 	}
 
 	public T getPrev() {
-		return this.prevObj;
+		return this.prevTarget;
 	}
 
 	public One4PM<T> aggregationMode(Object aggregator, String fieldName) {
-		this.mode = RelationMode.AGGREGATION;
+		this.relation.mode = RelationMode.AGGREGATION;
+		this.relation.target = aggregator;
+		this.relation.discriminator = fieldName;
+		
 		this.query.release().aggregated(aggregator, fieldName);
 		return this;
 	}
 
 	public One4PM<T> relationMode(Object owner, String fieldName) {
-		this.mode = RelationMode.RELATION;
+		this.relation.mode = RelationMode.RELATION;
+		this.relation.target = owner;
+		this.relation.discriminator = fieldName;
+		
 		this.query.release().filter(fieldName, owner);
 		return this;
 	}
