@@ -248,7 +248,7 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 		if(info.hasAggregator){
 			Relation rel = (Relation)Util.readField(obj, info.aggregator);
 			if(rel != null){
-				GaeMappingUtils.makeKey(clazz, value)
+				//GaeMappingUtils.makeKey(clazz, value)
 			}
 		}
 	}
