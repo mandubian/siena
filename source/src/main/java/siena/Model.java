@@ -130,7 +130,8 @@ public abstract class Model {
 	}
 	
 	public Model aggregate(Object aggregator, String fieldName){
-		return setRelation(new Relation(RelationMode.AGGREGATION, aggregator, fieldName));
+		return setRelation(
+				new Relation(RelationMode.AGGREGATION, aggregator, Util.getField(aggregator.getClass(), fieldName)));
 	}
 	
 	public boolean equals(Object that) {
@@ -567,10 +568,10 @@ public abstract class Model {
 			//}
 			switch(mode){
 			case AGGREGATION:
-				aggregationMode(ancestor, ClassInfo.getSimplestColumnName(field));
+				aggregationMode(ancestor, field);
 				break;
 			case RELATION:
-				relationMode(ancestor, ClassInfo.getSimplestColumnName(field));				
+				relationMode(ancestor, field);				
 				break;
 			}
 			
@@ -578,12 +579,12 @@ public abstract class Model {
 		}
 
 		
-		public One4PM<T> aggregationMode(Object aggregator, String fieldName) {
-			return this.one.aggregationMode(aggregator, fieldName);
+		public One4PM<T> aggregationMode(Object aggregator, Field field) {
+			return this.one.aggregationMode(aggregator, field);
 		}
 
-		public One4PM<T> relationMode(Object owner, String fieldName) {
-			return this.one.relationMode(owner, fieldName);
+		public One4PM<T> relationMode(Object owner, Field field) {
+			return this.one.relationMode(owner, field);
 		}
 
 		public T get() {

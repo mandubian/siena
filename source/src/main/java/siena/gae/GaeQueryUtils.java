@@ -12,8 +12,6 @@ import java.util.regex.Pattern;
 
 import siena.ClassInfo;
 import siena.Id;
-import siena.Query;
-import siena.QueryAggregated;
 import siena.QueryData;
 import siena.QueryFilter;
 import siena.QueryFilterSearch;
@@ -24,7 +22,6 @@ import siena.SienaException;
 import siena.SienaRestrictedApiException;
 import siena.Util;
 import siena.core.QueryFilterEmbedded;
-import siena.core.Relation;
 import siena.core.options.QueryOptionOffset;
 import siena.core.options.QueryOptionPage;
 import siena.core.options.QueryOptionState;

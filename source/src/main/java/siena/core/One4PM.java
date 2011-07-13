@@ -1,5 +1,7 @@
 package siena.core;
 
+import java.lang.reflect.Field;
+
 
 
 /**
@@ -15,6 +17,6 @@ public interface One4PM<T> extends One<T>  {
 	boolean isModified();
 	T getPrev();
 
-	One4PM<T> aggregationMode(Object aggregator, String fieldName);
-	One4PM<T> relationMode(Object owner, String fieldName);
+	One4PM<T> aggregationMode(Object aggregator, Field field);
+	One4PM<T> relationMode(Object owner, Field field);
 }

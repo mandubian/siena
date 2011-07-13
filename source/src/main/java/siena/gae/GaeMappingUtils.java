@@ -71,15 +71,15 @@ public class GaeMappingUtils {
 		return entity;
 	}
 	
-	public static Entity createEntityInstanceForUpdate(Field idField, ClassInfo info, Object obj){
-		Key key = makeKey(idField, info, obj);
+	public static Entity createEntityInstanceForUpdate(ClassInfo info, Object obj){
+		Key key = makeKey(info, obj);
 		Entity entity = new Entity(key);
 		
 		return entity;
 	}
 	
-	public static Entity createEntityInstanceForUpdateFromParent(Field idField, ClassInfo info, Object obj, Key parentKey, ClassInfo parentInfo, Field parentField){
-		Key key = makeKeyFromParent(idField, info, obj, parentKey, parentInfo, parentField);
+	public static Entity createEntityInstanceForUpdateFromParent(ClassInfo info, Object obj, Key parentKey, ClassInfo parentInfo, Field parentField){
+		Key key = makeKeyFromParent(info, obj, parentKey, parentInfo, parentField);
 		Entity entity = new Entity(key);
 		
 		return entity;
@@ -271,7 +271,7 @@ public class GaeMappingUtils {
 		}
 	}
 	
-	protected static Key makeKey(Class<?> clazz, Object value) {
+	protected static Key makeKeyFromId(Class<?> clazz, Object idVal) {
 		ClassInfo info = ClassInfo.getClassInfo(clazz);
 		
 		try {
@@ -284,22 +284,22 @@ public class GaeMappingUtils {
 					// long or string goes toString
 					return KeyFactory.createKey(
 							ClassInfo.getClassInfo(clazz).tableName,
-							value.toString());
+							idVal.toString());
 				case AUTO_INCREMENT:
 					Class<?> type = idField.getType();
 					// as a string with auto_increment can't exist, it is not cast into long
 					if (Long.TYPE==type || Long.class.isAssignableFrom(type)){
 						return KeyFactory.createKey(
 							ClassInfo.getClassInfo(clazz).tableName,
-							(Long)value);
+							(Long)idVal);
 					}
 					return KeyFactory.createKey(
 						ClassInfo.getClassInfo(clazz).tableName,
-						value.toString());
+						idVal.toString());
 				case UUID:
 					return KeyFactory.createKey(
 						ClassInfo.getClassInfo(clazz).tableName,
-						value.toString());
+						idVal.toString());
 				default:
 					throw new SienaException("Id Generator "+id.value()+ " not supported");
 				}
@@ -310,47 +310,20 @@ public class GaeMappingUtils {
 		}
 	}
 	
-	protected static Key makeKey(Field field, ClassInfo info, Object object) {
-		try {
-			Field idField = info.getIdField();
-			Object idVal = Util.readField(object, idField);
-			if(idVal == null)
-				throw new SienaException("Id Field " + idField.getName() + " value null");
-			
-			if(idField.isAnnotationPresent(Id.class)){
-				Id id = idField.getAnnotation(Id.class);
-				switch(id.value()) {
-				case NONE:
-					// long or string goes toString
-					return KeyFactory.createKey(
-							info.tableName,
-							idVal.toString());
-				case AUTO_INCREMENT:
-					Class<?> type = idField.getType();
-					// as a string with auto_increment can't exist, it is not cast into long
-					if (Long.TYPE==type || Long.class.isAssignableFrom(type)){
-						return KeyFactory.createKey(
-							info.tableName,
-							(Long)idVal);
-					}
-					return KeyFactory.createKey(
-							info.tableName,
-							idVal.toString());
-				case UUID:
-					return KeyFactory.createKey(
-							info.tableName,
-							idVal.toString());
-				default:
-					throw new SienaException("Id Generator "+id.value()+ " not supported");
-				}
-			}
-			else throw new SienaException("Field " + idField.getName() + " is not an @Id field");
-		} catch (Exception e) {
-			throw new SienaException(e);
-		}
+	protected static Key makeKey(Object object) {
+		return makeKey(ClassInfo.getClassInfo(object.getClass()), object);
+	}
+	
+	protected static Key makeKey(ClassInfo info, Object object) {
+		Field idField = info.getIdField();
+		Object idVal = Util.readField(object, idField);
+		if(idVal == null)
+			throw new SienaException("Id Field " + idField.getName() + " value null");
+
+		return makeKeyFromId(object.getClass(), idVal);
 	}
 
-	protected static Key makeKeyFromParent(Field field, ClassInfo info, Object object, Key parentKey, ClassInfo parentInfo, Field parentField) {
+	protected static Key makeKeyFromParent(ClassInfo info, Object object, Key parentKey, ClassInfo parentInfo, Field parentField) {
 		try {
 			Field idField = info.getIdField();
 			Object idVal = Util.readField(object, idField);

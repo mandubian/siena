@@ -3,6 +3,8 @@
  */
 package siena.core;
 
+import java.lang.reflect.Field;
+
 import siena.ClassInfo;
 import siena.PersistenceManager;
 import siena.Query;
@@ -102,21 +104,21 @@ public class BaseOne<T> implements One4PM<T>{
 		return this.prevTarget;
 	}
 
-	public One4PM<T> aggregationMode(Object aggregator, String fieldName) {
+	public One4PM<T> aggregationMode(Object aggregator, Field field) {
 		this.relation.mode = RelationMode.AGGREGATION;
 		this.relation.target = aggregator;
-		this.relation.discriminator = fieldName;
+		this.relation.discriminator = field;
 		
-		this.query.release().aggregated(aggregator, fieldName);
+		this.query.release().aggregated(aggregator, ClassInfo.getSimplestColumnName(field));
 		return this;
 	}
 
-	public One4PM<T> relationMode(Object owner, String fieldName) {
+	public One4PM<T> relationMode(Object owner, Field field) {
 		this.relation.mode = RelationMode.RELATION;
 		this.relation.target = owner;
-		this.relation.discriminator = fieldName;
+		this.relation.discriminator = field;
 		
-		this.query.release().filter(fieldName, owner);
+		this.query.release().filter(ClassInfo.getSimplestColumnName(field), owner);
 		return this;
 	}
 }

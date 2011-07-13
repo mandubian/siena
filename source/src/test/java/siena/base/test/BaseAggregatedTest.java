@@ -50,6 +50,54 @@ public abstract class BaseAggregatedTest extends TestCase {
 		assertNotNull(adam1.id);
 		assertNotNull(adam1.getRelation());
 
+		AggregateParentModel god1 = 
+			Model.getByKey(AggregateParentModel.class, god.id);
+		assertNotNull(god1);
+		assertEquals(adam1, god1.child.get());
+		
+		adam1.name = "adam1_UPD";
+		adam1.update();
+		
+		assertEquals(adam1, god1.child.forceSync().get());
+		
+		adam1.name = "adam1_UPD2";
+		adam1.save();
+		
+		assertEquals(adam1, god1.child.forceSync().get());
+		
+		AggregateChildModel adam2 = new AggregateChildModel("adam2");
+		adam2.aggregate(god, "child");
+		adam2.save();
+		
+		assertEquals(adam1, god1.child.forceSync().get());
+		
+		god1.child.set(adam2);
+		god1.update();
+
+		AggregateParentModel god2 = 
+			Model.getByKey(AggregateParentModel.class, god1.id);
+		assertNotNull(god2);
+		assertEquals(adam2, god2.child.get());
+		
+		AggregateChildModel adam3 = new AggregateChildModel("adam3");
+		adam3.aggregate(god, "child");
+		adam3.save();
+		
+		god.child.set(adam3);
+		god.update();
+		
+		AggregateParentModel god3 = 
+			Model.getByKey(AggregateParentModel.class, god.id);
+		assertNotNull(god3);
+		assertEquals(adam2, god3.child.get());
+		
+		god.child.forceSync().set(adam3);
+		god.update();
+		
+		god3 = 
+			Model.getByKey(AggregateParentModel.class, god.id);
+		assertNotNull(god3);
+		assertEquals(adam3, god3.child.get());
 	}
 
 	public void testAggregate() {
