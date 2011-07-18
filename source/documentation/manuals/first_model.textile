@@ -232,6 +232,62 @@ bc.. public class Person extends Model {
 
 p(note). *Note* Nevertheless if your model is just meant to represent some structured data, using __public__ modifier is not something bad at all and makes your code really clear.
 
+
+h2. <a name="query">Want to make your model aware of others</a>
+
+Generally, you don't design a model to stay alone on an isolated island: a model is meant to reference, own, depend on other models.
+
+here is the most simple example (and also not so interesting one): the *referenced entity* 
+a Person has a friend so a Person contains a reference to another Person.
+
+bc.. public class Person extends Model {
+
+	@Id
+	public Long id;
+	
+	public String firstName;
+	
+	public String lastName;
+	
+	public Person friend;	
+}
+
+p. *Note* the __friend__ will simple contain a reference to another Person object.
+
+A small example to create a friend and retrieve it:
+
+bc.. // creates bob
+Person bob = new Person("Bob", "Smith");
+bob.insert();
+
+// creates john and bob as a friend a john
+Person john = new Person("John", "Doe");
+john.friend = bob;
+john.insert();
+
+// rRetrieves john and its friend
+Person johnbis = Model.getByKey(Person.class, john.id);
+
+// Here Siena hasn't filled the full _friend_ Person object but just it's ID.
+assert(johnbis.friend.id != null);
+assert(johnbis.friend.firstName == null);
+assert(johnbis.friend.lastName == null);
+// This is due to the fact that NoSQL databases don't provide JOIN features
+// Siena doesn't try to do too many things in your back
+// So you need another request to get the full friend object  
+Person bobbis = johnbis.friend.get();
+assert(johnbis.friend.id != null);
+assert(johnbis.friend.firstName != null);
+assert(johnbis.friend.lastName != null);
+
+p. *Note* When you fetch a Person, the __friend__ field is not filled completely but just its ID. Why? Because Siena doesn't try to do a JOIN if you don't require it and, more important, because NoSQL databases generally don't provide JOIN features. That's why, as the friend ID is stored within the Person, that's only what can be retrieved in a single query. If you want the full friend object, you need to get it explicitly.
+
+
+bq. Do you want to know how to create/insert/update/delete such model?
+Do you want to create other kind of relations?
+Go "there":./relation_home.textile  
+
+
 h2. <a name="query">A glance at the possibilities of Queries? </a>
 
 You can get a query on your class using the @all(Class<?>)@ function:
