@@ -31,15 +31,14 @@ public class BaseOne<T> implements One4PM<T>{
 		this.pm = pm;
 		this.clazz = clazz;
 		this.query = pm.createQuery(clazz);
-		this.relation = new Relation();
 	}
 
 	public BaseOne(PersistenceManager pm, Class<T> clazz, RelationMode mode, Object obj, String fieldName) {
 		this.pm = pm;
 		this.clazz = clazz;
-		this.relation = new Relation(mode, obj, fieldName);
 		switch(mode){
 		case AGGREGATION:
+			this.relation = new Relation(mode, obj, fieldName);
 			this.query = pm.createQuery(clazz).aggregated(obj, fieldName);
 			break;
 		case RELATION:
@@ -59,14 +58,16 @@ public class BaseOne<T> implements One4PM<T>{
 
 		this.target = obj;
 		
-		// sets relation on target object
-		if(this.target != null){
-			Util.setField(this.target, ClassInfo.getClassInfo(clazz).aggregator, this.relation);
-		}
-
-		// resets relation on previous object
-		if(this.prevTarget != null){
-			Util.setField(this.prevTarget, ClassInfo.getClassInfo(clazz).aggregator, null);
+		if(relation != null && relation.mode == RelationMode.AGGREGATION){
+			// sets relation on target object
+			if(this.target != null){
+				Util.setField(this.target, ClassInfo.getClassInfo(clazz).aggregator, this.relation);
+			}
+	
+			// resets relation on previous objectll
+			if(this.prevTarget != null){
+				Util.setField(this.prevTarget, ClassInfo.getClassInfo(clazz).aggregator, null);
+			}
 		}
 		
 		isModified = true;
@@ -105,19 +106,19 @@ public class BaseOne<T> implements One4PM<T>{
 	}
 
 	public One4PM<T> aggregationMode(Object aggregator, Field field) {
-		this.relation.mode = RelationMode.AGGREGATION;
-		this.relation.target = aggregator;
-		this.relation.discriminator = field;
+		if(relation == null){
+			this.relation = new Relation(RelationMode.AGGREGATION, aggregator, field);
+		}else {
+			this.relation.mode = RelationMode.AGGREGATION;
+			this.relation.target = aggregator;
+			this.relation.discriminator = field;
+		}
 		
 		this.query.release().aggregated(aggregator, ClassInfo.getSimplestColumnName(field));
 		return this;
 	}
 
 	public One4PM<T> relationMode(Object owner, Field field) {
-		this.relation.mode = RelationMode.RELATION;
-		this.relation.target = owner;
-		this.relation.discriminator = field;
-		
 		this.query.release().filter(ClassInfo.getSimplestColumnName(field), owner);
 		return this;
 	}

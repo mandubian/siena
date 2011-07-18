@@ -12,6 +12,5 @@ package siena.core;
 public interface One<T>  {
 	T get();
 	void set(T obj);
-	One<T> sync();
 	One<T> forceSync();
 }

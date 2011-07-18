@@ -39,6 +39,12 @@ public class GaeAggregatedTest extends BaseAggregatedTest{
 	}
 
 	@Override
+	public void testAggregateMostSimpleMultiple() {
+		// TODO Auto-generated method stub
+		super.testAggregateMostSimpleMultiple();
+	}
+
+	@Override
 	public void testAggregate() {
 		// TODO Auto-generated method stub
 		super.testAggregate();
@@ -63,9 +69,9 @@ public class GaeAggregatedTest extends BaseAggregatedTest{
 	}
 
 	@Override
-	public void testAggregateDeleteChild() {
+	public void testAggregateDeleteChildOfChildren() {
 		// TODO Auto-generated method stub
-		super.testAggregateDeleteChild();
+		super.testAggregateDeleteChildOfChildren();
 	}
 
 	@Override

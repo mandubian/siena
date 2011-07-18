@@ -108,6 +108,7 @@ public abstract class BaseRelatedTest extends TestCase {
 		
 		RelatedSimpleOwnedParent godbis = Model.getByKey(RelatedSimpleOwnedParent.class, god.id);
 		
+		adam2.insert();
 		god.child.set(adam2);
 		god.update();
 
@@ -377,6 +378,9 @@ public abstract class BaseRelatedTest extends TestCase {
 		RelatedManyChild child57 = godbis.children.asQuery().filter("id", adams.get(57).id).get();		
 		assertEquals("adam57_modified", child57.name);
 
+		children = god.children.asList().forceSync();
+		assertEquals(adams.get(57), children.get(57));
+
 	}
 	
 	public void testRelatedManyCascadeUpdateManyRemove() {
@@ -412,7 +416,6 @@ public abstract class BaseRelatedTest extends TestCase {
 		
 		RelatedManyChild child57 = RelatedManyChild.all().filter("id", adams.get(57).id).get();		
 		assertNull(child57.owner);
-
 	}
 	
 	public void testRelatedManyCascadeUpdateManyAddEnd() {

@@ -244,23 +244,27 @@ public class GaeMappingUtils {
 				case NONE:
 					// long or string goes toString
 					return KeyFactory.createKey(
+							parentKey,
 							getKindWithAncestorField(info, parentInfo, parentField),
-						value.toString());
+							value.toString());
 				case AUTO_INCREMENT:
 					// as a string with auto_increment can't exist, it is not cast into long
 					if (Long.TYPE == type || Long.class.isAssignableFrom(type)){
 						return KeyFactory.createKey(
+								parentKey,
 								getKindWithAncestorField(info, parentInfo, parentField),
-							(Long)value);
+								(Long)value);
 					}
 					return KeyFactory.createKey(
+							parentKey,
 							getKindWithAncestorField(info, parentInfo, parentField),
-						value.toString());
+							value.toString());
 					
 				case UUID:
 					return KeyFactory.createKey(
+							parentKey,
 							getKindWithAncestorField(info, parentInfo, parentField),
-						value.toString());
+							value.toString());
 				default:
 					throw new SienaException("Id Generator "+id.value()+ " not supported");
 				}

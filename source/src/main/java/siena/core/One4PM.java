@@ -12,6 +12,7 @@ import java.lang.reflect.Field;
  * @param <T>
  */
 public interface One4PM<T> extends One<T>  {
+	One<T> sync();
 	One4PM<T> setSync(boolean isSync);
 	One4PM<T> setModified(boolean isModified);
 	boolean isModified();

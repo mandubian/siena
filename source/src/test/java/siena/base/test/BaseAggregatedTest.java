@@ -98,8 +98,48 @@ public abstract class BaseAggregatedTest extends TestCase {
 			Model.getByKey(AggregateParentModel.class, god.id);
 		assertNotNull(god3);
 		assertEquals(adam3, god3.child.get());
+		
+		adam3.delete();
+		assertNull(god3.child.forceSync().get());
 	}
 
+	public void testAggregateMostSimpleMultiple() {
+		AggregateParentModel god = new AggregateParentModel("god");
+		god.insert();
+		assertNotNull(god.id);
+
+		AggregateChildModel adam1 = new AggregateChildModel("adam1");
+		adam1.aggregate(god, "child");
+		adam1.insert();
+		
+		AggregateChildModel adam2 = new AggregateChildModel("adam2");	
+		adam2.aggregate(god, "children");
+		adam2.insert();
+
+		AggregateChildModel eve = new AggregateChildModel("eve");
+		eve.aggregate(god, "children");
+		eve.insert();
+
+		AggregateChildModel bob = new AggregateChildModel("bob");
+		bob.aggregate(god, "children");
+		bob.insert();
+
+		AggregateParentModel god1 = 
+			Model.getByKey(AggregateParentModel.class, god.id);
+		
+		assertNotNull(god1);
+		assertEquals(adam1, god1.child.get());
+		List<AggregateChildModel> children = god1.children.asQuery().fetch();
+		assertEquals(adam2, children.get(0));
+		assertEquals(eve, children.get(1));
+		assertEquals(bob, children.get(2));
+		
+		eve.delete();
+		children = god1.children.asList().forceSync();
+		assertEquals(adam2, children.get(0));
+		assertEquals(bob, children.get(1));
+	}
+	
 	public void testAggregate() {
 		AggregateChildModel adam1 = new AggregateChildModel("adam1");
 		AggregateChildModel adam2 = new AggregateChildModel("adam2");	
@@ -214,10 +254,14 @@ public abstract class BaseAggregatedTest extends TestCase {
 		bob.name = "bobby";
 		eve.name = "evvy";
 		
+		Model.batch(AggregateChildModel.class).update(adam1, bob, eve);
+		
 		god.save();
 		
 		AggregateParentModel godbis = AggregateParentModel.all().filter("name", "goddy").get();
-		assertEquals(god, godbis);
+		assertNotNull(godbis);
+		assertEquals(god.id, godbis.id);
+		assertEquals(god.name, godbis.name);
 		children = godbis.children.asList();
 		assertEquals(adam2, children.get(0));
 		assertEquals(eve, children.get(1));
@@ -261,7 +305,7 @@ public abstract class BaseAggregatedTest extends TestCase {
 		assertEquals(null, children.get(3));
 	}
 	
-	public void testAggregateDeleteChild() {
+	public void testAggregateDeleteChildOfChildren() {
 		AggregateChildModel adam1 = new AggregateChildModel("adam1");
 		AggregateChildModel adam2 = new AggregateChildModel("adam2");	
 		AggregateChildModel eve = new AggregateChildModel("eve");

@@ -503,10 +503,10 @@ public abstract class Model {
 			//}
 			switch(mode){
 			case AGGREGATION:
-				aggregationMode(obj, ClassInfo.getSimplestColumnName(field));
+				aggregationMode(obj, field);
 				break;
 			case RELATION:
-				relationMode(obj, ClassInfo.getSimplestColumnName(field));				
+				relationMode(obj, field);				
 				break;
 			}
 			
@@ -529,12 +529,12 @@ public abstract class Model {
 			return ((Many4PM<T>)createMany()).asList2Add();
 		}
 
-		public Many4PM<T> aggregationMode(Object aggregator, String fieldName) {
-			return this.many.aggregationMode(aggregator, fieldName);
+		public Many4PM<T> aggregationMode(Object aggregator, Field field) {
+			return this.many.aggregationMode(aggregator, field);
 		}
 
-		public Many4PM<T> relationMode(Object owner, String fieldName) {
-			return this.many.relationMode(owner, fieldName);
+		public Many4PM<T> relationMode(Object owner, Field field) {
+			return this.many.relationMode(owner, field);
 		}
 
 		public Many4PM<T> setSync(boolean isSync) {

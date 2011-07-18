@@ -105,7 +105,22 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 	
 	public void delete(Object obj){
 		List<Key> keys = new ArrayList<Key>();
-		_deleteSingle(obj, keys, null, null, null);
+		
+		Class<?> clazz = obj.getClass();
+		ClassInfo info = ClassInfo.getClassInfo(clazz);
+		
+		if(info.hasAggregator){
+			Relation rel = (Relation)Util.readField(obj, info.aggregator);
+			if(rel != null && rel.mode == RelationMode.AGGREGATION){
+				ClassInfo parentInfo = ClassInfo.getClassInfo(rel.target.getClass());
+				Key parentKey = GaeMappingUtils.makeKey(parentInfo, rel.target);
+				_deleteSingle(obj, keys, parentKey, parentInfo, (Field)rel.discriminator);
+			}else {
+				_deleteSingle(obj, keys, null, null, null);
+			}
+		}else {
+			_deleteSingle(obj, keys, null, null, null);
+		}
 		
 		ds.delete(keys);
 	}
@@ -238,13 +253,13 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 		_insertSingle(obj);
 	}
 		
-	private void _insertSingle(Object obj) {
+	private <T> void _insertSingle(T obj) {
 		Class<?> clazz = obj.getClass();
 		ClassInfo info = ClassInfo.getClassInfo(clazz);
 		
 		if(info.hasAggregator){
 			Relation rel = (Relation)Util.readField(obj, info.aggregator);
-			if(rel != null){
+			if(rel != null && rel.mode == RelationMode.AGGREGATION){
 				ClassInfo parentInfo = ClassInfo.getClassInfo(rel.target.getClass());
 				Key parentKey = GaeMappingUtils.makeKey(parentInfo, rel.target);
 				_insertSingle(obj, parentKey, rel.target, parentInfo, (Field)rel.discriminator);
@@ -256,7 +271,7 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 		}
 	}
 	
-	private void _insertSingle(Object obj, final Key parentEntityKey, final Object parentObj, 
+	private <T> void _insertSingle(T obj, final Key parentEntityKey, final Object parentObj, 
 			final ClassInfo parentInfo, final Field field) {
 		Class<?> clazz = obj.getClass();
 		ClassInfo info = ClassInfo.getClassInfo(clazz);
@@ -276,10 +291,6 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 			GaeMappingUtils.fillEntity(obj, entity);
 			ds.put(entity);
 			GaeMappingUtils.setIdFromKey(idField, obj, entity.getKey());
-			
-			// creates the aggregation relation
-//			Relation rel = new Relation(RelationMode.AGGREGATION, parentObj, field);
-//			Util.setField(obj, info.aggregator, rel);
 		}
 		
 		if(info.hasAggregatedFields){
@@ -298,35 +309,49 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 			save(relObjects);
 		}
 	}
-	
-	private int _insertMultiple(Object[] objects, final Entity parentEntity, final Object parentObj, final ClassInfo parentInfo, final Field field) {
-		return _insertMultiple(Arrays.asList(objects), parentEntity, parentObj, parentInfo, field);
-	}
-	
-	private int _insertMultiple(Iterable<?> objects, final Entity parentEntity, final Object parentObj, final ClassInfo parentInfo, final Field field) {
+
+	private <T> int _insertMultiple(Iterable<T> objects){
 		List<Entity> entities = new ArrayList<Entity>();
-		if(parentEntity==null){
-			for(Object obj:objects){
-				Class<?> clazz = obj.getClass();
-				ClassInfo info = ClassInfo.getClassInfo(clazz);
-				Field idField = info.getIdField();
-				Entity entity = GaeMappingUtils.createEntityInstance(idField, info, obj);
-				GaeMappingUtils.fillEntity(obj, entity);
-				entities.add(entity);
-			}			
-		}else {
-			for(Object obj:objects){
-				Class<?> clazz = obj.getClass();
-				ClassInfo info = ClassInfo.getClassInfo(clazz);
-				Field idField = info.getIdField();
-				Entity entity = GaeMappingUtils.createEntityInstanceFromParent(
-							idField, info, obj, 
-							parentEntity.getKey(), parentInfo, field);
-				GaeMappingUtils.fillEntity(obj, entity);
-				entities.add(entity);
+
+		for(Object obj:objects){
+			Class<?> clazz = obj.getClass();
+			ClassInfo info = ClassInfo.getClassInfo(clazz);
+			
+			if(info.hasAggregator){
+				Relation rel = (Relation)Util.readField(obj, info.aggregator);
+				if(rel != null && rel.mode == RelationMode.AGGREGATION){
+					ClassInfo parentInfo = ClassInfo.getClassInfo(rel.target.getClass());
+					Key parentKey = GaeMappingUtils.makeKey(parentInfo, rel.target);
+					_insertAddEntity(entities, obj, info, parentKey, parentInfo, (Field)rel.discriminator);
+				}else {
+					_insertAddEntity(entities, obj, info, null, null, null);
+				}
+			}else {
+				_insertAddEntity(entities, obj, info, null, null, null);
 			}
 		}
-		
+		return _insertPutEntities(entities, objects);
+	}
+	
+	private <T> void _insertAddEntity(final List<Entity> entities, final T obj, final ClassInfo info, 
+			final Key parentEntityKey, final ClassInfo parentInfo, final Field field){
+		if(parentEntityKey==null){
+			Field idField = info.getIdField();
+			Entity entity = GaeMappingUtils.createEntityInstance(idField, info, obj);
+			GaeMappingUtils.fillEntity(obj, entity);
+			entities.add(entity);
+		}else {
+			Field idField = info.getIdField();
+			Entity entity = GaeMappingUtils.createEntityInstanceFromParent(
+						idField, info, obj, 
+						parentEntityKey, parentInfo, field);
+			GaeMappingUtils.fillEntity(obj, entity);
+			entities.add(entity);
+		}
+
+	}
+	
+	private <T> int _insertPutEntities(Iterable<Entity> entities, Iterable<T> objects) {
 		List<Key> generatedKeys = ds.put(entities);
 		
 		int i=0;
@@ -342,8 +367,8 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 			GaeMappingUtils.setIdFromKey(idField, obj, generatedKeys.get(i));
 			
 			// creates the aggregation relation
-			Relation rel = new Relation(RelationMode.AGGREGATION, parentObj, field);
-			Util.setField(obj, info.aggregator, rel);
+			//Relation rel = new Relation(RelationMode.AGGREGATION, parentObj, field);
+			//Util.setField(obj, info.aggregator, rel);
 
 			if(info.hasAggregatedFields){
 				infos.add(info);
@@ -474,7 +499,7 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 		
 		if(info.hasAggregator){
 			Relation rel = (Relation)Util.readField(obj, info.aggregator);
-			if(rel != null){
+			if(rel != null && rel.mode == RelationMode.AGGREGATION){
 				ClassInfo parentInfo = ClassInfo.getClassInfo(rel.target.getClass());
 				Key parentKey = GaeMappingUtils.makeKey(parentInfo, rel.target);
 				if(!info.hasAggregatedFields && !info.hasOwnedFields){
@@ -586,18 +611,45 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 		return _updateManageMaps(entitiesMap, objectsMap, keysMap);
 	}
 
-	
-	private <T> int _updateComplexMultiple(Iterable<T> objs, Key parentKey, ClassInfo parentInfo, Field parentField){
+	private <T> int _updateMultiple(Iterable<T> objects){
 		HashMap<PersistenceType, List<Entity>> entitiesMap = new HashMap<PersistenceType, List<Entity>>(); 
 		HashMap<PersistenceType, List<Object>> objectsMap = new HashMap<PersistenceType, List<Object>>(); 
 		HashMap<PersistenceType, List<Key>> keysMap = new HashMap<PersistenceType, List<Key>>(); 
 
-		for(Object obj:objs){
-			_updateBuildMaps(entitiesMap, objectsMap, keysMap, obj, null, null, null);
+		for(Object obj:objects){
+			Class<?> clazz = obj.getClass();
+			ClassInfo info = ClassInfo.getClassInfo(clazz);
+			
+			if(info.hasAggregator){
+				Relation rel = (Relation)Util.readField(obj, info.aggregator);
+				if(rel != null && rel.mode == RelationMode.AGGREGATION){
+					ClassInfo parentInfo = ClassInfo.getClassInfo(rel.target.getClass());
+					Key parentKey = GaeMappingUtils.makeKey(parentInfo, rel.target);
+					_updateBuildMaps(entitiesMap, objectsMap, keysMap, 
+							obj, parentKey, parentInfo, (Field)rel.discriminator);
+				}else {
+					_updateBuildMaps(entitiesMap, objectsMap, keysMap, 
+							obj, null, null, null);
+				}
+			}else {
+				_updateBuildMaps(entitiesMap, objectsMap, keysMap, 
+						obj, null, null, null);
+			}
 		}
-		
 		return _updateManageMaps(entitiesMap, objectsMap, keysMap);
 	}
+	
+//	private <T> int _updateComplexMultiple(Iterable<T> objs, Key parentKey, ClassInfo parentInfo, Field parentField){
+//		HashMap<PersistenceType, List<Entity>> entitiesMap = new HashMap<PersistenceType, List<Entity>>(); 
+//		HashMap<PersistenceType, List<Object>> objectsMap = new HashMap<PersistenceType, List<Object>>(); 
+//		HashMap<PersistenceType, List<Key>> keysMap = new HashMap<PersistenceType, List<Key>>(); 
+//
+//		for(Object obj:objs){
+//			_updateBuildMaps(entitiesMap, objectsMap, keysMap, obj, null, null, null);
+//		}
+//		
+//		return _updateManageMaps(entitiesMap, objectsMap, keysMap);
+//	}
 
 
 	//private void _buildUpdateList(List<Entity> entities2Insert, List<Object> objects2Insert, List<Entity> entities2Update, List<Key> entities2Remove, List<Object> objects2Save, Object obj, Key parentKey, ClassInfo parentInfo, Field parentField){
@@ -668,6 +720,7 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 						List<Object> objects2Save = objectsMap.get(PersistenceType.SAVE);
 						if(objects2Save == null){
 							objects2Save = new ArrayList<Object>();
+							objectsMap.put(PersistenceType.SAVE, objects2Save);
 						}
 						objects2Save.add(prevObj);
 						
@@ -839,20 +892,11 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 		// id with null value means insert
 		if(idVal == null){
 			insert(obj);
-			//entity = GaeMappingUtils.createEntityInstance(idField, info, obj);
 		}
 		// id with not null value means update
 		else{
 			update(obj);
-			//entity = GaeMappingUtils.createEntityInstanceForUpdate(idField, info, obj);			
 		}
-		
-		/*GaeMappingUtils.fillEntity(obj, entity);
-		ds.put(entity);
-		
-		if(idVal == null){
-			GaeMappingUtils.setIdFromKey(idField, obj, entity.getKey());
-		}*/
 	}
 	
 	protected DatastoreService getDatastoreService() {
@@ -2033,33 +2077,11 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 	}
 
 	public int insert(Object... objects) {
-		/*List<Entity> entities = new ArrayList<Entity>(objects.length);
-		for(int i=0; i<objects.length;i++){
-			Class<?> clazz = objects[i].getClass();
-			ClassInfo info = ClassInfo.getClassInfo(clazz);
-			Field idField = info.getIdField();
-			Entity entity = GaeMappingUtils.createEntityInstance(idField, info, objects[i]);
-			GaeMappingUtils.fillEntity(objects[i], entity);
-			entities.add(entity);
-		}
-				
-		List<Key> generatedKeys =  ds.put(entities);
-		
-		int i=0;
-		for(Object obj:objects){
-			Class<?> clazz = obj.getClass();
-			ClassInfo info = ClassInfo.getClassInfo(clazz);
-			Field idField = info.getIdField();
-			GaeMappingUtils.setIdFromKey(idField, obj, generatedKeys.get(i++));
-		}
-		
-		return generatedKeys.size();*/
-		
-		return _insertMultiple(objects, null, null, null, null);
+		return _insertMultiple(Arrays.asList(objects));
 	}
 
 	public int insert(Iterable<?> objects) {
-		return _insertMultiple(objects, null, null, null, null);
+		return _insertMultiple(objects);
 	}
 
 	public int delete(Object... models) {
@@ -2164,7 +2186,7 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 	}
 
 	public <T> int update(Iterable<T> objects) {
-		return _updateComplexMultiple(objects, null, null, null);
+		return _updateMultiple(objects);
 	}
 
 	public <T> int update(Query<T> query, Map<String, ?> fieldValues) {
@@ -2188,33 +2210,13 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 			Object idVal = Util.readField(obj, idField);
 			// id with null value means insert
 			if(idVal == null){
-				//entity = GaeMappingUtils.createEntityInstance(idField, info, obj);
 				entities2Insert.add(obj);
 			}
 			// id with not null value means update
 			else{
 				entities2Update.add(obj);
-				//entity = GaeMappingUtils.createEntityInstanceForUpdate(idField, info, obj);			
-			}
-			
-			//GaeMappingUtils.fillEntity(obj, entity);
-			//entities.add(entity);			
-		}
-		
-		/*List<Key> generatedKeys = ds.put(entities);
-		
-		int i=0;
-		for(Object obj:objects){
-			Class<?> clazz = obj.getClass();
-			ClassInfo info = ClassInfo.getClassInfo(clazz);
-			Field idField = info.getIdField();
-			Object idVal = Util.readField(obj, idField);
-			if(idVal == null){
-				GaeMappingUtils.setIdFromKey(idField, obj, generatedKeys.get(i++));
 			}
 		}
-		return generatedKeys.size();*/
-		
 		return insert(entities2Insert) + update(entities2Update);
 	}
 	
