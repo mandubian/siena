@@ -5,6 +5,11 @@
 {% block body %}
 <h2>Frequently Asked Questions</h2>
 
+<p class="focus orange">
+UNDER RE-CONSTRUCTION... Will evolve soon!<br/>
+New manuals page also available on <a href="https://github.com/mandubian/siena/wiki/Manuals">Siena Github Wiki</a> 
+</p>
+
 <p>Please find your question here. If don't find the answer, feel free to join
 	<a href="http://groups.google.com/group/siena-discuss">the mailing list</a> and
 	ask your question there.</p>
@@ -12,25 +17,25 @@
 <dl>
 	<dt><strong>Is siena another ORM?</strong></dt>
 	<dd>Not exactly. It is not an ORM (Object-relational mapping tool) because it is not
-		only intended to be used in relational databases. Siena is a library for persistience
+		only intended to be used in relational databases. Siena is a library for persistence
 		that works in relational databases and NoSQL databases as well.</dd>
 	
 	<dt><strong>Does siena support JOINs?</strong></dt>
-	<dd>No. Siena has a common API for both relational and NoSQL databases. So you can
-		write code for NoSQL databases and then port it to a relational database and viceversa.
-		Supporting JOINs will break this compatibility. <br/>
-		Instead of using JOINs you can use denormalization. Siena has some features that will
-		help you with this. Please read the <a href="/documentation-getting-started.html">Getting started guide</a>,
-		the section that talks about "embedded objects".
+	<dd>Yes but not all JOINs (mainly only LEFT-JOIN for the time being). NoSQL doesn't support JOIN in general whereas SQL do. 
+		So, providing a JOIN feature for NoSQL is just doing some hidden requests to simulate the JOIN.
+		Nevertheless, Siena provides LEFT-JOIN for One2One relation for GAE and it tries to do it in the most optimized way.<br/>
+		In NoSQL, instead of using complicated JOINs, you can use denormalization and redundancy which is often a good manner. 
+		Siena has some features that will help you with this such as embedding and aggregation.
 	</dd>
 	
 	<dt><strong>How can I implement one-to-many relationships?</strong></dt>
 	<dd>Check the <a href="/documentation-getting-started.html">Getting started guide</a>,
-		the section that talks about "Working with relationships".</dd>
-	
+		the section that talks about "Working with relationships".
+		<p class="orange"><i>New Owner/Aggregated relation are coming soon with syntactic sugar One&lt;T&gt;/Many&lt;T&gt; that will make the relation clear and easy to use.</i></p>	
+	</dd>
 	
 	<dt><strong>How can I implement many-to-many relationships?</strong></dt>
-	<dd>Just create an intermediate class that represents the many-to-many relationship.
+	<dd>Just use denormalization and create an intermediate class that represents the many-to-many relationship.
 		Then implement two one-to-many relationships. Check the
 		<a href="/documentation-getting-started.html">Getting started guide</a>,
 		the section that talks about "Working with relationships".</dd>

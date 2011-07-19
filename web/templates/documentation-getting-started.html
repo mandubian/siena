@@ -4,28 +4,36 @@
 
 {% block body %}
 <h2>Getting started guide</h2>
-
+<p/>
+<ul class="focus orange" >
+This documentation is a bit old and should evolve soon.<br/>
+Anyway, this overview of Siena is still true and quite interesting. 
+You can also go & see:
+<li>the <a href="https://github.com/mandubian/siena/blob/master/source/documentation/manuals/first_model.textile">Write your first model tutorial</a></li>
+<li>the <a href="https://github.com/mandubian/siena/wiki/Manuals">The new manuals main page</a> <i>(under constant construction)</i></li>
+</ul>
 <p>Using siena is very easy. You just create your model classes and start to use them.
 	The only configuration is the annotation in your clases and a simple properties file.
 	The model classes must follow some constraints:</p>
 
 <ol>
-	<li>The class can extend <code>siena.Model</code>. See the examples bellow for more information.</li>
+	<li>The class can extend <code>siena.Model</code> (not mandatory but most pratical). See the examples bellow for more information.</li>
 	<li>To perform queries easily is strongly recommended to implement an <code>all()</code>
 		method like in the example. Nevertheless this is an optional step.</li>
 	<li>You can add an <code>@Table</code> annotation. The meaning of this annotation
 		will depend on the underlying siena implementation. This will be the table
-		name in a relational database, the entity name in the Google App Engine datastore,
-		the domain name in Amazon's SimpleDB,... The annotation is just named <em>table</em>
-		because is an easy to recognize nomenclature.</li>
+		name in a relational database, the entity name in the Google App Engine datastore... 
+		The annotation is just named <em>Table</em> because is an easy to recognize nomenclature.</li>
 	<li>You can add <code>@Column</code> annotations to the fields. This is very similar
 		to the <code>@Table</code> annotation. The meaning of the annotation value
 		will depend on the underlying siena implementation. </li>
 	<li>You must mark your primary key fields with an <code>@Id</code> annotation. Some keys can be generated
-		automatically by the application or the database. See the example.</li>
+		automatically by the application or the database. Manual keys are also allowed. See the example.</li>
 	<li>Note: in the example the fields are public for simplicity but they can be private or whatever you want. </li>
 </ol>
 
+<br/>
+<h3>Model Example</h3>
 <pre class="prettyprint">import siena.*;
 import static siena.Json.*;
 
@@ -43,8 +51,7 @@ public class Employee extends Model {
 	@Max(200) @NotNull
 	public String lastName;
 	
-	@Column("contact_info")
-	public Json contactInfo;
+	public Long age;
 	
 	@Column("boss") @Index("boss_index")
 	public Employee boss;
@@ -52,11 +59,55 @@ public class Employee extends Model {
 	@Filter("boss")
 	public Query&lt;Employee&gt; employees;
 	
+	@Column("contact_info")
+	public Json contactInfo;
+	
+	@EmbeddedMap
+	public static class Contact {
+		public String name;
+		public List<String> tags;
+	}
+	
+	@Embedded
+	public Map<String, Contact> contacts;
+
+	@Embedded
+	public List<Contact> otherContacts;
+	
+	public byte[] photo;
+
+	public static enum ServiceEnum {
+		ALPHA,
+		BETA,
+		DELTA,
+		GAMMA,
+		EPSILON;
+	}
+
+	public ServiceEnum service;
+	
 	public static Query&lt;Employee&gt; all() {
 		return Model.all(Employee.class);
 	}
 
+	public static Batch&lt;Employee&gt; batch() {
+		return Model.batch(Employee.class);
+	}
 }</pre>
+
+<p class="list">This example shows a class with:</p> 
+<ul>
+<li>The <em>@Table</em> annotation
+<li>The <em>siena.Model</em> extension which is the active record enabler and a great utility class providing entry points to advanced features,</li>
+<li>An auto-increment primary key,</li>
+<li>Some simple fields of different types with control annotations,</li>
+<li>The <code>boss</code> field representing a reference to another entity,</li>
+<li>The <code>employees</code> field being an automatic query to manage a one2many owned relation,</li>
+<li>A field called <code>contactInfo</code> that may contain a complex data structure stored JSON serialized into the DB,</li>
+<li>2 fields <code>contacts</code> &amp; <code>otherContacts</code> containing <i>embedded</i> data structures stored JSON serialized in the DB,</li>
+<li>A byte[] field that can contain binary data,</li>
+<li>An enum field</li>
+</ul>
 
 <p>Now you just need to write a simple configuration file. In siena all the classes in the same package
 	are configured with the same <code>PersistenceManager</code>. The configuration file must be

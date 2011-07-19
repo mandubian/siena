@@ -3,89 +3,99 @@
 {% block body %}
 <h2>Welcome to siena project!</h2>
 
-<p>Siena is a persitence API for Java inspired on the Google App Engine Python Datastore API. Example usage:</p>
+<p>Siena is a persitence API for Java inspired by the <a href="http://code.google.com/intl/fr/appengine/docs/python/datastore/">Google App Engine Python Datastore</a> trying to <b>draw a bridge between SQL and NoSQL</b> worlds.</p>
 
-<pre class="prettyprint">List&lt;Employee&gt; someEmployees = Employee.all()
+<p/>
+<h3>News</h3>
+<ul class="focus">
+	<li>Current stable version is <a href="https://github.com/mandubian/siena/tree/1.0.0-b5">Siena 1.0.0-b5</a></li>
+	<li>New extensions for great Java lightweight &amp; scalable web framework <a href="http://www.playframework.org/modules/siena">Play!</a> making Siena a very practical alternative to JPA in this great development environment</li>
+	<li>Moved code to <a href="https://github.com/mandubian/siena">Github</a></li>
+	<li>Original code has been refactored, enhanced those last months and lots of new features have appeared (<i>batch, pagination, statefulness, aggregation, owned relations</i>)</li>
+	<li>New lead developer is <a href="mailto:pascal.voitot.dev@gmail.com">Pascal Voitot</a> (Thanks to Alberto Gimeno, creator and initiator of the project for his great work and to all Siena supporters)</li>
+</ul>
+
+<br/>
+<h3>Example usage</h3>
+
+<pre class="prettyprint">
+// creates one employee
+Employee emp = new Employee();
+emp.firstName = "John";
+emp.lastName = "Doe";
+emp.insert();
+// updates it
+emp.age = 23;
+emp.update();
+
+//retrieves the same employee
+Employee sameEmp = Model.getByKey(Employee.class, emp.id);
+
+// gets some employees with filtering/ordering
+List&lt;Employee&gt; someEmployees = Employee.all()
 		.filter("firstName", "Mark")
 		.order("-lastName")
-		.fetch(10);</pre>
-		
+		.fetch(10);		
 
-<p>Siena is a single API with many implementations. You can use siena with
-	<a href="/documentation-jdbc.html">relational databases</a>, with the
-	<a href="/documentation-gae.html">Google App Engine's datastore</a> or with 
-	<a href="/documentation-sdb.html">Amazon's SimpleDB</a>.
-	There is also an implementation called
-	<a href="/documentation-remote.html">siena-remote</a> very useful if you want to use
-	the Google App Engine's datastore remotely. Other implmenetations are planned such as:
-	HBase, DBSLayer,...</p>
+// inserts a few employees created before
+Employee.batch().insert(emp1, emp2, emp3, emp4);
+</pre>
+<br/>
+<h3>Presentation</h3>
+<ul>
+<li><b>Siena provides a Java Object-DB mapping & querying API</b>
+<p>It is designed following the <a href="http://en.wikipedia.org/wiki/Active_record_pattern#Java">ActiveRecord pattern</a> which brings a simple and intuitive approach to manage your Java objects with respect to the database entities.</p></li> 
+<li><b>Siena tries to provide a common API for SQL/NoSQL</b>
+<p>Yet, Siena but doesn't pretend to be a kind of hibernate for SQL+NoSQL which would be crazy. It just intends to make the transition easier when changing database from SQL to NoSQL and vis versa by being able to reuse (almost) the same code without modifying too much.</p>
+</li>
+<li><b>Siena is a single API with many implementations</b>
+<p class="list">You can already use siena with:
+<ul>
+	<li><a href="/documentation-gae.html">Google App Engine's datastore</a></li> 
+	<li><a href="/documentation-jdbc.html">SQL Relational Databases (MySQL, H2, PostGres)</a></li>
+	<li><i>Other implementations are under development (Redis just now and soon SDB, HBase, Mongo)</i></li>
+</ul>
+</p>
+</li>
+<li><b>Siena is Open Source</b> and is released under the <a href="http://www.apache.org/licenses/LICENSE-2.0">Apache License 2.0</a></li>
+<p/>
+<li><b>Siena doesn’t try to hide all the specific database technical aspects</b>
+<p>Siena tries to provide a thin layer, very near from the low-level datastore but if you need to low-level datastore, you can use it directly.</p>
+</li>  
+<li><b>Siena development is a user experience driven process</b> 
+<p>We going from the user needs to the technical aspects of SQL/NoSQL databases and not the other way.</p>
+</li>  
+</ul>
+<p class="focus"><i>If you want to know more about Siena philosophy, go to our <a href="https://github.com/mandubian/siena/blob/master/README.textile">Github Presentation</a></i></p>
 
-<p>Siena is Open Source and is released under the <a href="http://www.apache.org/licenses/LICENSE-2.0">Apache License 2.0</a>.</p>
+
+<br/>
+<h3>Main features</h3>
+<ul>
+<li>Self-aware models based on Active Record pattern</li>
+<li>Simple Querying syntax with ordering/filtering/iterating</li>
+<li>Stateless & threadsafe (but can become stateful when required)</li>
+<li>one request = one transaction by default (but can trigger manual control of transactions)</li>
+<li>Easy representation of different kinds of entity relations</li>
+<li>Very simple entities pagination mechanism (can use GAE cursors for forward & also backward paging)</li>
+<li>One single JAR, no external dependencies</li>
+<li>Full control of your entities, no hidden cache, no persistence context...  
+<li>Can work with everything in Java world from the heaviest JEE servers to the lightest pure Java application</li>
+</ul>
 
 <h3>Advanced features</h3>
+<ul>
+<li>Simple join operations (native for SQL and simulated for GAE)</li>
+<li>Batch operations to manipulate multiple entities</li>
+<li>Asynchronous datastore (only for GAE for the time being)</li>
+<li>Entity Embedding (store complex structure serialized in JSON for SQL/GAE & Java-object + native embedding only for GAE)</li>
+<li>Entity aggregation (only for GAE for the time being based on entity grouping)</li>
+</ul>
 
-<p>Siena has several features including built-int <a href="/documentation-json.html">JSON support</a>
-	for easily storing complex data structures in a single field.
-	It also has automatic queries and database schema creation / synchronization for relational databases.</p>
-
-<pre class="prettyprint">import siena.*;
-import static siena.Json.*;
-
-@Table("employees")
-public class Employee extends Model {
-	
-	@Id(Generator.AUTO_INCREMENT)
-	public Long id;
-	
-	@Column("first_name")
-	@Max(200) @NotNull
-	public String firstName;
-	
-	@Column("last_name")
-	@Max(200) @NotNull
-	public String lastName;
-	
-	@Column("contact_info")
-	public Json contactInfo;
-	
-	@Column("boss") @Index("boss_index")
-	public Employee boss;
-	
-	@Filter("boss")
-	public Query&lt;Employee&gt; employees;
-	
-	public static void main(String[] args) {
-		Employee e = new Employee();
-		e.firstName = "John";
-		e.lastName = "Smith";
-		e.contactInfo = map()
-			.put("email", "john.smith@example.com")
-			.put("telephone", list("xxx", "yyy"));
-		e.insert();
-		
-		System.out.println(e.contactInfo);
-	}
-	
-	public static Query&lt;Employee&gt; all() {
-		return Model.all(Employee.class);
-	}
-
-}</pre>
-
-<p>This example shows a class with an auto-increment primary key, some simple fields, a
-	field called <code>contactInfo</code> that may will contain a complex data structure
-	and finally there is a special <code>employees</code> field that will let
-	query those employees whos boss is the current employee. The <code>main()</code>
-	method creates a new <code>Employee</code> and prints its contact info. This is the output:</p>
-	
-<pre class="prettyprint">{"email": "john.smith@example.com", "telephone": ["xxx", "yyy"]}</pre>
-
-<p>The example also shows how to use some annotations such as <code>@NotNull</code> or <code>@Index</code> that will
-	be used to generate the database schema if you are using a relational database.</p>
-
-<p>The <code>all()</code> method is not mandatory but is strongly recommended.</p>
-
-<p>Now that you have taken a brief look at what Siena does it's time to read the
-	<a href="/documentation-getting-started.html">Getting started guide</a>.</p>
+<br/>
+<ul class="focus">Now that you have taken a brief look at what Siena does, it's time to read: 
+<li>the <a href="https://github.com/mandubian/siena/blob/master/source/documentation/manuals/first_model.textile"><i>Write your first model</i> tutorial</a> if you want to begin writing a simple model and managing it and go further</li>
+<li>the <a href="/documentation-getting-started.html">The old (and a bit outdated) <i>Getting Started</i> guide</a> which will give a bit more info of a few things you can do in Siena.</li>
+</ul>	
 
 {% endblock %}
