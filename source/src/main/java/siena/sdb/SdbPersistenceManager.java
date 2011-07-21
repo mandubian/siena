@@ -22,6 +22,12 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.UUID;
 
+import com.amazonaws.auth.BasicAWSCredentials;
+import com.amazonaws.services.simpledb.AmazonSimpleDB;
+import com.amazonaws.services.simpledb.AmazonSimpleDBClient;
+import com.amazonaws.services.simpledb.model.CreateDomainRequest;
+import com.amazonaws.services.simpledb.model.PutAttributesRequest;
+
 import siena.AbstractPersistenceManager;
 import siena.ClassInfo;
 import siena.Query;
@@ -40,7 +46,7 @@ public class SdbPersistenceManager extends AbstractPersistenceManager {
 	private static final String[] supportedOperators = { "<", ">", ">=", "<=", "=" };
 	private static long ioffset = Math.abs(0l+Integer.MIN_VALUE);
 
-	private SimpleDB ws;
+	private AmazonSimpleDB sdb;
 	private String prefix;
 	private List<String> domains;
 
@@ -51,9 +57,30 @@ public class SdbPersistenceManager extends AbstractPersistenceManager {
 			throw new SienaException("Both awsAccessKeyId and awsSecretAccessKey properties must be set");
 		prefix = p.getProperty("prefix");
 		if(prefix == null) prefix = "";
-		ws = new SimpleDB(awsAccessKeyId, awsSecretAccessKey);
+		sdb = new AmazonSimpleDBClient(new BasicAWSCredentials(awsAccessKeyId, awsSecretAccessKey));
 	}
 
+	public void checkDomain(String domainName) {
+		if(domains == null) {
+			domains = sdb.listDomains().getDomainNames();
+		}
+		if(!domains.contains(domainName)) {
+			sdb.createDomain(new CreateDomainRequest(domainName));
+		}
+	}
+
+	
+	public void insert(Object obj) {
+		Class<?> clazz = obj.getClass();
+		ClassInfo info = ClassInfo.getClassInfo(clazz);
+		
+		String domain = SdbMappingUtils.getDomainName(clazz, prefix);
+		SdbMappingUtils.
+		sdb.putAttributes(putAttributesRequest);
+		ws.putAttributes(getDomainName(obj.getClass()), toItem(obj));
+	}
+
+	
 	public void delete(Object obj) {
 		ws.deleteAttributes(getDomainName(obj.getClass()), toItem(obj));
 	}
@@ -63,9 +90,9 @@ public class SdbPersistenceManager extends AbstractPersistenceManager {
 		fillModel(item, obj);
 	}
 
-	public void insert(Object obj) {
-		ws.putAttributes(getDomainName(obj.getClass()), toItem(obj));
-	}
+//	public void insert(Object obj) {
+//		ws.putAttributes(getDomainName(obj.getClass()), toItem(obj));
+//	}
 
 	public void update(Object obj) {
 		ws.putAttributes(getDomainName(obj.getClass()), toItem(obj));

@@ -4,9 +4,10 @@ import java.util.List;
 import java.util.Properties;
 
 import siena.PersistenceManager;
+import siena.base.test.model.PersonStringID;
 import siena.sdb.SdbPersistenceManager;
 
-public class SimpleDBTest extends BaseTest {
+public class SimpleDBTest extends AbstractTest {
 
 	@Override
 	public PersistenceManager createPersistenceManager(List<Class<?>> classes)
@@ -24,7 +25,7 @@ public class SimpleDBTest extends BaseTest {
 		return sdb;
 	}
 
-	@Override
+	/*@Override
 	public boolean supportsAutoincrement() {
 		return false;
 	}
@@ -37,6 +38,17 @@ public class SimpleDBTest extends BaseTest {
 	@Override
 	public boolean mustFilterToOrder() {
 		return true;
+	}*/
+
+	@Override
+	public void init() {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void createClasses(List<Class<?>> classes) {
+		classes.add(PersonStringID.class);
 	}
 
 }
