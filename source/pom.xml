@@ -359,6 +359,8 @@
 								<exclude>**/BaseModelTest.java</exclude>
 								<exclude>**/BaseMassTest.java</exclude>
 								<exclude>**/BaseEmbeddedTest.java</exclude>
+								<exclude>**/BaseAggregatedTest.java</exclude>
+								<exclude>**/BaseRelatedTest.java</exclude>
 								<exclude>**/TestAll.java</exclude>
 								<exclude>**/Person.java</exclude>
 								<exclude>**/Message.java</exclude>
@@ -366,6 +368,8 @@
 							</excludes>
 							<includes>
 								<include>**/GaeTest.java</include>
+								<exclude>**/GaeAggregatedTest.java</exclude>
+								<exclude>**/GaeRelatedTest.java</exclude>
 								<include>**/GaeAsyncTest.java</include>
 								<include>**/GaeModelTest.java</include>
 								<include>**/JdbcModelTest.java</include>
@@ -397,6 +401,8 @@
 								<exclude>**/BaseModelTest.java</exclude>
 								<exclude>**/BaseMassTest.java</exclude>
 								<exclude>**/BaseEmbeddedTest.java</exclude>
+								<exclude>**/BaseAggregatedTest.java</exclude>
+								<exclude>**/BaseRelatedTest.java</exclude>
 								<exclude>**/TestAll.java</exclude>
 								<exclude>**/Person.java</exclude>
 								<exclude>**/Message.java</exclude>
@@ -407,6 +413,8 @@
 								<include>**/GaeAsyncTest.java</include>
 								<include>**/GaeModelTest.java</include>
 								<include>**/GaeEmbeddedTest.java</include>
+								<exclude>**/GaeAggregatedTest.java</exclude>
+								<exclude>**/GaeRelatedTest.java</exclude>
 								<!--include>**/GaeMassTest.java</include-->
 							</includes>
 						</configuration>
@@ -428,6 +436,8 @@
 								<exclude>**/BaseModelTest.java</exclude>
 								<exclude>**/BaseMassTest.java</exclude>
 								<exclude>**/BaseEmbeddedTest.java</exclude>
+								<exclude>**/BaseAggregatedTest.java</exclude>
+								<exclude>**/BaseRelatedTest.java</exclude>
 								<exclude>**/DrizzleTest.java</exclude>
 								<exclude>**/TestAll.java</exclude>
 								<exclude>**/Person.java</exclude>
@@ -457,6 +467,8 @@
 								<exclude>**/BaseModelTest.java</exclude>
 								<exclude>**/BaseMassTest.java</exclude>
 								<exclude>**/BaseEmbeddedTest.java</exclude>
+								<exclude>**/BaseAggregatedTest.java</exclude>
+								<exclude>**/BaseRelatedTest.java</exclude>
 								<exclude>**/TestAll.java</exclude>
 								<exclude>**/Person.java</exclude>
 								<exclude>**/Message.java</exclude>
@@ -484,6 +496,8 @@
 								<exclude>**/BaseModelTest.java</exclude>
 								<exclude>**/BaseMassTest.java</exclude>
 								<exclude>**/BaseEmbeddedTest.java</exclude>
+								<exclude>**/BaseAggregatedTest.java</exclude>
+								<exclude>**/BaseRelatedTest.java</exclude>
 								<exclude>**/TestAll.java</exclude>
 								<exclude>**/Person.java</exclude>
 								<exclude>**/Message.java</exclude>
@@ -511,6 +525,8 @@
 								<exclude>**/BaseModelTest.java</exclude>
 								<exclude>**/BaseMassTest.java</exclude>
 								<exclude>**/BaseEmbeddedTest.java</exclude>
+								<exclude>**/BaseAggregatedTest.java</exclude>
+								<exclude>**/BaseRelatedTest.java</exclude>
 								<exclude>**/TestAll.java</exclude>
 								<exclude>**/Person.java</exclude>
 								<exclude>**/Message.java</exclude>
