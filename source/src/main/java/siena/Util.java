@@ -275,13 +275,11 @@ public class Util {
 		}
 	}
 	
-	public static void setFromObject(Object object, Field f, Object value)
-			throws IllegalArgumentException, IllegalAccessException {
+	public static void setFromObject(Object object, Field f, Object value) {
 		setField(object, f, fromObject(f, value));
 	}
 	
-	public static void setFromString(Object object, Field f, String value)
-			throws IllegalArgumentException, IllegalAccessException {
+	public static void setFromString(Object object, Field f, String value) {
 		setField(object, f, fromString(f.getType(), value));
 	}
 

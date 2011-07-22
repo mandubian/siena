@@ -17,29 +17,29 @@ package siena.sdb;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import java.util.UUID;
-
-import com.amazonaws.auth.BasicAWSCredentials;
-import com.amazonaws.services.simpledb.AmazonSimpleDB;
-import com.amazonaws.services.simpledb.AmazonSimpleDBClient;
-import com.amazonaws.services.simpledb.model.CreateDomainRequest;
-import com.amazonaws.services.simpledb.model.PutAttributesRequest;
 
 import siena.AbstractPersistenceManager;
 import siena.ClassInfo;
 import siena.Query;
 import siena.QueryFilter;
-import siena.QueryFilterSimple;
 import siena.QueryOrder;
 import siena.SienaException;
-import siena.Util;
 import siena.core.async.PersistenceManagerAsync;
-import siena.sdb.ws.Item;
-import siena.sdb.ws.SelectResponse;
-import siena.sdb.ws.SimpleDB;
+
+import com.amazonaws.AmazonClientException;
+import com.amazonaws.auth.BasicAWSCredentials;
+import com.amazonaws.services.simpledb.AmazonSimpleDB;
+import com.amazonaws.services.simpledb.AmazonSimpleDBClient;
+import com.amazonaws.services.simpledb.model.BatchPutAttributesRequest;
+import com.amazonaws.services.simpledb.model.CreateDomainRequest;
+import com.amazonaws.services.simpledb.model.GetAttributesRequest;
+import com.amazonaws.services.simpledb.model.GetAttributesResult;
+import com.amazonaws.services.simpledb.model.ReplaceableItem;
 
 public class SdbPersistenceManager extends AbstractPersistenceManager {
 	
@@ -66,155 +66,114 @@ public class SdbPersistenceManager extends AbstractPersistenceManager {
 		}
 		if(!domains.contains(domainName)) {
 			sdb.createDomain(new CreateDomainRequest(domainName));
+			domains.add(domainName);
 		}
 	}
-
 	
 	public void insert(Object obj) {
 		Class<?> clazz = obj.getClass();
 		ClassInfo info = ClassInfo.getClassInfo(clazz);
 		
 		String domain = SdbMappingUtils.getDomainName(clazz, prefix);
-		SdbMappingUtils.
-		sdb.putAttributes(putAttributesRequest);
-		ws.putAttributes(getDomainName(obj.getClass()), toItem(obj));
-	}
-
-	
-	public void delete(Object obj) {
-		ws.deleteAttributes(getDomainName(obj.getClass()), toItem(obj));
-	}
-
-	public void get(Object obj) {
-		Item item = ws.getAttributes(getDomainName(obj.getClass()), getIdValue(obj)).item;
-		fillModel(item, obj);
-	}
-
-//	public void insert(Object obj) {
-//		ws.putAttributes(getDomainName(obj.getClass()), toItem(obj));
-//	}
-
-	public void update(Object obj) {
-		ws.putAttributes(getDomainName(obj.getClass()), toItem(obj));
-	}
-
-	public String getIdValue(Object obj) {
+		
 		try {
-			return (String) ClassInfo.getIdField(obj.getClass()).get(obj);
-		} catch (Exception e) {
-			throw new SienaException(e);
-		}
-	}
-
-	protected String getDomainName(Class<?> clazz) {
-		String domain = prefix+ClassInfo.getClassInfo(clazz).tableName;
-		if(domains == null) {
-			domains = ws.listDomains(null, null).domains; // TODO pagination
-		}
-		if(!domains.contains(domain)) {
-			ws.createDomain(domain);
-		}
-		return domain;
-	}
-
-	private String getAttributeName(Field field) {
-		return ClassInfo.getColumnNames(field)[0];
-	}
-
-	private Object readField(Object object, Field field) {
-		field.setAccessible(true);
-		try {
-			return field.get(object);
-		} catch (Exception e) {
-			throw new SienaException(e);
+			checkDomain(domain);
+			sdb.putAttributes(SdbMappingUtils.createPutRequest(domain, clazz, info, obj));
+		}catch(AmazonClientException ex){
+			throw new SienaException(ex);
 		}
 	}
 	
-	private Item toItem(Object obj) {
-		Item item = new Item();
-		Class<?> clazz = obj.getClass();
-		for (Field field : ClassInfo.getClassInfo(clazz).updateFields) {
-			try {
-				String value = toString(field, field.get(obj));
-				if(value != null)
-					item.add(getAttributeName(field), value);
-			} catch (Exception e) {
-				throw new SienaException(e);
-			}
-		}
-		Field id = ClassInfo.getIdField(clazz);
-		String name = (String) readField(obj, id);
-		if(name == null) { // TODO: only if auto-generated
-			try {
-				name = UUID.randomUUID().toString();
-				id.set(obj, name);
-			} catch (Exception e) {
-				throw new SienaException(e);
-			}
-		}
-		item.name = name;
-		return item;
-	}
-	
-	private static String toString(Field field, Object object) {
-		if(object == null) return null;
-		Class<?> type = field.getType();
-		if(type == Integer.class || type == int.class) {
-			return toString((Integer) object);
-		}
-		if(ClassInfo.isModel(type)) {
-			try {
-				return ClassInfo.getIdField(type).get(object).toString();
-			} catch (Exception e) {
-				throw new SienaException(e);
-			}
-		}
-		return Util.toString(field, object);
+	@Override
+	public int insert(Object... objects) {
+		return insert(Arrays.asList(objects));
 	}
 
-	private void fillModel(Item item, Object obj) {
-		Class<?> clazz = obj.getClass();
-		for (Field field : ClassInfo.getClassInfo(clazz).updateFields) {
-			List<String> values = item.attributes.get(getAttributeName(field));
-			if(values == null || values.isEmpty())
-				continue;
-			try {
-				String value = values.get(0);
-				if(field.getType() == Integer.class || field.getType() == int.class) {
-					field.set(obj, fromString(value));
-				} else {
-					Class<?> type = field.getType();
-					if(ClassInfo.isModel(type)) {
-						Object rel = type.newInstance();
-						Field id = ClassInfo.getIdField(type);
-						id.set(rel, value);
-						field.set(obj, rel);
-					} else {
-						Util.setFromString(obj, field, value);
-					}
-				}
-			} catch (Exception e) {
-				throw new SienaException(e);
+	@Override
+	public int insert(Iterable<?> objects) {
+		Map<String, List<ReplaceableItem>> doMap = new HashMap<String, List<ReplaceableItem>>(); 
+		int nb = 0;
+		for(Object obj: objects){
+			Class<?> clazz = obj.getClass();
+			String domain = SdbMappingUtils.getDomainName(clazz, prefix);
+			List<ReplaceableItem> doList = doMap.get(domain); 
+			if(doList == null){
+				doList = new ArrayList<ReplaceableItem>();
+				doMap.put(domain, doList);
 			}
+			doList.add(SdbMappingUtils.createItem(obj));
+			
+			nb++;
 		}
 		
-		Field id = ClassInfo.getIdField(clazz);
+		for(String domain: doMap.keySet()){
+			checkDomain(domain);			
+			List<ReplaceableItem> doList = doMap.get(domain);
+			sdb.batchPutAttributes(new BatchPutAttributesRequest(domain, doList));			
+		}
+		return nb;
+	}
+	
+	public void get(Object obj) {
+		Class<?> clazz = obj.getClass();
+		
+		String domain = SdbMappingUtils.getDomainName(clazz, prefix);
 		try {
-			id.set(obj, item.name);
-		} catch (Exception e) {
-			throw new SienaException(e);
+			checkDomain(domain);
+			GetAttributesRequest req = SdbMappingUtils.createGetRequest(domain, clazz, obj);
+			// sets consistent read to true when reading one single object
+			req.setConsistentRead(true);
+			GetAttributesResult res = sdb.getAttributes(req);
+			if(res.getAttributes().size() == 0){
+				throw new SienaException(req.getItemName()+" not found in domain"+req.getDomainName());
+			}
+				
+			SdbMappingUtils.fillModel(req.getItemName(), res, clazz, obj);
+		}catch(AmazonClientException ex){
+			throw new SienaException(ex);
 		}
 	}
 	
-	private static String toString(int i) {
-		return String.format("%010d", i+ioffset);
+	@Override
+	public int get(Object... models) {
+		return get(Arrays.asList(models));
+	}
+
+	@Override
+	public <T> int get(Iterable<T> models) {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+
+	
+	public void update(Object obj) {
+		Class<?> clazz = obj.getClass();
+		ClassInfo info = ClassInfo.getClassInfo(clazz);
+		
+		String domain = SdbMappingUtils.getDomainName(clazz, prefix);
+		
+		try {
+			checkDomain(domain);
+			sdb.putAttributes(SdbMappingUtils.createPutRequest(domain, clazz, info, obj));
+		}catch(AmazonClientException ex){
+			throw new SienaException(ex);
+		}
 	}
 	
-	private static int fromString(String s) {
-		long l = Long.parseLong(s);
-		return (int) (l-ioffset);
+	public void delete(Object obj) {
+		Class<?> clazz = obj.getClass();
+		
+		String domain = SdbMappingUtils.getDomainName(clazz, prefix);
+		
+		try {
+			checkDomain(domain);
+			sdb.deleteAttributes(SdbMappingUtils.createDeleteRequest(domain, clazz, obj));
+		}catch(AmazonClientException ex){
+			throw new SienaException(ex);
+		}
 	}
-	
+
+
 	/* transactions */
 
 	public void beginTransaction(int isolationLevel) {
@@ -234,22 +193,23 @@ public class SdbPersistenceManager extends AbstractPersistenceManager {
 	
 	@SuppressWarnings("unchecked")
 	private <T> List<T> query(Query<T> query, String suffix, String nextToken) {
-		Class<?> clazz = query.getQueriedClass();
-		String domain = getDomainName(clazz);
-		String q = buildQuery(query, "select * from "+domain)+suffix;
-		SelectResponse response = ws.select(q, nextToken);
-		query.setNextOffset(response.nextToken);
-		List<Item> items = response.items;
-		List<T> result = new ArrayList<T>(items.size());
-		for (Item item : items) {
-			try {
-				T object = (T) clazz.newInstance();
-				fillModel(item, object);
-				result.add(object);
-			} catch (Exception e) {
-				throw new SienaException(e);
-			}
-		}
+//		Class<?> clazz = query.getQueriedClass();
+//		String domain = getDomainName(clazz);
+//		String q = buildQuery(query, "select * from "+domain)+suffix;
+//		SelectResponse response = ws.select(q, nextToken);
+//		query.setNextOffset(response.nextToken);
+//		List<Item> items = response.items;
+//		List<T> result = new ArrayList<T>(items.size());
+		List<T> result = new ArrayList<T>();
+//		for (Item item : items) {
+//			try {
+//				T object = (T) clazz.newInstance();
+//				fillModel(item, object);
+//				result.add(object);
+//			} catch (Exception e) {
+//				throw new SienaException(e);
+//			}
+//		}
 		return result;
 	}
 	
@@ -258,7 +218,7 @@ public class SdbPersistenceManager extends AbstractPersistenceManager {
 		
 		List<QueryFilter> filters = query.getFilters();
 		if(!filters.isEmpty()) {
-			q.append(" where ");
+			/*q.append(" where ");
 			
 			boolean first = true;
 			
@@ -287,7 +247,7 @@ public class SdbPersistenceManager extends AbstractPersistenceManager {
 						q.append(column+op+SimpleDB.quote(s));
 					}
 				}
-			}
+			}*/
 			
 		}
 		
@@ -326,12 +286,13 @@ public class SdbPersistenceManager extends AbstractPersistenceManager {
 
 	@Override
 	public <T> int count(Query<T> query) {
-		Class<?> clazz = query.getQueriedClass();
-		String domain = getDomainName(clazz);
-		String q = buildQuery(query, "select count(*) from "+domain);
-		SelectResponse response = ws.select(q, null);
-		query.setNextOffset(response.nextToken);
-		return Integer.parseInt(response.items.get(0).attributes.get("Count").get(0));
+//		Class<?> clazz = query.getQueriedClass();
+//		String domain = getDomainName(clazz);
+//		String q = buildQuery(query, "select count(*) from "+domain);
+//		SelectResponse response = ws.select(q, null);
+//		query.setNextOffset(response.nextToken);
+//		return Integer.parseInt(response.items.get(0).attributes.get("Count").get(0));
+		return 0;
 	}
 
 	@Override
@@ -388,18 +349,6 @@ public class SdbPersistenceManager extends AbstractPersistenceManager {
 	}
 
 	@Override
-	public int insert(Object... objects) {
-		// TODO Auto-generated method stub
-		return 0;
-	}
-
-	@Override
-	public int insert(Iterable<?> objects) {
-		// TODO Auto-generated method stub
-		return 0;
-	}
-
-	@Override
 	public int delete(Object... models) {
 		// TODO Auto-generated method stub
 		return 0;
@@ -417,17 +366,6 @@ public class SdbPersistenceManager extends AbstractPersistenceManager {
 		return 0;
 	}
 
-	@Override
-	public int get(Object... models) {
-		// TODO Auto-generated method stub
-		return 0;
-	}
-
-	@Override
-	public <T> int get(Iterable<T> models) {
-		// TODO Auto-generated method stub
-		return 0;
-	}
 
 	@Override
 	public <T> List<T> getByKeys(Class<T> clazz, Object... keys) {
