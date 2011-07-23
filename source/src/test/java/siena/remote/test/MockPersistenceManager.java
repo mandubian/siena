@@ -37,6 +37,7 @@ import siena.core.One4PM;
 import siena.core.async.PersistenceManagerAsync;
 import siena.core.async.QueryAsync;
 import siena.core.batch.Batch;
+import siena.core.options.PmOption;
 import siena.core.options.QueryOption;
 
 public class MockPersistenceManager implements PersistenceManager {
@@ -672,6 +673,30 @@ public class MockPersistenceManager implements PersistenceManager {
 	public <T> int update(Query<T> query, Map<String, ?> fieldValues) {
 		// TODO Auto-generated method stub
 		return 0;
+	}
+
+	@Override
+	public PersistenceManager option(PmOption opt) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public PmOption option(int type) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public Map<Integer, PmOption> options() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public void resetOptions() {
+		// TODO Auto-generated method stub
+		
 	}
 
 	@Override

@@ -1,6 +1,8 @@
 package siena;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import siena.core.BaseMany;
 import siena.core.BaseOne;
@@ -9,13 +11,15 @@ import siena.core.One4PM;
 import siena.core.SienaIterablePerPage;
 import siena.core.batch.BaseBatch;
 import siena.core.batch.Batch;
+import siena.core.options.PmOption;
 import siena.core.options.QueryOption;
 import siena.core.options.QueryOptionFetchType;
 import siena.core.options.QueryOptionOffset;
 import siena.core.options.QueryOptionState;
 
 public abstract class AbstractPersistenceManager implements PersistenceManager {
-
+	protected ThreadLocal<Map<Integer, PmOption>> options = new ThreadLocal<Map<Integer, PmOption>>();
+	
 	public <T> Query<T> createQuery(Class<T> clazz) {
 		return new BaseQuery<T>(this, clazz);
 	}
@@ -26,6 +30,33 @@ public abstract class AbstractPersistenceManager implements PersistenceManager {
 
 	public <T> Batch<T> createBatch(Class<T> clazz) {
 		return new BaseBatch<T>(this, clazz);
+	}
+
+	public PersistenceManager option(PmOption opt) {
+		Map<Integer, PmOption> map = options.get(); 
+		if(map == null){
+			map = new HashMap<Integer, PmOption>();
+			options.set(map);
+		}
+		map.put(opt.type, opt);
+		
+		return this;
+	}
+	
+	public PmOption option(int type){
+		Map<Integer, PmOption> map = options.get(); 
+		if(map == null){
+			return null;
+		}
+		return map.get(type);
+	}
+	
+	public Map<Integer, PmOption> options() {
+		return options.get();
+	}
+
+	public void resetOptions() {
+		options.remove();
 	}
 
 	public <T> Many4PM<T> createMany(Class<T> clazz) {

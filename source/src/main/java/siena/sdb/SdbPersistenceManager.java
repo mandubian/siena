@@ -15,7 +15,6 @@
  */
 package siena.sdb;
 
-import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -26,8 +25,6 @@ import java.util.Properties;
 import siena.AbstractPersistenceManager;
 import siena.ClassInfo;
 import siena.Query;
-import siena.QueryFilter;
-import siena.QueryOrder;
 import siena.SienaException;
 import siena.core.async.PersistenceManagerAsync;
 
@@ -35,17 +32,23 @@ import com.amazonaws.AmazonClientException;
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.services.simpledb.AmazonSimpleDB;
 import com.amazonaws.services.simpledb.AmazonSimpleDBClient;
+import com.amazonaws.services.simpledb.model.BatchDeleteAttributesRequest;
 import com.amazonaws.services.simpledb.model.BatchPutAttributesRequest;
 import com.amazonaws.services.simpledb.model.CreateDomainRequest;
+import com.amazonaws.services.simpledb.model.DeletableItem;
 import com.amazonaws.services.simpledb.model.GetAttributesRequest;
 import com.amazonaws.services.simpledb.model.GetAttributesResult;
 import com.amazonaws.services.simpledb.model.ReplaceableItem;
+import com.amazonaws.services.simpledb.model.SelectRequest;
+import com.amazonaws.services.simpledb.model.SelectResult;
 
 public class SdbPersistenceManager extends AbstractPersistenceManager {
 	
-	private static final String[] supportedOperators = { "<", ">", ">=", "<=", "=" };
-	private static long ioffset = Math.abs(0l+Integer.MIN_VALUE);
+	private static final String[] supportedOperators = { "<", ">", ">=", "<=", "=", "!=", "like", "not like", "in" };
 
+    public final static PmOptionSdbReadConsistency CONSISTENT_READ = new PmOptionSdbReadConsistency(true);
+    public final static PmOptionSdbReadConsistency NOT_CONSISTENT_READ = new PmOptionSdbReadConsistency(false);
+	
 	private AmazonSimpleDB sdb;
 	private String prefix;
 	private List<String> domains;
@@ -68,6 +71,14 @@ public class SdbPersistenceManager extends AbstractPersistenceManager {
 			sdb.createDomain(new CreateDomainRequest(domainName));
 			domains.add(domainName);
 		}
+	}
+	
+	public boolean isReadConsistent() {
+		PmOptionSdbReadConsistency opt = (PmOptionSdbReadConsistency)option(CONSISTENT_READ.type);
+		if(opt != null) {
+			return opt.isConsistentRead;
+		}
+		return false;
 	}
 	
 	public void insert(Object obj) {
@@ -122,7 +133,7 @@ public class SdbPersistenceManager extends AbstractPersistenceManager {
 			checkDomain(domain);
 			GetAttributesRequest req = SdbMappingUtils.createGetRequest(domain, clazz, obj);
 			// sets consistent read to true when reading one single object
-			req.setConsistentRead(true);
+			req.setConsistentRead(isReadConsistent());
 			GetAttributesResult res = sdb.getAttributes(req);
 			if(res.getAttributes().size() == 0){
 				throw new SienaException(req.getItemName()+" not found in domain"+req.getDomainName());
@@ -134,15 +145,15 @@ public class SdbPersistenceManager extends AbstractPersistenceManager {
 		}
 	}
 	
-	@Override
 	public int get(Object... models) {
 		return get(Arrays.asList(models));
 	}
 
-	@Override
 	public <T> int get(Iterable<T> models) {
-		// TODO Auto-generated method stub
-		return 0;
+		SelectRequest req = SdbMappingUtils.buildBatchGetQuery(models, prefix);
+		req.setConsistentRead(isReadConsistent());
+		SelectResult res = sdb.select(req);
+		return SdbMappingUtils.mapSelectResult(res, models);
 	}
 
 	
@@ -160,6 +171,35 @@ public class SdbPersistenceManager extends AbstractPersistenceManager {
 		}
 	}
 	
+	public <T> int update(Object... models) {
+		return update(Arrays.asList(models));
+	}
+
+	public <T> int update(Iterable<T> models) {
+		Map<String, List<ReplaceableItem>> doMap = new HashMap<String, List<ReplaceableItem>>(); 
+		int nb = 0;
+		for(Object obj: models){
+			Class<?> clazz = obj.getClass();
+			String domain = SdbMappingUtils.getDomainName(clazz, prefix);
+			List<ReplaceableItem> doList = doMap.get(domain); 
+			if(doList == null){
+				doList = new ArrayList<ReplaceableItem>();
+				doMap.put(domain, doList);
+			}
+			doList.add(SdbMappingUtils.createItem(obj));
+			
+			nb++;
+		}
+		
+		for(String domain: doMap.keySet()){
+			checkDomain(domain);			
+			List<ReplaceableItem> doList = doMap.get(domain);
+			sdb.batchPutAttributes(new BatchPutAttributesRequest(domain, doList));			
+		}
+		return nb;
+	}
+
+	
 	public void delete(Object obj) {
 		Class<?> clazz = obj.getClass();
 		
@@ -173,7 +213,35 @@ public class SdbPersistenceManager extends AbstractPersistenceManager {
 		}
 	}
 
+	public int delete(Object... models) {
+		return delete(Arrays.asList(models));
+	}
 
+	@Override
+	public int delete(Iterable<?> models) {
+		Map<String, List<DeletableItem>> doMap = new HashMap<String, List<DeletableItem>>(); 
+		int nb = 0;
+		for(Object obj: models){
+			Class<?> clazz = obj.getClass();
+			String domain = SdbMappingUtils.getDomainName(clazz, prefix);
+			List<DeletableItem> doList = doMap.get(domain); 
+			if(doList == null){
+				doList = new ArrayList<DeletableItem>();
+				doMap.put(domain, doList);
+			}
+			doList.add(SdbMappingUtils.createDeletableItem(obj));
+			
+			nb++;
+		}
+		
+		for(String domain: doMap.keySet()){
+			checkDomain(domain);			
+			List<DeletableItem> doList = doMap.get(domain);
+			sdb.batchDeleteAttributes(new BatchDeleteAttributesRequest(domain, doList));			
+		}
+		return nb;
+	}
+	
 	/* transactions */
 
 	public void beginTransaction(int isolationLevel) {
@@ -191,97 +259,25 @@ public class SdbPersistenceManager extends AbstractPersistenceManager {
 	public void rollbackTransaction() {
 	}
 	
-	@SuppressWarnings("unchecked")
-	private <T> List<T> query(Query<T> query, String suffix, String nextToken) {
-//		Class<?> clazz = query.getQueriedClass();
-//		String domain = getDomainName(clazz);
-//		String q = buildQuery(query, "select * from "+domain)+suffix;
-//		SelectResponse response = ws.select(q, nextToken);
-//		query.setNextOffset(response.nextToken);
-//		List<Item> items = response.items;
-//		List<T> result = new ArrayList<T>(items.size());
-		List<T> result = new ArrayList<T>();
-//		for (Item item : items) {
-//			try {
-//				T object = (T) clazz.newInstance();
-//				fillModel(item, object);
-//				result.add(object);
-//			} catch (Exception e) {
-//				throw new SienaException(e);
-//			}
-//		}
-		return result;
-	}
 	
-	private <T> String buildQuery(Query<T> query, String prefix) {
-		StringBuilder q = new StringBuilder(prefix);
-		
-		List<QueryFilter> filters = query.getFilters();
-		if(!filters.isEmpty()) {
-			/*q.append(" where ");
-			
-			boolean first = true;
-			
-			for (QueryFilter filter : filters) {
-				if(QueryFilterSimple.class.isAssignableFrom(filter.getClass())){
-					QueryFilterSimple qf = (QueryFilterSimple)filter;
-					Field f      = qf.field;
-					Object value = qf.value;
-					String op    = qf.operator;
-					
-					if(!first) {
-						q.append(" and ");
-					}
-					first = false;
-					
-					String column = null;
-					if(ClassInfo.isId(f)) {
-						column = "itemName()";
-					} else {
-						column = ClassInfo.getColumnNames(f)[0];
-					}
-					if(value == null && op.equals("=")) {
-						q.append(column+" is null");
-					} else {
-						String s = SdbPersistenceManager.toString(f, value);
-						q.append(column+op+SimpleDB.quote(s));
-					}
-				}
-			}*/
-			
-		}
-		
-		List<QueryOrder> orders = query.getOrders();
-		if(!orders.isEmpty()) {
-			QueryOrder last = orders.get(orders.size()-1);
-			Field field = last.field;
-			
-			if(ClassInfo.isId(field)) {
-				q.append("order by itemName()");
-			} else {
-				q.append("order by ");
-				q.append(ClassInfo.getColumnNames(field)[0]);
-			}
-			if(!last.ascending)
-				q.append(" desc");
-		}
-		
-		return q.toString();
-	}
+
 
 	@Override
 	public <T> List<T> fetch(Query<T> query) {
-		return query(query, "", null);
+		return null;
+		//return query(query, "", null);
 	}
 
 	@Override
 	public <T> List<T> fetch(Query<T> query, int limit) {
-		return query(query, " limit "+limit, null);
+		return null;
+		//return query(query, " limit "+limit, null);
 	}
 
 	@Override
 	public <T> List<T> fetch(Query<T> query, int limit, Object offset) {
-		return query(query, " limit "+limit, offset.toString());
+		return null;
+		//return query(query, " limit "+limit, offset.toString());
 	}
 
 	@Override
@@ -349,18 +345,6 @@ public class SdbPersistenceManager extends AbstractPersistenceManager {
 	}
 
 	@Override
-	public int delete(Object... models) {
-		// TODO Auto-generated method stub
-		return 0;
-	}
-
-	@Override
-	public int delete(Iterable<?> models) {
-		// TODO Auto-generated method stub
-		return 0;
-	}
-
-	@Override
 	public <T> int deleteByKeys(Class<T> clazz, Object... keys) {
 		// TODO Auto-generated method stub
 		return 0;
@@ -373,17 +357,6 @@ public class SdbPersistenceManager extends AbstractPersistenceManager {
 		return null;
 	}
 
-	@Override
-	public <T> int update(Object... models) {
-		// TODO Auto-generated method stub
-		return 0;
-	}
-
-	@Override
-	public <T> int update(Iterable<T> models) {
-		// TODO Auto-generated method stub
-		return 0;
-	}
 
 	@Override
 	public <T> void nextPage(Query<T> query) {

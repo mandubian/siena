@@ -12,6 +12,7 @@ import siena.core.async.PersistenceManagerAsync;
 import siena.core.batch.Batch;
 import siena.core.lifecycle.LifeCyclePhase;
 import siena.core.lifecycle.LifeCycleUtils;
+import siena.core.options.PmOption;
 
 public class PersistenceManagerLifeCycleWrapper implements PersistenceManager{
 	PersistenceManager pm;
@@ -23,6 +24,26 @@ public class PersistenceManagerLifeCycleWrapper implements PersistenceManager{
 	@Override
 	public void init(Properties p) {
 		pm.init(p);
+	}
+
+	@Override
+	public PersistenceManager option(PmOption opt) {
+		return pm.option(opt);
+	}
+
+	@Override
+	public PmOption option(int type) {
+		return pm.option(type);
+	}
+
+	@Override
+	public Map<Integer, PmOption> options() {
+		return pm.options();
+	}
+
+	@Override
+	public void resetOptions() {
+		pm.resetOptions();
 	}
 
 	@Override
