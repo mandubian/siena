@@ -62,6 +62,7 @@ import siena.core.lifecycle.LifeCyclePhase;
 import siena.core.options.QueryOption;
 import siena.core.options.QueryOptionPage;
 import siena.embed.JsonSerializer;
+import siena.sdb.SdbPersistenceManager;
 
 public abstract class BaseTestNoAutoInc extends AbstractTest {
 	
@@ -113,15 +114,24 @@ public abstract class BaseTestNoAutoInc extends AbstractTest {
 	}
 
 	public void postInit() {
-		for (Class<?> clazz : classes) {
+		/*for (Class<?> clazz : classes) {
 			if(!Modifier.isAbstract(clazz.getModifiers())){
 				pm.createQuery(clazz).delete();			
 			}
-		}
+		}*/
 
+		pm.createQuery(PersonUUID.class).delete();
+		
 		pm.insert(UUID_TESLA, UUID_CURIE, UUID_EINSTEIN);
-		pm.insert(LongManualID_TESLA, LongManualID_CURIE, LongManualID_EINSTEIN);
-		pm.insert(StringID_TESLA, StringID_CURIE, StringID_EINSTEIN);	
+		/*pm.insert(LongManualID_TESLA, LongManualID_CURIE, LongManualID_EINSTEIN);
+		pm.insert(StringID_TESLA, StringID_CURIE, StringID_EINSTEIN);*/
+		
+		/*pm.insert(UUID_TESLA, UUID_CURIE, UUID_EINSTEIN,
+				LongManualID_TESLA, LongManualID_CURIE, LongManualID_EINSTEIN,
+				StringID_TESLA, StringID_CURIE, StringID_EINSTEIN);*/
+
+		pm.option(SdbPersistenceManager.CONSISTENT_READ);
+
 	}
 	
 
@@ -239,12 +249,8 @@ public abstract class BaseTestNoAutoInc extends AbstractTest {
 	}
 	
 	public void testFetchOrderOnLongAutoId() {
-		try {
-			List<PersonLongAutoID> people = queryPersonLongAutoIDOrderBy("id", "", false).fetchKeys();
-		}catch(SienaRestrictedApiException ex){
-			return;
-		}
-		fail();
+		List<PersonLongAutoID> people = queryPersonLongAutoIDOrderBy("id", "", false).fetchKeys();
+		assertEquals(0, people.size());
 	}
 
 	public void testFetchOrderOnLongManualId() {
@@ -282,13 +288,9 @@ public abstract class BaseTestNoAutoInc extends AbstractTest {
 	}
 	
 	public void testFetchOrderOnLongAutoIdDesc() {
-		try {
-			List<PersonLongAutoID> people = queryPersonLongAutoIDOrderBy("id", "", true).fetchKeys();
-		}catch(SienaRestrictedApiException ex){
-			return;
-		}
+		List<PersonLongAutoID> people = queryPersonLongAutoIDOrderBy("id", "", true).fetchKeys();
 
-		fail();
+		assertEquals(0, people.size());
 	}
 		
 	public void testFetchOrderOnLongManualIdDesc() {
@@ -349,7 +351,7 @@ public abstract class BaseTestNoAutoInc extends AbstractTest {
 	public void testFilterOperatorEqualLongAutoID() {
 		try {
 			PersonLongAutoID person = pm.createQuery(PersonLongAutoID.class).filter("id", LongAutoID_EINSTEIN.id).get();
-		}catch(SienaRestrictedApiException ex){
+		}catch(SienaException ex){
 			return;
 		}
 		fail();
@@ -399,13 +401,8 @@ public abstract class BaseTestNoAutoInc extends AbstractTest {
 	}
 	
 	public void testFilterOperatorNotEqualLongAutoID() {
-		try {
-			List<PersonLongAutoID> people = pm.createQuery(PersonLongAutoID.class).filter("id!=", LongAutoID_EINSTEIN.id).order("id").fetch();
-		}catch(SienaRestrictedApiException ex){
-			return;
-		}
-
-		fail();
+		List<PersonLongAutoID> people = pm.createQuery(PersonLongAutoID.class).filter("id!=", LongAutoID_EINSTEIN.id).order("id").fetch();
+		assertEquals(0, people.size());
 	}
 
 	public void testFilterOperatorNotEqualLongManualID() {

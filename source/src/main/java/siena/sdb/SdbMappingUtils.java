@@ -57,19 +57,27 @@ public class SdbMappingUtils {
 		if(id != null){
 			switch(id.value()) {
 			case NONE:
-				Object idVal = null;
-				idVal = Util.readField(obj, idField);
+			{
+				Object idVal = Util.readField(obj, idField);
 				if(idVal == null)
 					throw new SienaException("Id Field " + idField.getName() + " value null");
 				keyVal = Util.toString(idField, idVal);				
 				break;
+			}
 			case AUTO_INCREMENT:
 				// manages String ID as not long!!!
 				throw new SienaRestrictedApiException("DB", "getItemName", "@Id AUTO_INCREMENT not supported by SDB");
 			case UUID:
-				keyVal = UUID.randomUUID().toString();
+			{
+				Object idVal = Util.readField(obj, idField);
+				if(idVal == null){
+					keyVal = UUID.randomUUID().toString();
+				}else {
+					keyVal = Util.toString(idField, idVal);
+				}
 				Util.setField(obj, idField, keyVal);
 				break;
+			}
 			default:
 				throw new SienaRestrictedApiException("DB", "createEntityInstance", "Id Generator "+id.value()+ " not supported");
 			}
@@ -85,7 +93,7 @@ public class SdbMappingUtils {
 		
 		for (Field field : ClassInfo.getClassInfo(clazz).updateFields) {
 			try {
-				String value = toString(obj, field);
+				String value = objectFieldToString(obj, field);
 				if(value != null){
 					ReplaceableAttribute attr = new ReplaceableAttribute(getAttributeName(field), value, true);
 					req.withAttributes(attr);
@@ -104,7 +112,7 @@ public class SdbMappingUtils {
 		
 		for (Field field : ClassInfo.getClassInfo(clazz).updateFields) {
 			try {
-				String value = toString(obj, field);
+				String value = objectFieldToString(obj, field);
 				if(value != null){
 					ReplaceableAttribute attr = new ReplaceableAttribute(getAttributeName(field), value, true);
 					item.withAttributes(attr);
@@ -144,17 +152,21 @@ public class SdbMappingUtils {
 		return req;
 	}
 	
-	public static String toString(Object obj, Field field) {
+	public static String objectFieldToString(Object obj, Field field) {
 		Object val = Util.readField(obj, field);
 		if(val == null) return null;
 		
+		return toString(field, val);
+	}
+	
+	public static String toString(Field field, Object val) {
 		Class<?> type = field.getType();
 		if(type == Integer.class || type == int.class) {
 			return toString((Integer)val);
 		}
 		if(ClassInfo.isModel(type)) {
 			try {
-				return toString(val, ClassInfo.getIdField(type)); 
+				return objectFieldToString(val, ClassInfo.getIdField(type)); 
 			} catch (Exception e) {
 				throw new SienaException(e);
 			}
@@ -332,10 +344,10 @@ public class SdbMappingUtils {
 		return "\""+s.replace("'", "''")+"\"";
 	}
 	
-	public static final String WHERE = " WHERE ";
-	public static final String AND = " AND ";
-	public static final String IS_NULL = " IS NULL";
-	public static final String IS_NOT_NULL = " IS NOT NULL";
+	public static final String WHERE = " where ";
+	public static final String AND = " and ";
+	public static final String IS_NULL = " is null ";
+	public static final String IS_NOT_NULL = " is not null ";
 	public static final String ITEM_NAME = "itemName()";
 	public static final String ALL_COLS = "*";
 	public static final String SELECT = "select ";
@@ -418,9 +430,11 @@ public class SdbMappingUtils {
 		switch(fetchType.fetchType){
 		case KEYS_ONLY:
 			q.append(SELECT + ITEM_NAME + FROM + domain);
+			break;
 		case NORMAL:
 		default:
-			q.append(SELECT + ALL_COLS + FROM + domain);			
+			q.append(SELECT + ALL_COLS + FROM + domain);
+			break;
 		}
 		
 		return new SelectRequest(buildFilterOrder(query, q).toString());		
@@ -479,13 +493,17 @@ public class SdbMappingUtils {
 							if(value == null) {
 								q.append(columns[i++] + IS_NULL);
 							} else {
-								q.append(columns[i++] + op + SimpleDB.quote(toString(value, key)));
+								q.append(columns[i++] + op + SimpleDB.quote(objectFieldToString(value, key)));
 							}
 						}
 					} else {
 						String column = null;
 						if(ClassInfo.isId(f)) {
 							column = "itemName()";
+							
+							if(value == null && op.equals("=")) {
+								throw new SienaException("SDB filter on @Id field with 'IS NULL' is not possible");
+							}
 						} else {
 							column = ClassInfo.getColumnNames(f)[0];
 						}
@@ -495,12 +513,11 @@ public class SdbMappingUtils {
 						} else if(value == null && op.equals("!=")) {
 							q.append(column + IS_NOT_NULL);
 						} else {
-							q.append(column + op + SimpleDB.quote(value.toString()));
+							q.append(column + op + SimpleDB.quote(toString(f, value)));
 						}
 					}
 				}
 			}
-			return q;
 		}
 		
 		List<QueryOrder> orders = query.getOrders();

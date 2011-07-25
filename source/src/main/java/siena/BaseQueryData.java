@@ -197,6 +197,7 @@ public class BaseQueryData<T> implements QueryData<T> {
 			}
 			filters.add(new QueryFilterSimple(field, op, value));
 		}
+		filters.add(new QueryFilterSimple(field, op, value));
 	}
 	
 	protected void addOrder(String fieldName) {

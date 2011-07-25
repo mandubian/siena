@@ -50,7 +50,7 @@ import com.amazonaws.services.simpledb.model.SelectResult;
 
 public class SdbPersistenceManager extends AbstractPersistenceManager {
 	public static final String DB = "SDB";
-	private static final String[] supportedOperators = { "<", ">", ">=", "<=", "=", "!=", "like", "not like", "in" };
+	private static final String[] supportedOperators = { "<", ">", ">=", "<=", "!=", "=", "like", "not like", "in" };
 
     public final static PmOptionSdbReadConsistency CONSISTENT_READ = new PmOptionSdbReadConsistency(true);
     public final static PmOptionSdbReadConsistency NOT_CONSISTENT_READ = new PmOptionSdbReadConsistency(false);
