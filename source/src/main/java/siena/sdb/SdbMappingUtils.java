@@ -3,16 +3,22 @@ package siena.sdb;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 import siena.ClassInfo;
+import siena.Id;
 import siena.Query;
 import siena.QueryFilter;
 import siena.QueryFilterSimple;
 import siena.QueryOrder;
 import siena.SienaException;
+import siena.SienaRestrictedApiException;
 import siena.Util;
+import siena.core.options.QueryOptionFetchType;
+import siena.core.options.QueryOptionOffset;
 import siena.sdb.ws.SimpleDB;
 
 import com.amazonaws.services.simpledb.model.Attribute;
@@ -35,18 +41,42 @@ public class SdbMappingUtils {
 		return domain;
 	}
 	
+	public static void getDomainName(StringBuffer str, Class<?> clazz, String prefix) {
+		str.append(prefix+ClassInfo.getClassInfo(clazz).tableName);
+	}
+	
 	public static String getAttributeName(Field field) {
 		return ClassInfo.getColumnNames(field)[0];
 	}
 
 	public static String getItemName(Class<?> clazz, Object obj){
 		Field idField = ClassInfo.getIdField(clazz);
-		String idVal = (String) Util.readField(obj, idField);
-		if(idVal == null) { // TODO: only if auto-generated
-			idVal = UUID.randomUUID().toString();
-			Util.setField(obj, idField, idVal);
+		Id id = idField.getAnnotation(Id.class);
+
+		String keyVal = null;
+		if(id != null){
+			switch(id.value()) {
+			case NONE:
+				Object idVal = null;
+				idVal = Util.readField(obj, idField);
+				if(idVal == null)
+					throw new SienaException("Id Field " + idField.getName() + " value null");
+				keyVal = Util.toString(idField, idVal);				
+				break;
+			case AUTO_INCREMENT:
+				// manages String ID as not long!!!
+				throw new SienaRestrictedApiException("DB", "getItemName", "@Id AUTO_INCREMENT not supported by SDB");
+			case UUID:
+				keyVal = UUID.randomUUID().toString();
+				Util.setField(obj, idField, keyVal);
+				break;
+			default:
+				throw new SienaRestrictedApiException("DB", "createEntityInstance", "Id Generator "+id.value()+ " not supported");
+			}
 		}
-		return idVal;
+		else throw new SienaException("Field " + idField.getName() + " is not an @Id field");
+
+		return keyVal;
 	}
 	
 	public static PutAttributesRequest createPutRequest(String domain, Class<?> clazz, ClassInfo info, Object obj) {
@@ -100,6 +130,13 @@ public class SdbMappingUtils {
 		return req;
 	}
 	
+	public static GetAttributesRequest createGetRequestFromKey(String domain, Class<?> clazz, Object key) {
+		GetAttributesRequest req = 
+			new GetAttributesRequest().withDomainName(domain).withItemName(key.toString());
+		
+		return req;
+	}
+	
 	public static DeleteAttributesRequest createDeleteRequest(String domain, Class<?> clazz, Object obj) {
 		DeleteAttributesRequest req = 
 			new DeleteAttributesRequest().withDomainName(domain).withItemName(getItemName(clazz, obj));
@@ -134,14 +171,17 @@ public class SdbMappingUtils {
 		return (int) (l-ioffset);
 	}
 
-	
-	public static void fillModel(String itemName, List<Attribute> attrs, Class<?> clazz, Object obj) {
+	public static void fillModelKeysOnly(String itemName, Class<?> clazz, Object obj) {
 		Field idField = ClassInfo.getIdField(clazz);
 		try {
 			Util.setFromString(obj, idField, itemName);
 		} catch (Exception e) {
 			throw new SienaException(e);
 		}
+	}
+	
+	public static void fillModel(String itemName, List<Attribute> attrs, Class<?> clazz, Object obj) {
+		fillModelKeysOnly(itemName, clazz, obj);
 		
 		Attribute theAttr;
 		for (Field field : ClassInfo.getClassInfo(clazz).updateFields) {
@@ -184,6 +224,10 @@ public class SdbMappingUtils {
 		fillModel(item.getName(), item.getAttributes(), clazz, obj);
 	}
 	
+	public static void fillModelKeysOnly(Item item, Class<?> clazz, ClassInfo info, Object obj) {
+		fillModelKeysOnly(item.getName(), clazz, obj);
+	}
+	
 	public static <T> int mapSelectResult(SelectResult res, Iterable<T> objects) {
 		List<Item> items = res.getItems();
 		
@@ -207,34 +251,81 @@ public class SdbMappingUtils {
 			if(theItem != null){
 				fillModel(theItem, clazz, info, obj);
 				nb++;
-			}			
+			}
 		}
 		
 		return nb;
 	}
 	
-	@SuppressWarnings("unchecked")
-	public static <T> List<T> query(Query<T> query, String prefix, String suffix, String nextToken) {
-		Class<?> clazz = query.getQueriedClass();
-		String domain = getDomainName(clazz, prefix);
-//		String q = buildQuery(query, "select * from " + domain) + suffix;
+	public static <T> List<T> mapSelectResultToList(SelectResult res, Class<T> clazz) {
+		List<T> l = new ArrayList<T>();
+		List<Item> items = res.getItems();
 		
+		ClassInfo info = ClassInfo.getClassInfo(clazz);
+		for(Item item: items){
+			T obj = Util.createObjectInstance(clazz);
+			fillModel(item, clazz, info, obj);
+			l.add(obj);
+		}
 		
-//		SelectResponse response = ws.select(q, nextToken);
-//		query.setNextOffset(response.nextToken);
-//		List<Item> items = response.items;
-//		List<T> result = new ArrayList<T>(items.size());
-		List<T> result = new ArrayList<T>();
-//		for (Item item : items) {
-//			try {
-//				T object = (T) clazz.newInstance();
-//				fillModel(item, object);
-//				result.add(object);
-//			} catch (Exception e) {
-//				throw new SienaException(e);
-//			}
-//		}
-		return result;
+		return l;
+	}
+	
+	public static <T> List<T> mapSelectResultToList(SelectResult res, Class<T> clazz, int offset) {
+		List<T> l = new ArrayList<T>();
+		List<Item> items = res.getItems();
+		
+		ClassInfo info = ClassInfo.getClassInfo(clazz);
+		for(int i=offset; i<items.size(); i++){
+			Item item = items.get(i);
+			T obj = Util.createObjectInstance(clazz);
+			fillModel(item, clazz, info, obj);
+			l.add(obj);
+		}
+		
+		return l;
+	}
+	
+	
+	public static <T> List<T> mapSelectResultToListKeysOnly(SelectResult res, Class<T> clazz) {
+		List<T> l = new ArrayList<T>();
+		List<Item> items = res.getItems();
+		
+		ClassInfo info = ClassInfo.getClassInfo(clazz);
+		for(Item item: items){
+			T obj = Util.createObjectInstance(clazz);
+			fillModelKeysOnly(item, clazz, info, obj);
+			l.add(obj);
+		}
+		
+		return l;
+	}
+	
+	public static <T> List<T> mapSelectResultToListKeysOnly(SelectResult res, Class<T> clazz, int offset) {
+		List<T> l = new ArrayList<T>();
+		List<Item> items = res.getItems();
+		
+		ClassInfo info = ClassInfo.getClassInfo(clazz);
+		for(int i=offset; i<items.size(); i++){
+			Item item = items.get(i);
+			T obj = Util.createObjectInstance(clazz);
+			fillModelKeysOnly(item, clazz, info, obj);
+			l.add(obj);
+		}
+		
+		return l;
+	}
+	
+	public static int mapSelectResultToCount(SelectResult res) {
+		Item item = res.getItems().get(0);
+		if(item != null){
+			Attribute attr = item.getAttributes().get(0);
+			if("Count".equals(attr.getName())){
+				return Integer.parseInt(attr.getValue());
+			}
+		}
+		
+		return -1;
 	}
 
 	public static String quote(String s) {
@@ -246,23 +337,27 @@ public class SdbMappingUtils {
 	public static final String IS_NULL = " IS NULL";
 	public static final String IS_NOT_NULL = " IS NOT NULL";
 	public static final String ITEM_NAME = "itemName()";
+	public static final String ALL_COLS = "*";
 	public static final String SELECT = "select ";
 	public static final String FROM = " from ";
 	public static final String ORDER_BY = " order by ";
 	public static final String DESC = " desc";
 	public static final String IN_BEGIN = " in(";
 	public static final String IN_END = ")";
+	public static final String COUNT_BEGIN = " count(";
+	public static final String COUNT_END = ")";
+	public static final String LIMIT = " limit ";
 
-	public static <T> SelectRequest buildBatchGetQuery(Iterable<T> objects, String prefix) {
-		String domain = null;
+	public static <T> SelectRequest buildBatchGetQuery(Iterable<T> objects, String prefix, StringBuffer domainBuf) {
 		Class<?> clazz = null;
 		StringBuilder q = new StringBuilder();
-		
+		String domain = null;
 		boolean first = true;
 		for(T obj: objects){
 			if(clazz == null){
 				clazz = obj.getClass();
 				domain = getDomainName(clazz, prefix);
+				domainBuf.append(domain);
 				q.append(SELECT + "*" + FROM + domain + WHERE + ITEM_NAME + IN_BEGIN);
 			}
 			
@@ -280,24 +375,74 @@ public class SdbMappingUtils {
 		return new SelectRequest(q.toString());		
 	}
 
-	public static <T> String buildQuery(Query<T> query, String prefix) {
+	public static <T> SelectRequest buildBatchGetQueryByKeys(Class<T> clazz, Iterable<?> keys, String prefix, StringBuffer domainBuf) {
+		String domain = getDomainName(clazz, prefix);;
+		domainBuf.append(domain);
+		StringBuilder q = new StringBuilder();
+		
+		q.append(SELECT + "*" + FROM + domain + WHERE + ITEM_NAME + IN_BEGIN);
+		boolean first = true;
+		for(Object key: keys){			
+			String itemName = key.toString();
+			if(!first){
+				q.append(",");
+			} else {
+				first = false;
+			}
+			q.append(quote(itemName));
+		}
+
+		q.append(IN_END);
+		
+		return new SelectRequest(q.toString());		
+	}
+	
+	public static <T> SelectRequest buildCountQuery(Query<T> query, String prefix, StringBuffer domainBuf) {
+		String domain = getDomainName(query.getQueriedClass(), prefix);;
+		domainBuf.append(domain);
+		StringBuilder q = new StringBuilder();
+		
+		q.append(SELECT + COUNT_BEGIN + "*" + COUNT_END + FROM + domain);
+		
+		return new SelectRequest(buildFilterOrder(query, q).toString());		
+	}
+	
+	public static <T> SelectRequest buildQuery(Query<T> query, String prefix, StringBuffer domainBuf) {	
 		Class<?> clazz = query.getQueriedClass();
 		String domain = getDomainName(clazz, prefix);
+		domainBuf.append(domain);
+		QueryOptionFetchType fetchType = (QueryOptionFetchType)query.option(QueryOptionFetchType.ID);
+
+		StringBuilder q = new StringBuilder();
 		
-		StringBuilder q = new StringBuilder(SELECT + "*" + FROM + domain);
+		switch(fetchType.fetchType){
+		case KEYS_ONLY:
+			q.append(SELECT + ITEM_NAME + FROM + domain);
+		case NORMAL:
+		default:
+			q.append(SELECT + ALL_COLS + FROM + domain);			
+		}
 		
+		return new SelectRequest(buildFilterOrder(query, q).toString());		
+	}
+	
+	public static <T> StringBuilder buildFilterOrder(Query<T> query, StringBuilder q){
 		List<QueryFilter> filters = query.getFilters();
+		Set<Field> filteredFields = new HashSet<Field>();
 		if(!filters.isEmpty()) {
 			q.append(WHERE);
 			
 			boolean first = true;
-			
+						
 			for (QueryFilter filter : filters) {
 				if(QueryFilterSimple.class.isAssignableFrom(filter.getClass())){
 					QueryFilterSimple qf = (QueryFilterSimple)filter;
 					Field f = qf.field;
 					Object value = qf.value;
 					String op = qf.operator;
+					
+					// for order verification in case the order is not on a filtered field
+					filteredFields.add(f);
 					
 					if(!first) {
 						q.append(AND);
@@ -324,6 +469,7 @@ public class SdbMappingUtils {
 
 						q.append(column+" in("+s.toString().substring(1)+")");
 					} else if(ClassInfo.isModel(f.getType())) {
+						// TODO could manage other ops here
 						if(!op.equals("=")) {
 							throw new SienaException("Unsupported operator for relationship: "+op);
 						}
@@ -333,8 +479,7 @@ public class SdbMappingUtils {
 							if(value == null) {
 								q.append(columns[i++] + IS_NULL);
 							} else {
-								Object keyVal = Util.readField(value, key);
-								q.append(columns[i++] + op + SimpleDB.quote(toString(keyVal, f)));
+								q.append(columns[i++] + op + SimpleDB.quote(toString(value, key)));
 							}
 						}
 					} else {
@@ -350,29 +495,52 @@ public class SdbMappingUtils {
 						} else if(value == null && op.equals("!=")) {
 							q.append(column + IS_NOT_NULL);
 						} else {
-							q.append(column + op + SimpleDB.quote(toString(value, f)));
+							q.append(column + op + SimpleDB.quote(value.toString()));
 						}
 					}
 				}
 			}
-			
+			return q;
 		}
 		
 		List<QueryOrder> orders = query.getOrders();
 		if(!orders.isEmpty()) {
 			QueryOrder last = orders.get(orders.size()-1);
 			Field field = last.field;
-			
 			if(ClassInfo.isId(field)) {
+				if(!filteredFields.contains(field)){
+					if(filters.isEmpty()) {
+						q.append(WHERE);
+					}
+					q.append(ITEM_NAME + IS_NOT_NULL);
+				}
 				q.append(ORDER_BY + ITEM_NAME);
 			} else {
-				q.append(ORDER_BY);
-				q.append(ClassInfo.getColumnNames(field)[0]);
+				String column = ClassInfo.getColumnNames(field)[0];
+				if(!filteredFields.contains(field)){
+					if(filters.isEmpty()) {
+						q.append(WHERE);
+					}
+					q.append(column + IS_NOT_NULL);
+				}
+				q.append(ORDER_BY + column);
 			}
 			if(!last.ascending)
 				q.append(DESC);
 		}
 		
-		return q.toString();
+		QueryOptionSdbContext sdbCtx = (QueryOptionSdbContext)query.option(QueryOptionSdbContext.ID);
+		QueryOptionOffset off = (QueryOptionOffset)query.option(QueryOptionOffset.ID);
+		if(sdbCtx != null && sdbCtx.realPageSize != 0){
+			if(off!=null && off.isActive()){
+				// if offset is active, adds it to the page size to be sure to retrieve enough elements
+				q.append(LIMIT + (sdbCtx.realPageSize + off.offset));
+			}else {
+				q.append(LIMIT + sdbCtx.realPageSize);
+			}
+		}
+		
+		return q;
 	}
+
 }

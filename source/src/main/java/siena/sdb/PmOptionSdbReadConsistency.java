@@ -4,7 +4,7 @@ import siena.core.options.PmOption;
 
 
 public class PmOptionSdbReadConsistency extends PmOption{
-    public static final int ID 	= 0x3001;
+    public static final int ID 	= 0x3101;
 	
     public boolean isConsistentRead = false;
     

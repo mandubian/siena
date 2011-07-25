@@ -15,6 +15,7 @@
  */
 package siena.sdb;
 
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -26,7 +27,12 @@ import siena.AbstractPersistenceManager;
 import siena.ClassInfo;
 import siena.Query;
 import siena.SienaException;
+import siena.Util;
 import siena.core.async.PersistenceManagerAsync;
+import siena.core.options.QueryOptionFetchType;
+import siena.core.options.QueryOptionOffset;
+import siena.core.options.QueryOptionPage;
+import siena.core.options.QueryOptionState;
 
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.auth.BasicAWSCredentials;
@@ -43,7 +49,7 @@ import com.amazonaws.services.simpledb.model.SelectRequest;
 import com.amazonaws.services.simpledb.model.SelectResult;
 
 public class SdbPersistenceManager extends AbstractPersistenceManager {
-	
+	public static final String DB = "SDB";
 	private static final String[] supportedOperators = { "<", ">", ">=", "<=", "=", "!=", "like", "not like", "in" };
 
     public final static PmOptionSdbReadConsistency CONSISTENT_READ = new PmOptionSdbReadConsistency(true);
@@ -116,11 +122,14 @@ public class SdbPersistenceManager extends AbstractPersistenceManager {
 			
 			nb++;
 		}
-		
-		for(String domain: doMap.keySet()){
-			checkDomain(domain);			
-			List<ReplaceableItem> doList = doMap.get(domain);
-			sdb.batchPutAttributes(new BatchPutAttributesRequest(domain, doList));			
+		try {
+			for(String domain: doMap.keySet()){
+				checkDomain(domain);			
+				List<ReplaceableItem> doList = doMap.get(domain);
+				sdb.batchPutAttributes(new BatchPutAttributesRequest(domain, doList));			
+			}
+		}catch(AmazonClientException ex){
+			throw new SienaException(ex);
 		}
 		return nb;
 	}
@@ -136,7 +145,7 @@ public class SdbPersistenceManager extends AbstractPersistenceManager {
 			req.setConsistentRead(isReadConsistent());
 			GetAttributesResult res = sdb.getAttributes(req);
 			if(res.getAttributes().size() == 0){
-				throw new SienaException(req.getItemName()+" not found in domain"+req.getDomainName());
+				throw new SienaException(req.getItemName()+" not found in domain "+req.getDomainName());
 			}
 				
 			SdbMappingUtils.fillModel(req.getItemName(), res, clazz, obj);
@@ -150,10 +159,16 @@ public class SdbPersistenceManager extends AbstractPersistenceManager {
 	}
 
 	public <T> int get(Iterable<T> models) {
-		SelectRequest req = SdbMappingUtils.buildBatchGetQuery(models, prefix);
+		StringBuffer domainBuf = new StringBuffer();
+		SelectRequest req = SdbMappingUtils.buildBatchGetQuery(models, prefix, domainBuf);
 		req.setConsistentRead(isReadConsistent());
-		SelectResult res = sdb.select(req);
-		return SdbMappingUtils.mapSelectResult(res, models);
+		try {	
+			checkDomain(domainBuf.toString());
+			SelectResult res = sdb.select(req);
+			return SdbMappingUtils.mapSelectResult(res, models);
+		}catch(AmazonClientException ex){
+			throw new SienaException(ex);
+		}
 	}
 
 	
@@ -190,11 +205,14 @@ public class SdbPersistenceManager extends AbstractPersistenceManager {
 			
 			nb++;
 		}
-		
-		for(String domain: doMap.keySet()){
-			checkDomain(domain);			
-			List<ReplaceableItem> doList = doMap.get(domain);
-			sdb.batchPutAttributes(new BatchPutAttributesRequest(domain, doList));			
+		try {
+			for(String domain: doMap.keySet()){
+				checkDomain(domain);			
+				List<ReplaceableItem> doList = doMap.get(domain);
+				sdb.batchPutAttributes(new BatchPutAttributesRequest(domain, doList));			
+			}
+		}catch(AmazonClientException ex){
+			throw new SienaException(ex);
 		}
 		return nb;
 	}
@@ -233,13 +251,429 @@ public class SdbPersistenceManager extends AbstractPersistenceManager {
 			
 			nb++;
 		}
-		
-		for(String domain: doMap.keySet()){
-			checkDomain(domain);			
-			List<DeletableItem> doList = doMap.get(domain);
-			sdb.batchDeleteAttributes(new BatchDeleteAttributesRequest(domain, doList));			
+		try {
+			for(String domain: doMap.keySet()){
+				checkDomain(domain);			
+				List<DeletableItem> doList = doMap.get(domain);
+				sdb.batchDeleteAttributes(new BatchDeleteAttributesRequest(domain, doList));			
+			}
+		}catch(AmazonClientException ex){
+			throw new SienaException(ex);
 		}
 		return nb;
+	}
+	
+	@Override
+	public void save(Object obj) {
+		Class<?> clazz = obj.getClass();
+		ClassInfo info = ClassInfo.getClassInfo(clazz);
+		Field idField = info.getIdField();
+		
+		//Entity entity;
+		Object idVal = Util.readField(obj, idField);
+		// id with null value means insert
+		if(idVal == null){
+			insert(obj);
+		}
+		// id with not null value means update
+		else{
+			update(obj);
+		}
+	}
+
+	@Override
+	public int save(Object... objects) {
+		return save(Arrays.asList(objects));
+	}
+
+	@Override
+	public int save(Iterable<?> objects) {
+		List<Object> entities2Insert = new ArrayList<Object>();
+		List<Object> entities2Update = new ArrayList<Object>();
+
+		for(Object obj:objects){
+			Class<?> clazz = obj.getClass();
+			ClassInfo info = ClassInfo.getClassInfo(clazz);
+			Field idField = info.getIdField();
+			
+			Object idVal = Util.readField(obj, idField);
+			// id with null value means insert
+			if(idVal == null){
+				entities2Insert.add(obj);
+			}
+			// id with not null value means update
+			else{
+				entities2Update.add(obj);
+			}
+		}
+		return insert(entities2Insert) + update(entities2Update);
+	}
+	
+	public <T> T getByKey(Class<T> clazz, Object key) {
+		String domain = SdbMappingUtils.getDomainName(clazz, prefix);
+		try {
+			checkDomain(domain);
+			GetAttributesRequest req = SdbMappingUtils.createGetRequestFromKey(domain, clazz, key);
+			// sets consistent read to true when reading one single object
+			req.setConsistentRead(isReadConsistent());
+			GetAttributesResult res = sdb.getAttributes(req);
+			if(res.getAttributes().size() == 0){
+				throw new SienaException(req.getItemName()+" not found in domain "+req.getDomainName());
+			}
+				
+			T obj = Util.createObjectInstance(clazz);
+
+			SdbMappingUtils.fillModel(req.getItemName(), res, clazz, obj);
+			
+			return obj;
+		}catch(AmazonClientException ex){
+			throw new SienaException(ex);
+		}
+	}
+
+	public <T> List<T> getByKeys(Class<T> clazz, Object... keys) {
+		return getByKeys(clazz, Arrays.asList(keys));
+	}
+	
+	public <T> List<T> getByKeys(Class<T> clazz, Iterable<?> keys) {
+		try {	
+			StringBuffer domainBuf = new StringBuffer();
+
+			SelectRequest req = SdbMappingUtils.buildBatchGetQueryByKeys(clazz, keys, prefix, domainBuf);
+			checkDomain(domainBuf.toString());
+			req.setConsistentRead(isReadConsistent());
+			SelectResult res = sdb.select(req);
+			return SdbMappingUtils.mapSelectResultToList(res, clazz);
+		}catch(AmazonClientException ex){
+			throw new SienaException(ex);
+		}
+	}
+
+	public <T> int count(Query<T> query) {
+		StringBuffer domainBuf = new StringBuffer();
+		SelectRequest req = SdbMappingUtils.buildCountQuery(query, prefix, domainBuf);
+
+		try {	
+			checkDomain(domainBuf.toString());
+			req.setConsistentRead(isReadConsistent());
+			SelectResult res = sdb.select(req);
+			return SdbMappingUtils.mapSelectResultToCount(res);
+		}catch(AmazonClientException ex){
+			throw new SienaException(ex);
+		}
+	}
+
+	public <T> List<T> fetch(Query<T> query) {
+		return doFetchList(query, Integer.MAX_VALUE, 0);
+	}
+	
+	public <T> List<T> fetch(Query<T> query, int limit) {
+		return doFetchList(query, limit, 0);
+	}
+
+	public <T> List<T> fetch(Query<T> query, int limit, Object offset) {
+		return doFetchList(query, limit, (Integer)offset);
+	}
+
+	public <T> List<T> fetchKeys(Query<T> query) {
+		((QueryOptionFetchType)query.option(QueryOptionFetchType.ID)).fetchType=QueryOptionFetchType.Type.KEYS_ONLY;
+
+		return doFetchList(query, Integer.MAX_VALUE, 0);
+	}
+
+	public <T> List<T> fetchKeys(Query<T> query, int limit) {
+		((QueryOptionFetchType)query.option(QueryOptionFetchType.ID)).fetchType=QueryOptionFetchType.Type.KEYS_ONLY;
+
+		return doFetchList(query, limit, 0);
+	}
+
+	public <T> List<T> fetchKeys(Query<T> query, int limit, Object offset) {
+		((QueryOptionFetchType)query.option(QueryOptionFetchType.ID)).fetchType=QueryOptionFetchType.Type.KEYS_ONLY;
+
+		return doFetchList(query, limit, (Integer)offset);
+	}
+	
+	public <T> Iterable<T> iter(Query<T> query) {
+		((QueryOptionFetchType)query.option(QueryOptionFetchType.ID)).fetchType=QueryOptionFetchType.Type.ITER;
+		return doFetchIterable(query, Integer.MAX_VALUE, 0);
+	}
+
+	public <T> Iterable<T> iter(Query<T> query, int limit) {
+		((QueryOptionFetchType)query.option(QueryOptionFetchType.ID)).fetchType=QueryOptionFetchType.Type.ITER;
+		return doFetchIterable(query, limit, 0);
+	}
+
+	public <T> Iterable<T> iter(Query<T> query, int limit, Object offset) {
+		((QueryOptionFetchType)query.option(QueryOptionFetchType.ID)).fetchType=QueryOptionFetchType.Type.ITER;
+		return doFetchIterable(query, limit, (Integer)offset);
+	}
+
+	
+	public <T> int delete(Query<T> query) {
+		List<T> l = fetchKeys(query);
+		
+		return delete(l);
+	}
+	
+	private <T> List<T> doFetchList(Query<T> query, int limit, int offset) {
+		QueryOptionSdbContext sdbCtx = (QueryOptionSdbContext)query.option(QueryOptionSdbContext.ID);
+		if(sdbCtx==null){
+			sdbCtx = new QueryOptionSdbContext();
+			query.customize(sdbCtx);
+		}
+		
+		QueryOptionState state = (QueryOptionState)query.option(QueryOptionState.ID);
+		QueryOptionFetchType fetchType = (QueryOptionFetchType)query.option(QueryOptionFetchType.ID);
+
+		QueryOptionPage pag = (QueryOptionPage)query.option(QueryOptionPage.ID);
+		if(!pag.isPaginating()){
+			// no pagination but pageOption active
+			if(pag.isActive()){
+				// if local limit is set, it overrides the pageOption.pageSize
+				if(limit!=Integer.MAX_VALUE){
+					sdbCtx.realPageSize = limit;
+					// pageOption is passivated to be sure it is not reused
+					pag.passivate();
+				}
+				// using pageOption.pageSize
+				else {
+					sdbCtx.realPageSize = pag.pageSize;
+					// passivates the pageOption in stateless mode not to keep anything between 2 requests
+					if(state.isStateless()){
+						pag.passivate();
+					}						
+				}
+			}
+			else {
+				if(limit != Integer.MAX_VALUE){
+					sdbCtx.realPageSize = limit;
+				}
+			}
+		}else {
+			// paginating so use the pagesize and don't passivate pageOption
+			// local limit is not taken into account
+			sdbCtx.realPageSize = pag.pageSize;
+		}
+		
+		QueryOptionOffset off = (QueryOptionOffset)query.option(QueryOptionOffset.ID);
+		// if local offset has been set, uses it
+		if(offset!=0){
+			off.activate();
+			off.offset = offset;
+		}
+		
+		// if previousPage has detected there is no more data, simply returns an empty list
+		if(sdbCtx.noMoreDataBefore){
+			return new ArrayList<T>();
+		}
+						
+		// manages cursor limitations for IN and != operators with offsets
+		if(!sdbCtx.isActive()){
+			StringBuffer domainBuf = new StringBuffer();
+			SelectRequest req = SdbMappingUtils.buildQuery(query, prefix, domainBuf);
+			req.setConsistentRead(isReadConsistent());
+			checkDomain(domainBuf.toString());
+			SelectResult res = sdb.select(req);
+			
+			// activates the SdbCtx now that it is initialised
+			sdbCtx.activate();
+			// sets the current cursor (in stateful mode, cursor is always kept for further use)
+			if(pag.isPaginating()){
+				String token = res.getNextToken();
+				if(token!=null){
+					sdbCtx.addToken(token);
+				}
+				
+				// if paginating and 0 results then no more data else resets noMoreDataAfter
+				if(res.getItems().size()==0){
+					sdbCtx.noMoreDataAfter = true;
+				} else {
+					sdbCtx.noMoreDataAfter = false;
+				}
+			}else{
+				String token = res.getNextToken();
+				if(token!=null){
+					sdbCtx.addAndMoveToken(token);
+				}
+			}		
+			// cursor not yet created
+			switch(fetchType.fetchType){
+			case KEYS_ONLY:
+				if(off.isActive()){
+					return SdbMappingUtils.mapSelectResultToListKeysOnly(res, query.getQueriedClass(), off.offset);
+				}else {
+					return SdbMappingUtils.mapSelectResultToListKeysOnly(res, query.getQueriedClass());
+				}
+			case NORMAL:
+			default:
+				if(off.isActive()){
+					return SdbMappingUtils.mapSelectResultToList(res, query.getQueriedClass(), off.offset);
+				}else {
+					return SdbMappingUtils.mapSelectResultToList(res, query.getQueriedClass());
+				}
+			}			
+		}
+		else {
+			// we prepare the query each time
+			StringBuffer domainBuf = new StringBuffer();
+			SelectRequest req = SdbMappingUtils.buildQuery(query, prefix, domainBuf);
+			req.setConsistentRead(isReadConsistent());
+			checkDomain(domainBuf.toString());
+			// we can't use real asynchronous function with cursors
+			// so the page is extracted at once and wrapped into a SienaFuture
+			String token = sdbCtx.currentToken();
+			if(token!=null){
+				req.setNextToken(token);
+			}
+			SelectResult res = sdb.select(req);
+									
+			// sets the current cursor (in stateful mode, cursor is always kept for further use)
+			if(pag.isPaginating()){
+				token = res.getNextToken();
+				if(token!=null){
+					sdbCtx.addToken(token);
+				}
+				// if paginating and 0 results then no more data else resets noMoreDataAfter
+				if(res.getItems().size()==0){
+					sdbCtx.noMoreDataAfter = true;
+				} else {
+					sdbCtx.noMoreDataAfter = false;
+				}
+			}else{
+				token = res.getNextToken();
+				if(token!=null){
+					sdbCtx.addAndMoveToken(token);
+				}
+			}
+			
+			switch(fetchType.fetchType){
+			case KEYS_ONLY:
+				return SdbMappingUtils.mapSelectResultToListKeysOnly(res, query.getQueriedClass());
+			case NORMAL:
+			default:
+				return SdbMappingUtils.mapSelectResultToList(res, query.getQueriedClass());
+			}
+		}
+	}
+	
+	private <T> Iterable<T> doFetchIterable(Query<T> query, int limit, int offset) {
+		QueryOptionSdbContext sdbCtx = (QueryOptionSdbContext)query.option(QueryOptionSdbContext.ID);
+		if(sdbCtx==null){
+			sdbCtx = new QueryOptionSdbContext();
+			query.customize(sdbCtx);
+		}
+		
+		QueryOptionState state = (QueryOptionState)query.option(QueryOptionState.ID);
+
+		QueryOptionPage pag = (QueryOptionPage)query.option(QueryOptionPage.ID);
+		if(!pag.isPaginating()){
+			// no pagination but pageOption active
+			if(pag.isActive()){
+				// if local limit is set, it overrides the pageOption.pageSize
+				if(limit!=Integer.MAX_VALUE){
+					sdbCtx.realPageSize = limit;
+					// pageOption is passivated to be sure it is not reused
+					pag.passivate();
+				}
+				// using pageOption.pageSize
+				else {
+					sdbCtx.realPageSize = pag.pageSize;
+					// passivates the pageOption in stateless mode not to keep anything between 2 requests
+					if(state.isStateless()){
+						pag.passivate();
+					}						
+				}
+			}
+			else {
+				if(limit != Integer.MAX_VALUE){
+					sdbCtx.realPageSize = limit;
+				}
+			}
+		}else {
+			// paginating so use the pagesize and don't passivate pageOption
+			// local limit is not taken into account
+			sdbCtx.realPageSize = pag.pageSize;
+		}
+		
+		QueryOptionOffset off = (QueryOptionOffset)query.option(QueryOptionOffset.ID);
+		// if local offset has been set, uses it
+		if(offset!=0){
+			off.activate();
+			off.offset = offset;
+		}
+		
+		// if previousPage has detected there is no more data, simply returns an empty list
+		if(sdbCtx.noMoreDataBefore){
+			return new ArrayList<T>();
+		}
+						
+		// manages cursor limitations for IN and != operators with offsets
+		if(!sdbCtx.isActive()){
+			StringBuffer domainBuf = new StringBuffer();
+			SelectRequest req = SdbMappingUtils.buildQuery(query, prefix, domainBuf);
+			req.setConsistentRead(isReadConsistent());
+			checkDomain(domainBuf.toString());
+			SelectResult res = sdb.select(req);
+			
+			// activates the SdbCtx now that it is initialised
+			sdbCtx.activate();
+			// sets the current cursor (in stateful mode, cursor is always kept for further use)
+			if(pag.isPaginating()){
+				String token = res.getNextToken();
+				if(token!=null){
+					sdbCtx.addToken(token);
+				}
+				
+				// if paginating and 0 results then no more data else resets noMoreDataAfter
+				if(res.getItems().size()==0){
+					sdbCtx.noMoreDataAfter = true;
+				} else {
+					sdbCtx.noMoreDataAfter = false;
+				}
+			}else{
+				String token = res.getNextToken();
+				if(token!=null){
+					sdbCtx.addAndMoveToken(token);
+				}
+			}		
+			
+			return new SdbSienaIterable<T>(res.getItems(), query);
+		}
+		else {
+			// we prepare the query each time
+			StringBuffer domainBuf = new StringBuffer();
+			SelectRequest req = SdbMappingUtils.buildQuery(query, prefix, domainBuf);
+			req.setConsistentRead(isReadConsistent());
+			checkDomain(domainBuf.toString());
+			// we can't use real asynchronous function with cursors
+			// so the page is extracted at once and wrapped into a SienaFuture
+			String token = sdbCtx.currentToken();
+			if(token!=null){
+				req.setNextToken(token);
+			}
+			SelectResult res = sdb.select(req);
+									
+			// sets the current cursor (in stateful mode, cursor is always kept for further use)
+			if(pag.isPaginating()){
+				token = res.getNextToken();
+				if(token!=null){
+					sdbCtx.addToken(token);
+				}
+				// if paginating and 0 results then no more data else resets noMoreDataAfter
+				if(res.getItems().size()==0){
+					sdbCtx.noMoreDataAfter = true;
+				} else {
+					sdbCtx.noMoreDataAfter = false;
+				}
+			}else{
+				token = res.getNextToken();
+				if(token!=null){
+					sdbCtx.addAndMoveToken(token);
+				}
+			}
+			
+			return new SdbSienaIterable<T>(res.getItems(), query);
+		}
 	}
 	
 	/* transactions */
@@ -258,80 +692,6 @@ public class SdbPersistenceManager extends AbstractPersistenceManager {
 
 	public void rollbackTransaction() {
 	}
-	
-	
-
-
-	@Override
-	public <T> List<T> fetch(Query<T> query) {
-		return null;
-		//return query(query, "", null);
-	}
-
-	@Override
-	public <T> List<T> fetch(Query<T> query, int limit) {
-		return null;
-		//return query(query, " limit "+limit, null);
-	}
-
-	@Override
-	public <T> List<T> fetch(Query<T> query, int limit, Object offset) {
-		return null;
-		//return query(query, " limit "+limit, offset.toString());
-	}
-
-	@Override
-	public <T> int count(Query<T> query) {
-//		Class<?> clazz = query.getQueriedClass();
-//		String domain = getDomainName(clazz);
-//		String q = buildQuery(query, "select count(*) from "+domain);
-//		SelectResponse response = ws.select(q, null);
-//		query.setNextOffset(response.nextToken);
-//		return Integer.parseInt(response.items.get(0).attributes.get("Count").get(0));
-		return 0;
-	}
-
-	@Override
-	public <T> int delete(Query<T> query) {
-		// TODO Auto-generated method stub
-		return 0;
-	}
-
-	@Override
-	public <T> List<T> fetchKeys(Query<T> query) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public <T> List<T> fetchKeys(Query<T> query, int limit) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public <T> List<T> fetchKeys(Query<T> query, int limit, Object offset) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public <T> Iterable<T> iter(Query<T> query) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public <T> Iterable<T> iter(Query<T> query, int limit) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public <T> Iterable<T> iter(Query<T> query, int limit, Object offset) {
-		// TODO Auto-generated method stub
-		return null;
-	}
 
 	@Override
 	public <T> void release(Query<T> query) {
@@ -348,13 +708,6 @@ public class SdbPersistenceManager extends AbstractPersistenceManager {
 	public <T> int deleteByKeys(Class<T> clazz, Object... keys) {
 		// TODO Auto-generated method stub
 		return 0;
-	}
-
-
-	@Override
-	public <T> List<T> getByKeys(Class<T> clazz, Object... keys) {
-		// TODO Auto-generated method stub
-		return null;
 	}
 
 
@@ -384,30 +737,15 @@ public class SdbPersistenceManager extends AbstractPersistenceManager {
 	}
 
 
-	@Override
-	public <T> T getByKey(Class<T> clazz, Object key) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
+	
 
 	@Override
-	public void save(Object obj) {
-		// TODO Auto-generated method stub
-		
-	}
-
-	@Override
-	public int save(Object... objects) {
+	public <T> int update(Query<T> query, Map<String, ?> fieldValues) {
 		// TODO Auto-generated method stub
 		return 0;
 	}
 
-	@Override
-	public int save(Iterable<?> objects) {
-		// TODO Auto-generated method stub
-		return 0;
-	}
+
 
 	@Override
 	public <T> int deleteByKeys(Class<T> clazz, Iterable<?> keys) {
@@ -415,17 +753,6 @@ public class SdbPersistenceManager extends AbstractPersistenceManager {
 		return 0;
 	}
 
-	@Override
-	public <T> List<T> getByKeys(Class<T> clazz, Iterable<?> keys) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public <T> int update(Query<T> query, Map<String, ?> fieldValues) {
-		// TODO Auto-generated method stub
-		return 0;
-	}
 
 
 }

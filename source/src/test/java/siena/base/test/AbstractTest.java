@@ -16,7 +16,8 @@ public abstract class AbstractTest extends TestCase {
 	public abstract void init();
 	public abstract void createClasses(List<Class<?>> classes);
 	public abstract PersistenceManager createPersistenceManager(List<Class<?>> classes) throws Exception;
-	
+	public abstract void postInit();
+
 	@Override
 	protected void setUp() throws Exception {
 		super.setUp();
@@ -26,6 +27,8 @@ public abstract class AbstractTest extends TestCase {
 		pm = createPersistenceManager(classes);
 		
 		PersistenceManagerFactory.install(pm, classes);
+		
+		postInit();
 	}
 
 }
