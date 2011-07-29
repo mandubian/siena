@@ -33,7 +33,6 @@ import siena.base.test.model.BigDecimalModel;
 import siena.base.test.model.BigDecimalModelNoPrecision;
 import siena.base.test.model.BigDecimalStringModel;
 import siena.base.test.model.Contact;
-import siena.base.test.model.ContainerModel;
 import siena.base.test.model.DataTypes;
 import siena.base.test.model.DataTypes.EnumLong;
 import siena.base.test.model.Discovery;
