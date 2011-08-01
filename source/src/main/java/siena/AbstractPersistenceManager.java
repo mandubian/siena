@@ -44,14 +44,14 @@ public abstract class AbstractPersistenceManager implements PersistenceManager {
 
 	public <T> void release(Query<T> query) {
 		QueryOptionOffset offset = (QueryOptionOffset)query.option(QueryOptionOffset.ID);
-		QueryOption reuse = query.option(QueryOptionState.ID);
+		QueryOption state = query.option(QueryOptionState.ID);
 		
 		// resets offset
 		if(offset.isActive()) 
 			offset.offset=0;
 		// disables reusable and cludge
-		if(reuse.isActive()){
-			reuse.passivate();
+		if(state.isActive()){
+			state.passivate();
 		}
 	}
 

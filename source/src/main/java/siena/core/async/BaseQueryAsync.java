@@ -59,6 +59,11 @@ public class BaseQueryAsync<T> extends BaseQueryData<T> implements QueryAsync<T>
 		return this;
 	}
 
+	public QueryAsync<T> owned(Object owner, String fieldName) {
+		addOwned(owner, fieldName);
+		return this;
+	}
+
 	public QueryAsync<T> search(String match, String... fields) {
 		addSearch(match, fields);
 		return this;

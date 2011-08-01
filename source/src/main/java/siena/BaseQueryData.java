@@ -26,13 +26,14 @@ public class BaseQueryData<T> implements QueryData<T> {
 	private static final long serialVersionUID = -5112648712321740542L;
 
 	protected Class<T> clazz;
-	
+
 	protected List<QueryFilter> filters;
 	protected List<QueryOrder> orders;
 	protected List<QueryFilterSearch> searches;
 	protected List<QueryJoin> joins;
 	protected List<QueryAggregated> aggregatees;
-	
+	protected List<QueryOwned> ownees;
+
 	protected Map<Integer, QueryOption> options = defaultOptions();
 	
 	public static Map<Integer, QueryOption> defaultOptions() {
@@ -53,6 +54,7 @@ public class BaseQueryData<T> implements QueryData<T> {
 		searches = new ArrayList<QueryFilterSearch>();
 		joins = new ArrayList<QueryJoin>();
 		aggregatees = new ArrayList<QueryAggregated>();
+		ownees = new ArrayList<QueryOwned>();
 	}
 	
 	public BaseQueryData(Class<T> clazz) {
@@ -63,6 +65,7 @@ public class BaseQueryData<T> implements QueryData<T> {
 		searches = new ArrayList<QueryFilterSearch>();
 		joins = new ArrayList<QueryJoin>();
 		aggregatees = new ArrayList<QueryAggregated>();
+		ownees = new ArrayList<QueryOwned>();
 	}
 	
 	public BaseQueryData(BaseQueryData<T> data) {
@@ -118,6 +121,10 @@ public class BaseQueryData<T> implements QueryData<T> {
 		return aggregatees;
 	}
 	
+	public List<QueryOwned> getOwnees() {
+		return ownees;
+	}
+
 	public QueryOption option(int option) {
 		return options.get(option);
 	}
@@ -249,6 +256,24 @@ public class BaseQueryData<T> implements QueryData<T> {
 		aggregatees.add(0, new QueryAggregated(aggregator, field));
 	}
 	
+	protected void addAggregated(Object aggregator, Field field){
+		if(!aggregatees.isEmpty()) aggregatees.remove(0);
+		aggregatees.add(0, new QueryAggregated(aggregator, field));
+	}
+	
+	protected void addOwned(Object owner, String fieldName){
+		Field field = Util.getField(this.getQueriedClass(), fieldName);
+		// removes existing ownee (not very nice I know :) )
+		if(!ownees.isEmpty()) ownees.remove(0);
+		ownees.add(0, new QueryOwned(owner, field));
+	}
+	
+	protected void addOwned(Object owner, Field field){
+		// removes existing ownee (not very nice I know :) )
+		if(!ownees.isEmpty()) ownees.remove(0);
+		ownees.add(0, new QueryOwned(owner, field));
+	}
+	
 	protected void optionPaginate(int pageSize) {
 		// sets the pagination
 		QueryOptionPage opt = (QueryOptionPage)(options.get(QueryOptionPage.ID));
@@ -341,10 +366,11 @@ public class BaseQueryData<T> implements QueryData<T> {
 		searches.clear();
 		joins.clear();
 		aggregatees.clear();
+		ownees.clear();
 		options = defaultOptions();
 	}
 	
-	protected void resetOptions() {
+	public void resetOptions() {
 		options = defaultOptions();
 	}
 

@@ -13,6 +13,7 @@ import siena.Id;
 import siena.Json;
 import siena.Query;
 import siena.QueryAggregated;
+import siena.QueryOwned;
 import siena.SienaException;
 import siena.SienaRestrictedApiException;
 import siena.Util;
@@ -723,42 +724,69 @@ public class GaeMappingUtils {
 	}
 	
 	public static <T> T mapRelation(Query<T> query, T obj, ClassInfo info) {
+		// aggregators/owners
 		List<QueryAggregated> aggregs = query.getAggregatees();
-		if(aggregs.isEmpty()){
+		List<QueryOwned> ownees = query.getOwnees();
+
+		if(aggregs.isEmpty() && ownees.isEmpty()){
 			return obj;
 		}
-		else if(aggregs.size() == 1){
-			QueryAggregated aggreg = aggregs.get(0);
-			
+
+		if(aggregs.size() == 1){
+			// aggregators
+			QueryAggregated aggreg = aggregs.get(0);			
 			Relation rel = 
 				new Relation(RelationMode.AGGREGATION, aggreg.aggregator, aggreg.field.getName());
 			Util.setField(obj, info.aggregator, rel);
-			
-			return obj;
 		}
-		else {
+		else if(aggregs.size() > 1){
 			throw new SienaException("Only one aggregation per query allowed");
 		}
+		
+		if(ownees.size() == 1){
+			// owners
+			QueryOwned ownee = ownees.get(0);				
+			Util.setField(obj, ownee.field, ownee.owner);
+				
+		}
+		else if(ownees.size() > 1){
+			throw new SienaException("Only one owner per query allowed");
+		}
+		
+		return obj;
 	}
 
 	public static <T> List<T> mapRelations(Query<T> query, List<T> objs, ClassInfo info) {
 		List<QueryAggregated> aggregs = query.getAggregatees();
-		if(aggregs.isEmpty()){
+		List<QueryOwned> ownees = query.getOwnees();
+
+		if(aggregs.isEmpty() && ownees.isEmpty()){
 			return objs;
 		}
-		else if(aggregs.size() == 1){
+		
+		if(aggregs.size() == 1){
 			QueryAggregated aggreg = aggregs.get(0);
 			
 			Relation rel = 
 				new Relation(RelationMode.AGGREGATION, aggreg.aggregator, aggreg.field.getName());
 			for(T obj: objs){
 				Util.setField(obj, info.aggregator, rel);
-			}
-			
-			return objs;
+			}			
 		}
-		else {
+		else if(aggregs.size() > 1){
 			throw new SienaException("Only one aggregation per query allowed");
 		}
+		
+		if(ownees.size() == 1){
+			// owners
+			QueryOwned ownee = ownees.get(0);
+			for(T obj: objs){
+				Util.setField(obj, ownee.field, ownee.owner);
+			}
+		}
+		else if(ownees.size() > 1){
+			throw new SienaException("Only one owner per query allowed");
+		}
+		return objs;
 	}
 }

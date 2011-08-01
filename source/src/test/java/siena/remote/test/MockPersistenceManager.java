@@ -31,6 +31,7 @@ import siena.QueryFilter;
 import siena.QueryFilterSearch;
 import siena.QueryJoin;
 import siena.QueryOrder;
+import siena.QueryOwned;
 import siena.core.Many4PM;
 import siena.core.One4PM;
 import siena.core.async.PersistenceManagerAsync;
@@ -405,6 +406,18 @@ public class MockPersistenceManager implements PersistenceManager {
 
 		@Override
 		public Query<T> aggregated(Object aggregator, String fieldName) {
+			// TODO Auto-generated method stub
+			return null;
+		}
+
+		@Override
+		public Query<T> owned(Object owner, String fieldName) {
+			// TODO Auto-generated method stub
+			return null;
+		}
+
+		@Override
+		public List<QueryOwned> getOwnees() {
 			// TODO Auto-generated method stub
 			return null;
 		}

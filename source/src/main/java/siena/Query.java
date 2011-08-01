@@ -39,6 +39,7 @@ public interface Query<T> extends QueryData<T>{
 	Query<T> search(String match, QueryOption opt, String... fields);
 
 	Query<T> aggregated(Object aggregator, String fieldName);	
+	Query<T> owned(Object owner, String fieldName);	
 
 	T get();
 	int delete();

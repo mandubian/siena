@@ -5,6 +5,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
+import java.lang.reflect.Field;
 import java.util.List;
 import java.util.Map;
 
@@ -90,7 +91,22 @@ public class BaseQuery<T> extends BaseQueryData<T> implements Query<T> {
 		addAggregated(aggregator, fieldName);
 		return this;
 	}
+	
+	public Query<T> aggregated(Object aggregator, Field field) {
+		addAggregated(aggregator, field);
+		return this;
+	}
 
+	public Query<T> owned(Object owner, String fieldName) {
+		addOwned(owner, fieldName);
+		return this;
+	}
+	
+	public Query<T> owned(Object owner, Field field) {
+		addOwned(owner, field);
+		return this;
+	}
+	
 	public T get() {
 		return pm.get(this);
 	}

@@ -49,6 +49,7 @@ public interface QueryData<T> extends Serializable{
 	List<QueryFilterSearch> getSearches();
 	List<QueryJoin> getJoins();
 	List<QueryAggregated> getAggregatees();
+	List<QueryOwned> getOwnees();
 
 	Class<T> getQueriedClass();
 

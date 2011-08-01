@@ -5,6 +5,7 @@ package siena.core;
 
 import java.lang.reflect.Field;
 
+import siena.BaseQuery;
 import siena.ClassInfo;
 import siena.PersistenceManager;
 import siena.Query;
@@ -42,7 +43,7 @@ public class BaseOne<T> implements One4PM<T>{
 			this.query = pm.createQuery(clazz).aggregated(obj, fieldName);
 			break;
 		case RELATION:
-			this.query = pm.createQuery(clazz).filter(fieldName, obj);
+			this.query = pm.createQuery(clazz).owned(obj, fieldName);
 			break;
 		}
 		query = pm.createQuery(clazz);		
@@ -114,12 +115,12 @@ public class BaseOne<T> implements One4PM<T>{
 			this.relation.discriminator = field;
 		}
 		
-		this.query.release().aggregated(aggregator, ClassInfo.getSimplestColumnName(field));
+		((BaseQuery<T>)(this.query)).aggregated(aggregator, field);
 		return this;
 	}
 
 	public One4PM<T> relationMode(Object owner, Field field) {
-		this.query.release().filter(ClassInfo.getSimplestColumnName(field), owner);
+		((BaseQuery<T>)(this.query)).owned(owner, field);
 		return this;
 	}
 }

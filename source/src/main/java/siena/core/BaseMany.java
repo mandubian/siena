@@ -268,7 +268,7 @@ public class BaseMany<T> implements Many4PM<T>{
 			}
 			return this; 
 		}
-		
+				
 		public SyncList<V> forceSync() {
 			elements = many.asQuery().fetch();
 			elements2Remove.clear();

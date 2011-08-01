@@ -34,6 +34,7 @@ public interface QueryAsync<T> extends QueryData<T>{
 	QueryAsync<T> order(String fieldName);
 	QueryAsync<T> join(String field, String... sortFields);	
 	QueryAsync<T> aggregated(Object aggregator, String field);	
+	QueryAsync<T> owned(Object owner, String field);	
 	QueryAsync<T> search(String match, String... fields);
 	QueryAsync<T> search(String match, QueryOption opt, String... fields);
 	

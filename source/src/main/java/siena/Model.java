@@ -304,6 +304,10 @@ public abstract class Model {
 		public Query<T> aggregated(Object aggregator, String fieldName) {
 			return createQuery().aggregated(aggregator, fieldName);
 		}
+		
+		public Query<T> owned(Object owner, String fieldName) {
+			return createQuery().owned(owner, fieldName);
+		}
 
 		public T get() {
 			return createQuery().get();
@@ -368,6 +372,10 @@ public abstract class Model {
 
 		public List<QueryAggregated> getAggregatees() {
 			return createQuery().getAggregatees();
+		}
+
+		public List<QueryOwned> getOwnees() {
+			return createQuery().getOwnees();
 		}
 
 		@Deprecated
@@ -562,17 +570,14 @@ public abstract class Model {
 		private One4PM<T> createOne() {
 			if(this.one == null){
 				this.one = ancestor.getPersistenceManager().createOne(clazz);
-			}
-			//else if(((QueryOptionState)this.listQuery.asQuery().option(QueryOptionState.ID)).isStateless()){
-			//	this.listQuery.asQuery().release();				
-			//}
-			switch(mode){
-			case AGGREGATION:
-				aggregationMode(ancestor, field);
-				break;
-			case RELATION:
-				relationMode(ancestor, field);				
-				break;
+				switch(mode){
+				case AGGREGATION:
+					aggregationMode(ancestor, field);
+					break;
+				case RELATION:
+					relationMode(ancestor, field);				
+					break;
+				}
 			}
 			
 			return this.one;
