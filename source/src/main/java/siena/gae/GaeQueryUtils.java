@@ -18,6 +18,7 @@ import siena.QueryFilterSearch;
 import siena.QueryFilterSimple;
 import siena.QueryJoin;
 import siena.QueryOrder;
+import siena.QueryOwned;
 import siena.SienaException;
 import siena.SienaRestrictedApiException;
 import siena.Util;
@@ -225,6 +226,15 @@ public class GaeQueryUtils {
 				
 				q.addFilter(propName, op, value);
 			}
+		}
+		
+		// adds filter on owners
+		List<QueryOwned> ownees = query.getOwnees();
+		for (QueryOwned ownee : ownees) {
+			String propertyName = ClassInfo.getSimplestColumnName(ownee.field);
+			FilterOperator op = operators.get("=");
+			Key key = GaeMappingUtils.getKey(ownee.owner);
+			q.addFilter(propertyName, op, key);
 		}
 		
 		List<QueryOrder> orders = query.getOrders();

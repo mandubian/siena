@@ -91,6 +91,7 @@ public class BaseQueryData<T> implements QueryData<T> {
 		this.searches = data.searches;
 		this.joins = data.joins;
 		this.aggregatees = data.aggregatees;
+		this.ownees = data.ownees;
 
 		for(Integer key : data.options.keySet()){
 			this.options.put(key, data.options.get(key));
