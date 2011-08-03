@@ -1,17 +1,19 @@
 h1. <a name="query-main">Using Query</a>
 
+h2. <a name="query-summary">Summary<T>@</a>
+
 p(note). @Query<T>@ is the main entry point for:
-* *fetching/iterating/paginating/counting* through those multiple entities
-* *updating/deleting* multiple entities depending on criteria (filters, orders, aggregators, owners...)
+* *Ffetching/iterating/paginating/counting* through those multiple entities
+* *Uupdating/deleting* multiple entities depending on criteria (filters, orders, aggregators, owners...)
 
 @Query<T>@ provides:
-* *a fluent API* (each functions of query returns a @Query<T>@) to refine the criteria of the query.
-* *terminal actions* to fulfill the real business job of fetching/iterating over entities in the datastore 
+* *Fluent API* (each functions of query returns a @Query<T>@) to refine the criteria of the query.
+* *Terminal actions* to fulfill the real business job of fetching/iterating over entities in the datastore 
 
 @Query<T>@ instances are:
-* *NOT THREADSAFE* because they keep a context (for pagination for ex) so don't use it in a 
-* *stateless by default* but for
-* *stateful on demand*
+* *NOT THREADSAFE* because they may keep a context (for pagination for ex) so don't call one instance of query from multiple thread or do it because you know what you do.
+* *Stateless by default* regarding offsets/limits/cursors (not for pagination naturally) so each call to a query terminal action starts at first entity again.
+* *Stateful on demand* regarding offsets/limits so it keeps the current limit/offset/cursor in the DB.
 
 
 h2. <a name="query-get">Creating a @Query<T>@</a>
