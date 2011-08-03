@@ -39,13 +39,18 @@ public class GaeTest extends GaeSamplesTest{
 	}
 
 	public void test() {
+		// creates dog
 		Dog pluto = new Dog("Pluto");
-		
+		// creates master
 		Person tom = new Person("Tom");
+		// associates dog to master
 		tom.dog.set(pluto);
+		// saves both
 		tom.save();
 		
+		// retrieves master
 		Person tombis = Person.getByName("Tom");
+		// gets dog (it is also extracted from the DB there)
 		Dog plutobis = tombis.dog.get();
 		assertEquals(tom.id, tombis.id);
 		assertEquals(tom.name, tombis.name);
@@ -53,6 +58,46 @@ public class GaeTest extends GaeSamplesTest{
 		assertEquals(pluto.name, plutobis.name);
 		assertEquals(tom.id, plutobis.master.id);
 		assertEquals(tom.name, plutobis.master.name);
+		
+		// updates dog data
+		pluto.name = "Pluto_2";
+		pluto.update();
+		
+		// proves the One<T> can't be aware of the update of the dog
+		Dog plutoAfter = tombis.dog.get();
+		assertEquals(pluto.id, plutoAfter.id);		
+		// Still Pluto and not Pluto2
+		assertEquals("Pluto", plutoAfter.name);
+		assertEquals(tom.id, plutoAfter.master.id);
+		assertEquals(tom.name, plutoAfter.master.name);
+		
+		// forces the resync of the dog to get latest version
+		plutoAfter = tombis.dog.forceSync().get();
+		assertEquals(pluto.id, plutoAfter.id);
+		assertEquals("Pluto_2", plutoAfter.name);
+		assertEquals(tom.id, plutoAfter.master.id);
+		
+		// creates another dog
+		Dog medor = new Dog("Medor");
+		// changes Tom's dog
+		tom.dog.set(medor);
+		// saves both
+		tom.update();
+		
+		// resync the dog
+		Dog medorAfter = tombis.dog.forceSync().get();
+		assertEquals(medor.id, medorAfter.id);
+		assertEquals(medor.name, medorAfter.name);
+		assertEquals(tom.id, medorAfter.master.id);
+		assertEquals(tom.name, medorAfter.master.name);
+		
+		// retrieves again the dog from the master
+		tombis = Person.getByName("Tom");
+		medorAfter = tombis.dog.get();
+		assertEquals(medor.id, medorAfter.id);
+		assertEquals(medor.name, medorAfter.name);
+		assertEquals(tom.id, medorAfter.master.id);
+		assertEquals(tom.name, medorAfter.master.name);
 	}
 
 }
