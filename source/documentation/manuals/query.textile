@@ -1,6 +1,6 @@
 h1. <a name="query-main">Using Query</a>
 
-<pre><code>@Query<T>@ is the main entry point for:
+<code>@Query<T>@ is the main entry point for:
 * *fetching/iterating/paginating/counting* through those multiple entities
 * *updating/deleting* multiple entities depending on criteria (filters, orders, aggregators, owners...)
 
@@ -12,7 +12,7 @@ h1. <a name="query-main">Using Query</a>
 * *NOT THREADSAFE* because they keep a context (for pagination for ex) so don't use it in a 
 * *stateless by default* but for
 * *stateful on demand*
-</code></pre>
+</code>
 
 h2. <a name="query-get">Creating a @Query<T>@</a>
 
