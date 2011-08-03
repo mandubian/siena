@@ -1,6 +1,6 @@
 h1. <a name="query-main">Using Query</a>
 
-bq.. @Query<T>@ is the main entry point for:
+p(note). @Query<T>@ is the main entry point for:
 * *fetching/iterating/paginating/counting* through those multiple entities
 * *updating/deleting* multiple entities depending on criteria (filters, orders, aggregators, owners...)
 
