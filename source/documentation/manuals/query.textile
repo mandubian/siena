@@ -1,2 +1,133 @@
-h1. Using Query
+h1. <a name="query-main">Using Query</a>
 
+<pre><code>@Query<T>@ is the main entry point for:
+* *fetching/iterating/paginating/counting* through those multiple entities
+* *updating/deleting* multiple entities depending on criteria (filters, orders, aggregators, owners...)
+
+@Query<T>@ provides:
+* *a fluent API* (each functions of query returns a @Query<T>@) to refine the criteria of the query.
+* *terminal actions* to fulfill the real business job of fetching/iterating over entities in the datastore 
+
+@Query<T>@ instances are:
+* *NOT THREADSAFE* because they keep a context (for pagination for ex) so don't use it in a 
+* *stateless by default* but for
+* *stateful on demand*
+</code></pre>
+
+h2. <a name="query-get">Creating a @Query<T>@</a>
+
+bc. Query<YourModel> query = Model.all(YourModel.class);
+
+Sometimes, you are lazy (like me) and don't want to repeat the classname in the all(). Thus, in your Model, you can override this function by a simpler one:
+
+bc.. public class YourModel extends Model{
+...
+	Query<YourModel> all() { return Model.all(YourModel.class); }	
+...
+}
+
+p. 
+
+h2. <a name="query-basic">Basic features of @Query<T>@</a>
+
+h3. <a name="query-basic-fetch">Fetch entities of a class in a list</a>
+
+bc.. List<YourModel> objects = Model.all(YourModel.class).fetch();
+for(YourModel obj: objects{
+...
+// DOIT
+...
+}
+
+// you can also set a limit in the number of objects
+List<YourModel> objects_0_10 = Model.all(YourModel.class).fetch(10);
+
+// you can also set a limit and an offset in the number of objects
+List<YourModel> objects_5_15 = Model.all(YourModel.class).fetch(10, 5);
+
+p. In this case, you don't add any filtering criterion so you retrieve all entities. Be careful if the number of such entities is huge!
+
+
+h3. <a name="query-basic-iter">Iterate through entities of a class</a>
+
+bc.. Iterable<YourModel> iter = Model.all(YourModel.class).iter();
+Iterator<YourModel> it = iter.iterator();
+
+while(it.hasNext()) {
+YourModel obj = it.next();
+...
+
+// DOIT
+...
+}
+
+// you can also set a limit in the number of objects
+Iterable<YourModel> iter_0_10 = Model.all(YourModel.class).iter(10);
+
+// you can also set a limit and an offset in the number of objects
+Iterable<YourModel> iter_5_15 = Model.all(YourModel.class).iter(10, 5);
+
+
+p. 
+
+bq.. *Understand difference between iter and fetch* :
+ - fetch performs the datastore query and retrieves all raw entities and then immediately maps them into your Java models. If you have lots of results and heavy models, the mapping can be quite long.
+ - iter performs the datastore query and retrieves all raw entities BUT IT DOESN'T MAP them into Java models immediately. The mapping is performed at each call to @it.next()@. Thus, if the mapping is long, you can split the mapping load across your code.
+ 
+p. 
+
+h3. <a name="query-basic-fetch">Get the first model of a class</a>
+
+bc.. YourModel object = Model.all(YourModel.class).get(); 
+
+p. It returns the first model retrieved from the datastore according to its index for these entities.
+
+
+h3. <a name="query-basic-filter">Filter on a field</a>
+
+bc.. List<YourModel> objects = Model.all(YourModel.class).filter("myField", "myValue").fetch();
+
+p. It returns the entities have @myField@ value equal to @myValue@.
+
+p. The filter is done on the name of the field so be careful not to type a wrong name. This is a limitation of Java which is not a language allowing to create dynamic type safe APIs.
+
+p. The value to filter on is an object and can be of any type: a Long, a Double, another model for relations etc...
+
+h3. <a name="query-basic-order">Order on a field</a>
+
+bc.. List<YourModel> objects = Model.all(YourModel.class).order("myField-").fetch();
+ 
+p. It returns the entities in descendant order according to @myField@.
+ 
+ 
+h3. <a name="query-basic-order">Paginate your entities</a>
+
+bc.. Query<YourModel> query = Model.all(YourModel.class).paginate(10);
+List<YourModel> firstPage = query.fetch();
+List<YourModel> secondPage = query.nextPage().fetch();
+Iterable<YourModel> thirdPage query.nextPage().iter();
+List<YourModel> secondPageAgain = query.previousPage().fetch();
+...
+ 
+p. Here you can easily understand the query keeps in memory the context of the current page to be able to go to next or previous page. 
+  
+
+h3. <a name="query-basic-count">Count all entities of a class</a>
+
+bc.. in nb = Model.all(YourModel.class).count();
+
+p. It returns the number of entities.
+ 
+ 
+h3. <a name="query-basic-delete">Delete all entities of a class</a>
+
+bc.. in nbDeleted = Model.all(YourModel.class).delete();
+
+p. It returns the number of entities deleted.
+ 
+==<br/>== 
+ 
+h2. <a name="query-detailed">Detailed features of @Query<T>@</a>
+ 
+bq. First remind that you can mix almost all those functions with each other. If you mix something forbidden, don't worry, Siena will throw an Exception to tell you!
+ 
