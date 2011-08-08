@@ -7,3 +7,4 @@ h2(#summary). Summary
 An owned relation is:
 * a directed and tight relation
 
+
