@@ -1,0 +1,178 @@
+h1. <a name="relation-syntax-many">Using the new syntax @Many<T>@</a>
+
+h3. This is a new syntax to represent:
+
+* the relation from the owner/aggregator entity to the children or aggregated entities in a One2Many/Many2One relation
+* the owner side in a multiple owned relation
+* the aggregator side in a multiple aggregated relation
+* a versatile way to retrieve the children of the relation as a List or as a Query. 
+
+p(note). *Note* with @Many<T>@, you don't have to choose in your model how you want to manipulate your child  entities: you will be able to do it through a simple list retrieved at once or through a query with limits, offsets, filters, ordering etc... 
+
+h3. Siena DO
+
+* _manage the relation_ but not the full life-cycle of related entities.
+* _manage relation change_ when you add a child to the One2Many relation. 
+* _auto-insert the related entities_ at the same time as the parent (or when updating it) if not done yet.
+* _lazy-load the related entities_ only when required.
+* _delete-cascade the aggregated entities_ because an aggregated entity can't exist outside its aggregator. *This is the ONLY accepted delete cascade*. 
+
+h3. Siena DOESN'T
+
+* _manage the updates of data within the related entities_. You must save them yourself.
+* _delete the owned entities when you delete the owner_ since an owned entity can change owner. Nevertheless, the owned entity is no more associated to any owner.
+
+h2. <a name="relation-syntax-one-owner">@Many<T>@ in an owned relation</a>
+
+p. Here is the owner model:
+
+bc.. public class OwnerModel {
+...
+	@Owned(mappingBy="owner")
+	public One<ChildModel> child;	
+...
+}
+
+p. Here is the child model:
+
+bc.. public class ChildModel {
+...
+	public OwnerModel owner;	
+...
+}
+
+p. *Note* On the child side, the _owner_ field is just written as a simple reference to the owner without any @One<T>@. Why? because, on the owned entity side, the owner is just referenced by its id/key.
+
+p. Using the old notation @Query<T>@, the @One<T>@ is equivalent to:
+
+bc.. public class OwnerModel {
+...
+	@Filter("owner")
+	public Query<ChildModel> child;	
+...
+}
+
+p. Yet, you should take care of the unicity of the child by yourself.
+
+h2(#relation-syntax-one-aggregate). @One<T>@ in an aggregated relation
+
+p. Here is the aggregator model:
+
+bc.. public class AggregatorModel {
+...
+	@Aggregated
+	public One<ChildModel> child;	
+...
+}
+
+p. Here is the aggregated model:
+
+bc.. public class AggregatedModel {
+...
+...
+}
+
+p(note). *Note* On the aggregated side, there is no reference to the aggregator because an aggregated entity shall not be aware of its aggregator: it's a part of it but it was not necessarily meant to be. 
+It's very useful because you don't need to foresee your model will be aggregated while designing it and you can aggregate any model.
+ 
+bq. The aggregator reference is managed by Siena itself and you don't have to deal with it neither declare it in your model.
+
+p(note). **Note** Nevertheless, if you absolutely want to access your own aggregator, it's possible. Go to the "aggregated relation page":./relation_aggregated.html.
+
+h2(#relation-syntax-one-code). Using One<T> in your code
+
+p. The 3 importants functions of @One<T>@ are: 
+* @void set(T obj)@ : a setter to change the OneToXXX related child
+* @T get()@ : a getter to get the current child of the OneToXXX relation
+* @One<T> forceSync()@ : a useful function to force to resynchronization of the child with the DB when you want to be sure you get the latest version. 
+
+h3(#relation-syntax-one-code-insert). Associate child with @set(T obj)@ & insert child+parent in one call
+
+bc.. Dog pluto = new Dog("Pluto");
+		
+Person tom = new Person("Tom");
+// associates the child entitys
+tom.dog.set(pluto);
+tom.save(); // or insert(), it's exactly the same behavior
+		
+p(note). *Note* You don't have to insert the child object as Siena inserts it at the same time as the parent (if the child was not inserted yet).
+
+==<br/>==
+
+h3(#relation-syntax-one-code-get). Retrieve the parent & get the child from parent with @get()@
+
+bc.. Person tom = Person.getByName("Tom");
+// here tom's dog is not yet loaded and you can load it through One<T>.get()
+Dog pluto = tom.dog.get();
+		
+p(note). *Note* tom.dog is a @One<Dog>@ so you need to use	@get()@ to access the real object
+
+==<br/>==
+
+h3(#relation-syntax-one-code-get). Change the child with @set(T obj)@ and saves parent+new child
+
+bc.. Person tom = Person.getByName("Tom");
+// creates a new dog
+Dog medor = new Dog("Medor");
+// associates the new dog to the master
+tom.dog.set(medor);
+// inserts medor, changes the relation and updates tom
+tom.update();
+
+// OWNED RELATION ONLY: proves pluto is no more the dog of tom
+Dog pluto = Dog.getByName("Pluto");
+assert(pluto.master == null);
+		
+
+p(note). *Note* In an aggregated relation, when you change the target of the relation and updates the parent, the previous related entity is deleted as it can't exist outside its parent aggregator.
+
+==<br/>==
+
+h3(#relation-syntax-one-code-forcesync). Force synchronization of the child with @forceSync()@
+
+bc.. Person tom = Person.getByName("Tom");
+// gets current pluto
+Dog pluto = tom.dog.get();
+...
+// some time later, you want to be sure to have the latest version
+Dog pluto = tom.dog.forceSync().get();
+
+p. 
+
+==<br/>==
+
+h3(#relation-syntax-one-code-update-data). Updating data within child is NOT cascaded when updating/saving parent saving
+
+bc.. Person tom = Person.getByName("Tom");
+Dog pluto = tom.dog.get();
+pluto.name = "Pluto2";
+
+tom.save(); // THIS DOESN'T UPDATE PLUTO
+assert(pluto.name.equals("Pluto"));
+pluto.save(); // THIS SAVE PLUTO
+assert(pluto.name.equals("Pluto2"));
+ 
+
+h3(#relation-syntax-one-code-update-aggreg).  AGGREGATED RELATION ONLY : Changing the child with @set(T obj)@ deletes previous child
+
+bc..  Car peugeot = Car.getByName("Peugeot");
+Motor motor = car.motor.get();
+Motor newmotor = new Motor("newmotor");
+car.motor.set(newmotor);
+
+peugeot.update();
+// motor is also deleted
+motor.get(); // throws SienaException()
+
+
+
+h3(#relation-syntax-one-code-delete-aggreg). AGGREGATED RELATION ONLY : Delete child is cascaded when deleting aggregator
+
+bc.. Car peugeot = Car.getByName("Peugeot");
+Motor motor = car.motor.get();
+
+peugeot.delete();
+// motor is also deleted
+
+p. 
+
