@@ -277,6 +277,9 @@ public class GaeMappingUtils {
 	}
 	
 	protected static Key makeKeyFromId(Class<?> clazz, Object idVal) {
+		if(idVal == null)
+			throw new SienaException("makeKeyFromId with Id null");
+		
 		ClassInfo info = ClassInfo.getClassInfo(clazz);
 		
 		try {
