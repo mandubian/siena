@@ -65,6 +65,12 @@ public class GaeEmbeddedTest extends BaseEmbeddedTest{
 		// TODO Auto-generated method stub
 		super.testEmbeddedNativeFilter();
 	}
+
+	@Override
+	public void testEmbeddedModelNative() {
+		// TODO Auto-generated method stub
+		super.testEmbeddedModelNative();
+	}
 	
 	
 }

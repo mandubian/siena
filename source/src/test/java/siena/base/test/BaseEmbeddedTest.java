@@ -11,6 +11,7 @@ import siena.PersistenceManager;
 import siena.PersistenceManagerFactory;
 import siena.base.test.model.EmbeddedContainerModel;
 import siena.base.test.model.EmbeddedContainerModelJava;
+import siena.base.test.model.EmbeddedContainerModelNative;
 import siena.base.test.model.EmbeddedContainerNative;
 import siena.base.test.model.EmbeddedModel;
 import siena.base.test.model.EmbeddedNative;
@@ -32,6 +33,7 @@ public abstract class BaseEmbeddedTest extends TestCase {
 		classes.add(EmbeddedSubModel.class);
 		classes.add(EmbeddedContainerModel.class);
 		classes.add(EmbeddedContainerModelJava.class);
+		classes.add(EmbeddedContainerModelNative.class);
 		classes.add(EmbeddedContainerNative.class);
 		classes.add(EmbeddedNative.class);
 		
@@ -230,5 +232,30 @@ public abstract class BaseEmbeddedTest extends TestCase {
 		assertEquals(containers.get(64).embed.javaEmbed.l, afterContainer.embed.javaEmbed.l);
 		assertEquals(containers.get(64).embed.nativeEmbed.str, afterContainer.embed.nativeEmbed.str);
 		assertEquals(containers.get(64).embed.nativeEmbed.l, afterContainer.embed.nativeEmbed.l);
+	}
+	
+	public void testEmbeddedModelNative() {
+		EmbeddedModel embed = new EmbeddedModel();
+		embed.id = "embed";
+		embed.alpha = "test";
+		embed.beta = 123;
+		embed.setGamma(true);
+		pm.insert(embed);
+		
+		EmbeddedContainerModelNative container = new EmbeddedContainerModelNative();
+		container.id = "container";
+		container.embed = embed;
+		pm.insert(container);
+
+		EmbeddedContainerModelNative afterContainer = pm.getByKey(EmbeddedContainerModelNative.class, container.id);
+		assertNotNull(afterContainer);
+		assertEquals(container.id, afterContainer.id);
+		assertNotNull(afterContainer.embed);
+		assertEquals(embed.id, afterContainer.embed.id);
+		
+		// doesn't ignore @EmbedIgnore as it is not possible to have fine grain in Java serialization
+		assertEquals("test", afterContainer.embed.alpha);
+		assertEquals(embed.beta, afterContainer.embed.beta);
+		assertEquals(embed.isGamma(), afterContainer.embed.isGamma());
 	}
 }

@@ -10,21 +10,17 @@ import siena.embed.Embedded;
 import siena.embed.Embedded.Mode;
 import siena.embed.EmbeddedList;
 
-@Table("container_models_java")
+@Table("container_models_native")
 @EmbeddedList
-public class EmbeddedContainerModelJava{
+public class EmbeddedContainerModelNative{
 	@Id(Generator.NONE)
     public String id;
     
-    @Embedded(mode=Mode.SERIALIZE_JAVA)
     @Column("embed")
+    @Embedded(mode=Mode.NATIVE)
     public EmbeddedModel embed;
     
-    @Embedded(mode=Mode.SERIALIZE_JAVA)
-    @Column("embeds")
-    public List<EmbeddedModel> embeds;
-    
     public String toString() {
-    	return "id:"+id + " - embed:" + embed + " - embeds:"+embeds;
+    	return "id:"+id + " - embed:" + embed;
     }
 }
