@@ -111,9 +111,9 @@ public class GaeNativeSerializer {
 					propValue = propValue.toString();
 				} 
 				else if(ClassInfo.isModel(fieldClass)){
-					// if it is a model, anyway how it is annotated, it is native embedded
-					GaeNativeSerializer.embed(entity, embeddingColumnName + "." + ClassInfo.getSingleColumnName(f), propValue, level + 1);
-					continue;
+					// if it's a model and as there a no join, we can't fetch everything! So only the key is embedded
+					//GaeNativeSerializer.embed(entity, embeddingColumnName + "." + ClassInfo.getSingleColumnName(f), propValue, level + 1);
+					propValue = Util.readField(propValue, ClassInfo.getIdField(fieldClass));
 				}
 			}
 			
@@ -148,8 +148,11 @@ public class GaeNativeSerializer {
 					Util.setField(obj, f, value);
 				}
 				else if(ClassInfo.isModel(f.getType())){
-					Object value = GaeNativeSerializer.unembed(
-							f.getType(), embeddingFieldName + "." + ClassInfo.getSingleColumnName(f), entity, level+1);
+					// here we create a model with only the key as we don't embed anything else because there is no join by default
+					Class<?> fieldClass = f.getType();
+					Object value = Util.createObjectInstance(fieldClass);
+					Util.setField(value, ClassInfo.getIdField(fieldClass), propValue);
+					
 					Util.setField(obj, f, value);
 				}
 				else {
