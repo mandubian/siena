@@ -145,7 +145,7 @@ public abstract class BaseEmbeddedTest extends TestCase {
 		container.id = "container";
 		container.normal = "string";
 		container.embed = embed;
-		pm.insert(container);
+		pm.save(container);
 		
 		EmbeddedContainerNative afterContainer = Model.getByKey(EmbeddedContainerNative.class, container.id);
 		assertNotNull(afterContainer);

@@ -34,7 +34,7 @@ public class GaeNativeSerializer {
 			throw new SienaException("can't serializer Array/Collection in native mode");
 		}
 		
-		for (Field f : ClassInfo.getClassInfo(clazz).updateFields) {
+		for (Field f : ClassInfo.getClassInfo(clazz).allFields) {
 			// doesn't try to analyze fields, just try to store it
 			Class<?> fieldClass = f.getType();
 			String propName = embeddingColumnName + "." + ClassInfo.getSingleColumnName(f);
@@ -107,7 +107,11 @@ public class GaeNativeSerializer {
 				else if (Enum.class.isAssignableFrom(fieldClass)) {
 					propValue = propValue.toString();
 				} 
-
+				else if(ClassInfo.isModel(fieldClass)){
+					// if it is a model, anyway how it is annotated, it is native embedded
+					GaeNativeSerializer.embed(entity, embeddingColumnName + "." + ClassInfo.getSingleColumnName(f), propValue);
+					continue;
+				}
 			}
 			
 			Unindexed ui = f.getAnnotation(Unindexed.class);
@@ -126,7 +130,7 @@ public class GaeNativeSerializer {
 
 		T obj = Util.createObjectInstance(clazz);
 		try {
-			for (Field f : ClassInfo.getClassInfo(clazz).updateFields) {
+			for (Field f : ClassInfo.getClassInfo(clazz).allFields) {
 				// doesn't try to analyze fields, just try to store it
 				String propName = embeddingFieldName + "." + ClassInfo.getSingleColumnName(f);			
 				Object propValue = entity.getProperty(propName);

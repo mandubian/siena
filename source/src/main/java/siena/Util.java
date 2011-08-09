@@ -204,12 +204,21 @@ public class Util {
 	}
 	
 	public static Object fromObject(Field field, Object value) {
+		Class<?> type = field.getType();
 		if(value == null) {
-			if(field.getType().isPrimitive()) return 0;
+			if(type.isPrimitive()){
+				if(byte.class==type)    return (byte)0;
+				else if(Character.TYPE==type) return (char)0;
+				else if(Short.TYPE==type)   return (short)0;
+				else if(Integer.TYPE==type) return (int)0;
+				else if(Long.TYPE==type)    return (long)0;
+				else if(Float.TYPE==type)   return (float)0;
+				else if(Double.TYPE==type)  return (double)0;
+				else if(Boolean.TYPE==type) return false;
+			}
 			return null;
 		}
 		
-		Class<?> type = field.getType();
 		if(Number.class.isAssignableFrom(value.getClass())) {
 			Number number = (Number) value;
 			if(byte.class==type || Byte.class==type)    return number.byteValue();
