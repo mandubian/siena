@@ -433,7 +433,7 @@ public class GaeMappingUtils {
 							}
 							break;
 						case NATIVE:
-							GaeNativeSerializer.embed(entity, ClassInfo.getSingleColumnName(field), value);
+							GaeNativeSerializer.embed(entity, ClassInfo.getSingleColumnName(field), value, 0);
 							// has set several new properties in entity so go to next field
 							continue;
 						}
@@ -508,7 +508,7 @@ public class GaeMappingUtils {
 				}*/
 				else if(ClassInfo.isEmbedded(field) && field.getAnnotation(Embedded.class).mode() == Embedded.Mode.NATIVE){
 					Object value = GaeNativeSerializer.unembed(
-							field.getType(), ClassInfo.getSingleColumnName(field), entity);
+							field.getType(), ClassInfo.getSingleColumnName(field), entity, 0);
 					Util.setField(obj, field, value);
 				}
 				else {
@@ -549,7 +549,7 @@ public class GaeMappingUtils {
 				} 
 				else if(ClassInfo.isEmbedded(field) && field.getAnnotation(Embedded.class).mode() == Embedded.Mode.NATIVE){
 					Object value = GaeNativeSerializer.unembed(
-								field.getType(), ClassInfo.getSingleColumnName(field), entity);
+								field.getType(), ClassInfo.getSingleColumnName(field), entity, 0);
 					Util.setField(obj, field, value);
 				}
 				/*else if(ClassInfo.isAggregated(field)){

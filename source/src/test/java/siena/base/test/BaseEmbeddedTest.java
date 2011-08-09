@@ -240,6 +240,10 @@ public abstract class BaseEmbeddedTest extends TestCase {
 		embed.alpha = "test";
 		embed.beta = 123;
 		embed.setGamma(true);
+		embed.sub = new EmbeddedSubModel();
+		embed.sub.id = "sub";
+		embed.sub.parent = embed;
+		
 		pm.insert(embed);
 		
 		EmbeddedContainerModelNative container = new EmbeddedContainerModelNative();
@@ -257,5 +261,10 @@ public abstract class BaseEmbeddedTest extends TestCase {
 		assertEquals("test", afterContainer.embed.alpha);
 		assertEquals(embed.beta, afterContainer.embed.beta);
 		assertEquals(embed.isGamma(), afterContainer.embed.isGamma());
+		assertEquals("sub", afterContainer.embed.sub.id);
+		assertEquals(embed.id, afterContainer.embed.sub.parent.id);
+		assertEquals(embed.alpha, afterContainer.embed.sub.parent.alpha);
+		assertEquals(embed.beta, afterContainer.embed.sub.parent.beta);
+		assertNull(afterContainer.embed.sub.parent.sub);
 	}
 }

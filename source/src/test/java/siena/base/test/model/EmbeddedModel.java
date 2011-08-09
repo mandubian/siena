@@ -24,6 +24,8 @@ public class EmbeddedModel implements Serializable{
     
     private boolean isGamma;
     
+    public EmbeddedSubModel sub;
+    
     @Filter("parent")
     public siena.Query<EmbeddedSubModel> subs;           
     

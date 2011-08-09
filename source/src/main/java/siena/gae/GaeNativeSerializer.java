@@ -28,7 +28,10 @@ import com.google.appengine.api.datastore.Text;
  */
 public class GaeNativeSerializer {
 
-	public static void embed(Entity entity, String embeddingColumnName, Object embeddedObj){
+	public static void embed(Entity entity, String embeddingColumnName, Object embeddedObj, int level){
+		// the level prevents from stackoverflow in case of a circular ref
+		if(level > 2) return;
+		
 		Class<?> clazz = embeddedObj.getClass();
 		if(clazz.isArray() || Collection.class.isAssignableFrom(clazz)){
 			throw new SienaException("can't serializer Array/Collection in native mode");
@@ -80,7 +83,7 @@ public class GaeNativeSerializer {
 						}
 						break;
 					case NATIVE:
-						GaeNativeSerializer.embed(entity, embeddingColumnName + "." + ClassInfo.getSingleColumnName(f), propValue);
+						GaeNativeSerializer.embed(entity, embeddingColumnName + "." + ClassInfo.getSingleColumnName(f), propValue, level+1);
 						// has set several new properties in entity so go to next field
 						continue;
 					}
@@ -109,7 +112,7 @@ public class GaeNativeSerializer {
 				} 
 				else if(ClassInfo.isModel(fieldClass)){
 					// if it is a model, anyway how it is annotated, it is native embedded
-					GaeNativeSerializer.embed(entity, embeddingColumnName + "." + ClassInfo.getSingleColumnName(f), propValue);
+					GaeNativeSerializer.embed(entity, embeddingColumnName + "." + ClassInfo.getSingleColumnName(f), propValue, level + 1);
 					continue;
 				}
 			}
@@ -123,12 +126,16 @@ public class GaeNativeSerializer {
 		}
 	}
 	
-	public static <T> T unembed(Class<T> clazz, String embeddingFieldName, Entity entity){
+	public static <T> T unembed(Class<T> clazz, String embeddingFieldName, Entity entity, int level){
+		// the level prevents from stackoverflow in case of a circular ref
+		if(level > 2) return null;
+		
 		if(clazz.isArray() || Collection.class.isAssignableFrom(clazz)){
 			throw new SienaException("can't serializer Array/Collection in native mode");
 		}
 
 		T obj = Util.createObjectInstance(clazz);
+
 		try {
 			for (Field f : ClassInfo.getClassInfo(clazz).allFields) {
 				// doesn't try to analyze fields, just try to store it
@@ -137,7 +144,12 @@ public class GaeNativeSerializer {
 				
 				if(ClassInfo.isEmbedded(f) && f.getAnnotation(Embedded.class).mode() == Embedded.Mode.NATIVE){
 					Object value = GaeNativeSerializer.unembed(
-							f.getType(), embeddingFieldName + "." + ClassInfo.getSingleColumnName(f), entity);
+							f.getType(), embeddingFieldName + "." + ClassInfo.getSingleColumnName(f), entity, level+1);
+					Util.setField(obj, f, value);
+				}
+				else if(ClassInfo.isModel(f.getType())){
+					Object value = GaeNativeSerializer.unembed(
+							f.getType(), embeddingFieldName + "." + ClassInfo.getSingleColumnName(f), entity, level+1);
 					Util.setField(obj, f, value);
 				}
 				else {
