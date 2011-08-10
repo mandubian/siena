@@ -11,7 +11,7 @@ p(note). @Query<T>@ is the main entry point for:
 * *Terminal actions* to fulfill the real business job of fetching/iterating over entities in the datastore 
 
 @Query<T>@ instances are:
-* *NOT THREADSAFE* because they may keep a context (for pagination for ex) so don't call one instance of query from multiple thread or do it because you know what you do.
+* *NOT THREADSAFE* because they may keep a context (for pagination for ex) so don't call one instance of query from multiple threads or do it because you know what you do.
 * *Stateless by default* regarding offsets/limits/cursors (not for pagination naturally) so each call to a query terminal action starts at first entity again.
 * *Stateful on demand* regarding offsets/limits so it keeps the current limit/offset/cursor in the DB.
 
@@ -20,7 +20,7 @@ h2. <a name="query-get">Creating a @Query<T>@</a>
 
 bc. Query<YourModel> query = Model.all(YourModel.class);
 
-Sometimes, you are lazy (like me) and don't want to repeat the classname in the all(). Thus, in your Model, you can override this function by a simpler one:
+p. Sometimes, you are lazy (like me) and don't want to repeat the classname in the all(). Thus, in your Model, you can override this function by a simpler one:
 
 bc.. public class YourModel extends Model{
 ...
@@ -30,7 +30,6 @@ bc.. public class YourModel extends Model{
 
 
 p. 
-
 
 h2. <a name="query-basic">Basic features of @Query<T>@</a>
 
