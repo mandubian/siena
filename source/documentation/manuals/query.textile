@@ -72,12 +72,11 @@ Iterable<YourModel> iter_0_10 = Model.all(YourModel.class).iter(10);
 // you can also set a limit and an offset in the number of objects
 Iterable<YourModel> iter_5_15 = Model.all(YourModel.class).iter(10, 5);
 
-
 p. 
 
 bq.. *Understand difference between iter and fetch* :
- - _fetch_ performs the datastore query and _retrieves all raw entities_ and then _immediately maps them_ into your Java models. If you have lots of results and heavy models, the mapping can be quite long.
- - _iter_ performs the datastore query and r_etrieves all raw entities BUT IT DOESN'T MAP them_ into Java models immediately. The mapping is performed at each call to @it.next()@. Thus, if the mapping is long, you can split the mapping load across your code.
+ - *fetch* performs the datastore query and *retrieves all raw entities* and then *immediately maps them* into your Java models. If you have lots of results and heavy models, the mapping can be quite long.
+ - *iter* performs the datastore query and *retrieves all raw entities BUT IT DOESN'T MAP them* into Java models immediately. The mapping is performed at each call to @it.next()@. Thus, if the mapping is long, you can split the mapping load across your code.
  
 p. 
 
