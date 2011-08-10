@@ -1,10 +1,7 @@
 h1(#title). Owned Relations In Siena
 
-bq. UNDER CONSTRUCTION
+bq.. UNDER CONSTRUCTION
+TO BE CONTINUED...
 
-h2(#summary). Summary
-
-An owned relation is:
-* a directed and tight relation
 
 
