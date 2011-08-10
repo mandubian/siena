@@ -133,3 +133,5 @@ h2. <a name="query-detailed">Detailed features of @Query<T>@</a>
  
 bq. First remind that you can mix almost all those functions with each other. If you mix something forbidden, don't worry, Siena will throw an Exception to tell you!
  
+*UNDER CONSTRUCTION*
+*TO BE CONTINUED...* 

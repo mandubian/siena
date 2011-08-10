@@ -1,6 +1,6 @@
 h1. Why a Siena Model should extend siena.Model class?
 
-Extending the siena.Model class is not mandatory in Siena but it is strongly advised.
+Extending the siena.Model class is not mandatory in Siena but it makes things easier (A future refactoring of Siena should reduce this dependency drastically as this block the extends slot in Java which is useful sometimes).
 Some people don't like this way of doing since its blocks the single __extends__ slot provided by Java language. 
 
 h2. *__So Why extending Model?__*
