@@ -42,13 +42,13 @@ assert(obj.rel.anyField != null);
 
 p. 
 
-bq. Now let's present the different types of referenced relations with samples:
-
 ==<br/>==
+
+bq. *Now let's present the different types of referenced relations with samples*
 
 h2. <a name="unowned-one-to-one-1-way">Unowned One-to-One 1-Way</a>
 
-p. Take this Example:
+bq.. Take this Example:
 A person has a cat but the cat doesn't belong to this person because a cat has no master. So the person knows her cat but the cat doesn't need to know the person.
 So we create 2 models.
 
@@ -160,7 +160,7 @@ bq. *Note* When you request a Person, its _cat_ field is partially filled: basic
 
 h2(#unowned-one-to-one-1-way). <a name="unowned-one-to-one-2-ways">Unowned One-to-One 2-ways</a>
 
-p. Take this stupid example:
+bq.. Take this stupid example:
 Imagine a planetary system where a planet has a single satellite (Earth+Moon for ex) and the satellite turns around its planet but the satellite doesn't completely belong to the planet and could change planet if a stronger gravitational object went around there.
 So we create 2 models.
 
@@ -270,7 +270,7 @@ assertEquals(moon.name, moonbis.name);
 assertEquals(earth.id, moonbis.planet.id);
 assertEquals(earth.name, moonbis.planet.name);
 
-p(note). In a 2-ways relation, you can't save both objects (or entities) at the same time because, to be referenced, an object must be inserted (and assigned an ID).
+bq. *Note:* In a 2-ways relation, you can't save both objects (or entities) at the same time because, to be referenced, an object must be inserted (and assigned an ID).
 
 ==<br/>==
 
