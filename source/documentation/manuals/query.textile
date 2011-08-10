@@ -29,8 +29,6 @@ bc.. public class YourModel extends Model{
 }
 
 
-p. 
-
 h2. <a name="query-basic">Basic features of @Query<T>@</a>
 
 h3. <a name="query-basic-fetch">Fetch entities of a class in a list</a>
