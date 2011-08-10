@@ -33,5 +33,5 @@ bc.. public static Query<YourClass> all() {
 
 p. It's not mandatory and you can call @Model.all(YourClass.class)@ instead of it.
 
-*UNDER CONSTRUCTION
+*UNDER CONSTRUCTION*
 *TO BE CONTINUED...*
