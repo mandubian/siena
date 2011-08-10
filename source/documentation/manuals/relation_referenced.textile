@@ -3,10 +3,10 @@ h1. <a name="title">Reference Relations In Siena</a>
 h2. <a name="summary">Summary</a>
 
 A reference relation is:
-* a simple directed relation from one originating model towards a targeted model. 
-* the originating model doesn't own the relation.
-* the originating model doesn't own the targeted model.
-* the targeted model has its own lifecycle completely independent from the originating model.
+* a *simple directed relation* from one originating model towards a targeted model. 
+* the *originating model doesn't own the relation*.
+* the *originating model doesn't own the targeted model*.
+* the *targeted model has its own lifecycle* completely independent from the originating model.
 
 A reference to a model is *physically stored* in the originating model *as a field containing the primary key/id* of the targeted object.
 
@@ -22,7 +22,7 @@ bc.. public class YourModel extends Model {
 ...
 }
 
-p(note). *IMPORTANT TO KNOW*: Siena is aimed at bridging SQL/NoSQL. *Almost all NoSQL DB have a limitation compared to SQL DB which is the absence of JOIN request*. In NoSQL, when you fetch the originating model, you can't fetch the targeted model in the same query (which is possible in a SQL DB with a left join). 
+bq. *IMPORTANT TO KNOW*: Siena is aimed at bridging SQL/NoSQL. *Almost all NoSQL DB have a limitation compared to SQL DB which is the absence of JOIN request*. In NoSQL, when you fetch the originating model, you can't fetch the targeted model in the same query (which is possible in a SQL DB with a left join). 
 So, as Siena tries to provide the minimum intersection between SQL/NoSQL, by default, it doesn't manage JOIN requests (there are ways to do it in Siena anyway, please see the join doc for this). *The only field of the targeting object to be retrieved with the originating object is the ID of the targeted object*. 
 Then, if you want to fetch the full targeted object, you must do it yourself with a second request to the datastore.
 
@@ -40,7 +40,7 @@ assert(obj.rel != null);
 assert(obj.rel.id != null);
 assert(obj.rel.anyField != null);
 
-
+p. 
 bq. Now let's present the different types of referenced relations with samples:
 
 ==<br/>==
@@ -82,7 +82,7 @@ public class Cat extends Model{
 	}
 }
 
-
+p. 
 p. Here is the Person with a reference to the cat represented by a Cat object.
 
 bc.. @Table("sample_unowned_onetoone_person")
