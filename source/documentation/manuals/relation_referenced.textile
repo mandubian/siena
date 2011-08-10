@@ -2,14 +2,13 @@ h1. <a name="title">Reference Relations In Siena</a>
 
 h2. <a name="summary">Summary</a>
 
-<pre><code>A reference relation is:
+A reference relation is:
 * a simple directed relation from one originating model towards a targeted model. 
 * the originating model doesn't own the relation.
 * the originating model doesn't own the targeted model.
 * the targeted model has its own lifecycle completely independent from the originating model.
 
 A reference to a model is *physically stored* in the originating model *as a field containing the primary key/id* of the targeted object.
-</code></pre>
 
 
 p. Here is how you write it in a model:
