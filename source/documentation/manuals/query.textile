@@ -3,8 +3,8 @@ h1. <a name="query-main">Using Query</a>
 h2. <a name="query-summary">Summary</a>
 
 p(note). @Query<T>@ is the main entry point for:
-* *Ffetching/iterating/paginating/counting* through those multiple entities
-* *Uupdating/deleting* multiple entities depending on criteria (filters, orders, aggregators, owners...)
+* *Fetching/iterating/paginating/counting* through those multiple entities
+* *Updating/deleting* multiple entities depending on criteria (filters, orders, aggregators, owners...)
 
 @Query<T>@ provides:
 * *Fluent API* (each functions of query returns a @Query<T>@) to refine the criteria of the query.
@@ -28,7 +28,9 @@ bc.. public class YourModel extends Model{
 ...
 }
 
+
 p. 
+
 
 h2. <a name="query-basic">Basic features of @Query<T>@</a>
 
@@ -47,8 +49,11 @@ List<YourModel> objects_0_10 = Model.all(YourModel.class).fetch(10);
 // you can also set a limit and an offset in the number of objects
 List<YourModel> objects_5_15 = Model.all(YourModel.class).fetch(10, 5);
 
+p. 
+
 p. In this case, you don't add any filtering criterion so you retrieve all entities. Be careful if the number of such entities is huge!
 
+==<br/>==
 
 h3. <a name="query-basic-iter">Iterate through entities of a class</a>
 
@@ -73,10 +78,12 @@ Iterable<YourModel> iter_5_15 = Model.all(YourModel.class).iter(10, 5);
 p. 
 
 bq.. *Understand difference between iter and fetch* :
- - fetch performs the datastore query and retrieves all raw entities and then immediately maps them into your Java models. If you have lots of results and heavy models, the mapping can be quite long.
- - iter performs the datastore query and retrieves all raw entities BUT IT DOESN'T MAP them into Java models immediately. The mapping is performed at each call to @it.next()@. Thus, if the mapping is long, you can split the mapping load across your code.
+ - _fetch_ performs the datastore query and _retrieves all raw entities_ and then _immediately maps them_ into your Java models. If you have lots of results and heavy models, the mapping can be quite long.
+ - _iter_ performs the datastore query and r_etrieves all raw entities BUT IT DOESN'T MAP them_ into Java models immediately. The mapping is performed at each call to @it.next()@. Thus, if the mapping is long, you can split the mapping load across your code.
  
 p. 
+
+==<br/>==
 
 h3. <a name="query-basic-fetch">Get the first model of a class</a>
 
@@ -84,6 +91,7 @@ bc.. YourModel object = Model.all(YourModel.class).get();
 
 p. It returns the first model retrieved from the datastore according to its index for these entities.
 
+==<br/>==
 
 h3. <a name="query-basic-filter">Filter on a field</a>
 
@@ -95,13 +103,16 @@ p. The filter is done on the name of the field so be careful not to type a wrong
 
 p. The value to filter on is an object and can be of any type: a Long, a Double, another model for relations etc...
 
+==<br/>==
+
 h3. <a name="query-basic-order">Order on a field</a>
 
 bc.. List<YourModel> objects = Model.all(YourModel.class).order("myField-").fetch();
  
 p. It returns the entities in descendant order according to @myField@.
  
- 
+==<br/>==
+
 h3. <a name="query-basic-order">Paginate your entities</a>
 
 bc.. Query<YourModel> query = Model.all(YourModel.class).paginate(10);
@@ -113,6 +124,7 @@ List<YourModel> secondPageAgain = query.previousPage().fetch();
  
 p. Here you can easily understand the query keeps in memory the context of the current page to be able to go to next or previous page. 
   
+==<br/>==
 
 h3. <a name="query-basic-count">Count all entities of a class</a>
 
@@ -120,7 +132,8 @@ bc.. in nb = Model.all(YourModel.class).count();
 
 p. It returns the number of entities.
  
- 
+==<br/>==
+
 h3. <a name="query-basic-delete">Delete all entities of a class</a>
 
 bc.. in nbDeleted = Model.all(YourModel.class).delete();
@@ -128,10 +141,10 @@ bc.. in nbDeleted = Model.all(YourModel.class).delete();
 p. It returns the number of entities deleted.
  
 ==<br/>== 
- 
+
 h2. <a name="query-detailed">Detailed features of @Query<T>@</a>
  
 bq. First remind that you can mix almost all those functions with each other. If you mix something forbidden, don't worry, Siena will throw an Exception to tell you!
- 
+
 *UNDER CONSTRUCTION*
 *TO BE CONTINUED...* 
