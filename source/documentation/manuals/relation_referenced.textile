@@ -42,7 +42,7 @@ assert(obj.rel.id != null);
 assert(obj.rel.anyField != null);
 
 
-p. Now let's present the different types of referenced relations with samples: 
+bq. Now let's present the different types of referenced relations with samples:
 
 ==<br/>==
 
