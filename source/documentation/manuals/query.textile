@@ -28,6 +28,7 @@ bc.. public class YourModel extends Model{
 ...
 }
 
+p. 
 
 h2. <a name="query-basic">Basic features of @Query<T>@</a>
 
