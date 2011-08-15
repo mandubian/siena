@@ -1,6 +1,6 @@
 h1. Relations In Siena
 
-In Siena, we have classified relations between models in 3 categories (at least for the time being):
+In Siena, we have classified relations between models in 4 categories (at least for the time being):
 
 h2(#reference). Reference relations
  
@@ -18,7 +18,7 @@ Generally, the database table representing the owning entity (in SQL & NoSQL) do
 To have more info, go "there":./relation_owned.textile
 
 
-h2(#aggregated). Aggregated relations
+h2(#aggregated). Aggregation relations
 
 This is something coming from the NoSQL world where pure relational normalized models are not the most efficient and where redundancy and denormalization is generally a good manner.
 In GAE, this is represented by the _entities group_ feature.
@@ -28,4 +28,7 @@ Here is a sample: consider a car as a group of pieces. A piece can be considered
 
 To have more info, go "there":./relation_aggregated.textile
 
-In this context, we create the _aggregation_ relation when a model aggregates other models. The aggregated model is not 
+h2(#aggregated). Embedding relations
+
+*UNDER CONSTRUCTION*
+*TO BE CONTINUED*
