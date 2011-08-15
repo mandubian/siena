@@ -10,7 +10,9 @@ import junit.framework.TestCase;
 import siena.Model;
 import siena.PersistenceManager;
 import siena.PersistenceManagerFactory;
+import siena.base.test.model.AggregateChildManualModel;
 import siena.base.test.model.AggregateChildModel;
+import siena.base.test.model.AggregateParentManualModel;
 import siena.base.test.model.AggregateParentModel;
 
 public abstract class BaseAggregatedTest extends TestCase {
@@ -758,5 +760,42 @@ public abstract class BaseAggregatedTest extends TestCase {
 		assertEquals( adams.get(43), adamsbis.get(6));		
 		assertEquals( adams.get(42), adamsbis.get(7));		
 		assertEquals( adams.get(41), adamsbis.get(8));		
+	}
+	
+	public void testAggregateMostSimpleManual() {
+		AggregateParentManualModel god = new AggregateParentManualModel("god");
+		god.insert();
+		assertNotNull(god.id);
+		
+		AggregateChildManualModel adam1 = new AggregateChildManualModel(123L, "adam1");
+		adam1.aggregate(god, "child");
+		adam1.insert();
+		
+		AggregateChildManualModel adam2 = new AggregateChildManualModel(0L, "adam2");	
+		adam2.aggregate(god, "children");
+		adam2.insert();
+
+		AggregateChildManualModel eve = new AggregateChildManualModel(1L, "eve");
+		eve.aggregate(god, "children");
+		eve.insert();
+
+		AggregateChildManualModel bob = new AggregateChildManualModel(2L, "bob");
+		bob.aggregate(god, "children");
+		bob.insert();
+
+		
+		AggregateChildManualModel adam1After = AggregateChildManualModel.all().aggregated(god, "child").get();
+		assertEquals(adam1, adam1After);
+
+		List<AggregateChildManualModel> children = AggregateChildManualModel.all().aggregated(god, "children").fetch();		
+		assertEquals(adam2, children.get(0));
+		assertEquals(eve, children.get(1));
+		assertEquals(bob, children.get(2));
+		
+		AggregateChildManualModel adam1After2 = AggregateChildManualModel.all().aggregated(god, "child").filter("id", 123L).get();		
+		assertEquals(adam1, adam1After2);
+
+		AggregateChildManualModel eveAfter = AggregateChildManualModel.all().aggregated(god, "children").filter("id", 1L).get();		
+		assertEquals(eve, eveAfter);
 	}
 }

@@ -915,20 +915,22 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 		List<QueryAggregated> aggregs = query.getAggregatees();
 		if(aggregs.isEmpty()){
 			q = new com.google.appengine.api.datastore.Query(info.tableName);
+			return ds.prepare(GaeQueryUtils.addFiltersOrders(query, q));
 		}
 		else if(aggregs.size() == 1){
 			QueryAggregated aggreg = aggregs.get(0);
-			
+			Key ancestorKey = GaeMappingUtils.getKey(aggreg.aggregator);
 			q = new com.google.appengine.api.datastore.Query(
 					GaeMappingUtils.getKindWithAncestorField(info, 
 							ClassInfo.getClassInfo(aggreg.aggregator.getClass()), aggreg.field));
-			q.setAncestor(GaeMappingUtils.getKey(aggreg.aggregator));
+			q.setAncestor(ancestorKey);
+			
+			return ds.prepare(GaeQueryUtils.addFiltersOrders(query, q, ancestorKey));
 		}
 		else {
 			throw new SienaException("Only one aggregation per query allowed");
 		}
 		
-		return ds.prepare(GaeQueryUtils.addFiltersOrders(query, q));
 	}
 
 	private <T> PreparedQuery prepareKeysOnly(Query<T> query) {

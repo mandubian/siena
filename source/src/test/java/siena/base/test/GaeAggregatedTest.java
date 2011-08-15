@@ -146,6 +146,12 @@ public class GaeAggregatedTest extends BaseAggregatedTest{
 		super.testAggregateListQueryOrder();
 	}
 
+	@Override
+	public void testAggregateMostSimpleManual() {
+		// TODO Auto-generated method stub
+		super.testAggregateMostSimpleManual();
+	}
+
 
 	
 

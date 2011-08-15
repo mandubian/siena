@@ -6,6 +6,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -67,7 +68,7 @@ public class PostgresqlPersistenceManager extends JdbcPersistenceManager {
 			}
 		} finally {
 			JdbcDBUtils.closeResultSet(gk);
-			JdbcDBUtils.closeStatement(ps);
+			JdbcDBUtils.closeStatementAndConnection(this, ps);
 		}
 	}
 	
@@ -121,7 +122,7 @@ public class PostgresqlPersistenceManager extends JdbcPersistenceManager {
 			}
 			
 		} finally {
-			JdbcDBUtils.closeStatement(ps);
+			JdbcDBUtils.closeStatementAndConnection(this, ps);
 		}
 		// doesn't work with Postgres because it doesn't manage generated keys
 		// int[] res = ps.executeBatch();
@@ -243,7 +244,7 @@ public class PostgresqlPersistenceManager extends JdbcPersistenceManager {
 		} catch (Exception e) {
 			throw new SienaException(e);
 		} finally {
-			JdbcDBUtils.closeStatement(ps);
+			JdbcDBUtils.closeStatementAndConnection(this, ps);
 		}
 	}
 	
@@ -251,78 +252,7 @@ public class PostgresqlPersistenceManager extends JdbcPersistenceManager {
 
 	@Override
 	public int save(Object... objects) {
-		Map<JdbcClassInfo, List<Object>> generatedObjMap = new HashMap<JdbcClassInfo, List<Object>>();
-		Map<JdbcClassInfo, List<Object>> objMap = new HashMap<JdbcClassInfo, List<Object>>();
-		PreparedStatement ps = null;
-		
-		for(Object obj:objects){
-			JdbcClassInfo classInfo = JdbcClassInfo.getClassInfo(obj.getClass());
-			Field idField = classInfo.info.getIdField();
-			Object idVal = Util.readField(obj, idField);
-			
-			if(idVal == null && !classInfo.generatedKeys.isEmpty()){
-				if(!generatedObjMap.containsKey(classInfo)){
-					List<Object> l = new ArrayList<Object>();
-					l.add(obj);
-					generatedObjMap.put(classInfo, l);
-				}else{
-					generatedObjMap.get(classInfo).add(obj);
-				}
-			} else {
-				if(!objMap.containsKey(classInfo)){
-					List<Object> l = new ArrayList<Object>();
-					l.add(obj);
-					objMap.put(classInfo, l);
-				}else{
-					objMap.get(classInfo).add(obj);
-				}
-			}
-		}
-		
-		int total = 0;
-		try {
-			// these are the insertion with generated keys
-			for(JdbcClassInfo classInfo: generatedObjMap.keySet()){
-				total += insert(generatedObjMap.get(classInfo));
-			}
-			
-			// these are the insertion or update without generated keys
-			// can't use batch in Postgres with generated keys... known bug
-			// http://postgresql.1045698.n5.nabble.com/PreparedStatement-batch-statement-impossible-td3406927.html
-			for(JdbcClassInfo classInfo: objMap.keySet()){
-				List<String> keyNames = new ArrayList<String>();
-				for (Field field : classInfo.keys) {
-					keyNames.add(field.getName());
-				}
-				
-				// !!! insert or update pour postgres : the less worst solution I found!!!!
-				// INSERT INTO myTable (myKey) SELECT myKeyValue WHERE myKeyValue NOT IN (SELECT myKey FROM myTable);
-				// UPDATE myTable SET myUpdateCol = myUpdateColValue WHERE myKey = myKeyValue;
-				ps = getConnection().prepareStatement(
-						"INSERT INTO "+ classInfo.tableName + " (" + Util.join(keyNames, ",") + ") " 
-						+ "SELECT ? WHERE ? NOT IN (SELECT "+ Util.join(keyNames, ",")  
-						+ " FROM "+ classInfo.tableName + ");"
-						+ classInfo.updateSQL);
-			
-				for(Object obj: objMap.get(classInfo)){				
-					int i = 1;
-					i = addParameters(obj, classInfo.keys, ps, i);
-					i = addParameters(obj, classInfo.keys, ps, i);
-					i = addParameters(obj, classInfo.updateFields, ps, i);
-					addParameters(obj, classInfo.keys, ps, i);
-					ps.executeUpdate();
-					total++;
-				}
-			}
-			
-			return total;			
-		} catch (SienaException e) {
-			throw e;
-		} catch (Exception e) {
-			throw new SienaException(e);
-		} finally {
-			JdbcDBUtils.closeStatement(ps);
-		}
+		return save(Arrays.asList(objects));
 	}
 
 	@Override
@@ -397,7 +327,7 @@ public class PostgresqlPersistenceManager extends JdbcPersistenceManager {
 		} catch (Exception e) {
 			throw new SienaException(e);
 		} finally {
-			JdbcDBUtils.closeStatement(ps);
+			JdbcDBUtils.closeStatementAndConnection(this, ps);
 		}
 	}
 	

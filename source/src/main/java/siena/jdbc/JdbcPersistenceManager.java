@@ -116,7 +116,7 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 		} catch(SQLException e) {
 			throw new SienaException(e);
 		} finally {
-			JdbcDBUtils.closeStatement(ps);
+			JdbcDBUtils.closeStatementAndConnection(this, ps);
 		}
 	}
 
@@ -138,7 +138,7 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 			throw new SienaException(e);
 		} finally {
 			JdbcDBUtils.closeResultSet(rs);
-			JdbcDBUtils.closeStatement(ps);
+			JdbcDBUtils.closeStatementAndConnection(this, ps);
 		}
 	}
 
@@ -169,7 +169,7 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 		} catch (Exception e) {
 			throw new SienaException(e);
 		} finally {
-			JdbcDBUtils.closeStatement(ps);
+			JdbcDBUtils.closeStatementAndConnection(this, ps);
 		}
 	}
 
@@ -186,7 +186,7 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 		} catch(SQLException e) {
 			throw new SienaException(e);
 		} finally {
-			JdbcDBUtils.closeStatement(ps);
+			JdbcDBUtils.closeStatementAndConnection(this, ps);
 		}
 	}
 
@@ -237,7 +237,7 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 		} catch (Exception e) {
 			throw new SienaException(e);
 		} finally {
-			JdbcDBUtils.closeStatement(ps);
+			JdbcDBUtils.closeStatementAndConnection(this, ps);
 		}
 	}
 	
@@ -302,7 +302,7 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 			}
 		} finally {
 			JdbcDBUtils.closeResultSet(gk);
-			JdbcDBUtils.closeStatement(ps);
+			JdbcDBUtils.closeStatementAndConnection(this, ps);
 		}
 	}
 
@@ -649,7 +649,7 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 				
 				if(state.isStateless()){
 					JdbcDBUtils.closeResultSet(rs);
-					JdbcDBUtils.closeStatement(statement);
+					JdbcDBUtils.closeStatementAndConnection(this, statement);
 				}else {
 					Integer offsetParamIdx = parameters.size();
 					Integer limitParamIdx = offsetParamIdx - 1;
@@ -664,7 +664,7 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 			} 
 			catch(SQLException e) {
 				JdbcDBUtils.closeResultSet(rs);
-				JdbcDBUtils.closeStatement(statement);
+				JdbcDBUtils.closeStatementAndConnection(this, statement);
 				throw new SienaException(e);
 			}
 		}else {
@@ -707,7 +707,7 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 				return result;
 			}catch(SQLException ex){
 				JdbcDBUtils.closeResultSet(rs);
-				JdbcDBUtils.closeStatement(jdbcCtx.statement);
+				JdbcDBUtils.closeStatementAndConnection(this, jdbcCtx.statement);
 				throw new SienaException(ex);
 			} 
 		}
@@ -754,7 +754,7 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 			throw new SienaException(e);
 		} finally {
 			JdbcDBUtils.closeResultSet(rs);
-			JdbcDBUtils.closeStatement(statement);
+			JdbcDBUtils.closeStatementAndConnection(this, statement);
 		}
 	}
 
@@ -773,7 +773,7 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 			throw new SienaException(e);
 		} finally {
 			JdbcDBUtils.closeResultSet(rs);
-			JdbcDBUtils.closeStatement(statement);
+			JdbcDBUtils.closeStatementAndConnection(this, statement);
 		}
 	}
 	
@@ -880,7 +880,7 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 				
 				if(state.isStateless()){
 					JdbcDBUtils.closeResultSet(rs);
-					JdbcDBUtils.closeStatement(statement);
+					JdbcDBUtils.closeStatementAndConnection(this, statement);
 				}else {
 					Integer offsetParamIdx = parameters.size();
 					Integer limitParamIdx = offsetParamIdx - 1;
@@ -893,7 +893,7 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 				return result;
 			} catch(SQLException e) {
 				JdbcDBUtils.closeResultSet(rs);
-				JdbcDBUtils.closeStatement(statement);
+				JdbcDBUtils.closeStatementAndConnection(this, statement);
 				throw new SienaException(e);
 			} 
 		}else {
@@ -935,7 +935,7 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 				return result;
 			}catch(SQLException ex){
 				JdbcDBUtils.closeResultSet(rs);
-				JdbcDBUtils.closeStatement(jdbcCtx.statement);
+				JdbcDBUtils.closeStatementAndConnection(this, jdbcCtx.statement);
 				throw new SienaException(ex);
 			} 
 		}
@@ -1076,11 +1076,11 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 					jdbcCtx.offsetParamIdx = offsetParamIdx;
 				}
 				
-				return new JdbcSienaIterable<T>(statement, rs, query);
+				return new JdbcSienaIterable<T>(this, statement, rs, query);
 			} 
 			catch(SQLException e) {
 				JdbcDBUtils.closeResultSet(rs);
-				JdbcDBUtils.closeStatement(statement);
+				JdbcDBUtils.closeStatementAndConnection(this, statement);
 				throw new SienaException(e);
 			} 
 		}else {
@@ -1103,9 +1103,9 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 				
 				ResultSet rs = jdbcCtx.statement.executeQuery();
 
-				return new JdbcSienaIterable<T>(jdbcCtx.statement, rs, query);
+				return new JdbcSienaIterable<T>(this, jdbcCtx.statement, rs, query);
 			}catch(SQLException ex){
-				JdbcDBUtils.closeStatement(jdbcCtx.statement);
+				JdbcDBUtils.closeStatementAndConnection(this, jdbcCtx.statement);
 				throw new SienaException(ex);
 			} 
 		}
@@ -1137,7 +1137,7 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 		QueryOptionJdbcContext jdbcCtx = (QueryOptionJdbcContext)query.option(QueryOptionJdbcContext.ID);
 		
 		if(jdbcCtx != null && jdbcCtx.isActive()){
-			JdbcDBUtils.closeStatement(jdbcCtx.statement);
+			JdbcDBUtils.closeStatementAndConnection(this, jdbcCtx.statement);
 			jdbcCtx.statement = null;
 			jdbcCtx.passivate();
 		}
@@ -1229,54 +1229,7 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 
 	
 	public int get(Object... objects) {
-		Map<JdbcClassInfo, List<Object>> objMap = new HashMap<JdbcClassInfo, List<Object>>();
-		PreparedStatement ps = null;
-		
-		for(Object obj:objects){
-			JdbcClassInfo classInfo = JdbcClassInfo.getClassInfo(obj.getClass());
-			if(!objMap.containsKey(classInfo)){
-				List<Object> l = new ArrayList<Object>();
-				l.add(obj);
-				objMap.put(classInfo, l);
-			}else{
-				objMap.get(classInfo).add(obj);
-			}
-		}
-		int total = 0;
-		try {
-			for(JdbcClassInfo classInfo: objMap.keySet()){
-				// doesn't manage multiple keys case
-				if(classInfo.keys.size()>1){
-					throw new SienaException("Can't batch select multiple keys objects");
-				}
-				
-				Field f = classInfo.keys.get(0);
-				
-				HashMap<Object, Object> keyObj = new HashMap<Object, Object>();
-				
-				for(Object obj: objMap.get(classInfo)){
-					Object key = Util.readField(obj, f);
-					keyObj.put(key, obj);
-				}
-				
-				Query<?> q = createQuery(classInfo.info.clazz);
-				List<?> results = q.filter(f.getName()+ " IN", keyObj.keySet()).fetch();
-				
-				for(Object res:results){
-					Object resKey = Util.readField(res, f);
-					Util.copyObject(res, keyObj.get(resKey));
-				}
-				total+=results.size();
-			}
-			return total;
-
-		} catch (SienaException e) {
-			throw e;
-		} catch (Exception e) {
-			throw new SienaException(e);
-		} finally {
-			JdbcDBUtils.closeStatement(ps);
-		}
+		return get(Arrays.asList(objects));
 	}
 
 	public <T> int get(Iterable<T> objects) {
@@ -1328,7 +1281,7 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 		} catch (Exception e) {
 			throw new SienaException(e);
 		} finally {
-			JdbcDBUtils.closeStatement(ps);
+			JdbcDBUtils.closeStatementAndConnection(this, ps);
 		}
 	}
 
@@ -1349,54 +1302,12 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 		} catch (Exception e) {
 			throw new SienaException(e);
 		} finally {
-			JdbcDBUtils.closeStatement(ps);
+			JdbcDBUtils.closeStatementAndConnection(this, ps);
 		}	
 	}
 
 	public <T> List<T> getByKeys(Class<T> clazz, Object... keys) {
-		PreparedStatement ps = null;
-		JdbcClassInfo classInfo = JdbcClassInfo.getClassInfo(clazz);
-		
-		try {
-			// doesn't manage multiple keys case
-			if(classInfo.keys.size()>1){
-				throw new SienaException("Can't batch select multiple keys objects");
-			}
-				
-			Field f = classInfo.keys.get(0);
-			List<Object> keyList = new ArrayList<Object>();
-			Collections.addAll(keyList, keys);
-			
-			Query<T> q = createQuery(clazz);
-			List<T> results = q.filter(f.getName()+ " IN", keyList).fetch();
-			List<T> realResults = new ArrayList<T>();
-			HashMap<Object, T> keyObj = new HashMap<Object, T>();
-			
-			for(Object key: keys){
-				if(!keyObj.containsKey(key)){
-					for(int i=0; i<results.size();i++){
-						T res = results.get(i);
-						Object resKey = Util.readField(res, f);
-						Object fromKey = Util.fromObject(f, key);
-						if(fromKey.equals(resKey)){
-							keyObj.put(key, res);
-							results.remove(i);
-							break;
-						}
-					}
-				}
-				
-				realResults.add(keyObj.get(key));
-			}
-			
-			return realResults;
-		} catch (SienaException e) {
-			throw e;
-		} catch (Exception e) {
-			throw new SienaException(e);
-		} finally {
-			JdbcDBUtils.closeStatement(ps);
-		}	
+		return getByKeys(clazz, Arrays.asList(keys));
 	}
 
 	public <T> List<T> getByKeys(Class<T> clazz, Iterable<?> keys) {
@@ -1442,7 +1353,7 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 		} catch (Exception e) {
 			throw new SienaException(e);
 		} finally {
-			JdbcDBUtils.closeStatement(ps);
+			JdbcDBUtils.closeStatementAndConnection(this, ps);
 		}	
 	}
 
@@ -1451,55 +1362,7 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 	}
 
 	public int insert(Object... objects) {
-		Map<JdbcClassInfo, List<Object>> objMap = new HashMap<JdbcClassInfo, List<Object>>();
-		PreparedStatement ps = null;
-		
-		for(Object obj:objects){
-			JdbcClassInfo classInfo = JdbcClassInfo.getClassInfo(obj.getClass());
-			if(!objMap.containsKey(classInfo)){
-				List<Object> l = new ArrayList<Object>();
-				l.add(obj);
-				objMap.put(classInfo, l);
-			}else{
-				objMap.get(classInfo).add(obj);
-			}
-		}
-
-		int total = 0;
-		try {
-			for(JdbcClassInfo classInfo: objMap.keySet()){
-				if(classInfo.generatedKeys.isEmpty()){
-					ps = getConnection().prepareStatement(classInfo.insertSQL);
-					
-					for(Object obj: objMap.get(classInfo)){
-						for (Field field : classInfo.keys) {
-							Id id = field.getAnnotation(Id.class);
-							if (id.value() == Generator.UUID) {
-								field.set(obj, UUID.randomUUID().toString());
-							}
-						}
-						// TODO: implement primary key generation: SEQUENCE
-						addParameters(obj, classInfo.insertFields, ps, 1);
-						ps.addBatch();
-					}
-					
-					// TODO what to do with results of executeBatch ??????
-					int[] res = ps.executeBatch();
-					total+=res.length;
-				}else {
-					total+=insertBatchWithAutoIncrementKey(classInfo, objMap);
-				}			
-
-			}			
-			return total;
-		} catch (SienaException e) {
-			throw e;
-		} catch (Exception e) {
-			throw new SienaException(e);
-		} finally {
-			JdbcDBUtils.closeStatement(ps);
-		}
-		
+		return insert(Arrays.asList(objects));		
 	}
 
 	public int insert(Iterable<?> objects) {
@@ -1549,50 +1412,12 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 		} catch (Exception e) {
 			throw new SienaException(e);
 		} finally {
-			JdbcDBUtils.closeStatement(ps);
+			JdbcDBUtils.closeStatementAndConnection(this, ps);
 		}
 	}
 
 	public int delete(Object... objects) {
-		Map<JdbcClassInfo, List<Object>> objMap = new HashMap<JdbcClassInfo, List<Object>>();
-		PreparedStatement ps = null;
-		
-		for(Object obj:objects){
-			JdbcClassInfo classInfo = JdbcClassInfo.getClassInfo(obj.getClass());
-			if(!objMap.containsKey(classInfo)){
-				List<Object> l = new ArrayList<Object>();
-				l.add(obj);
-				objMap.put(classInfo, l);
-			}else{
-				objMap.get(classInfo).add(obj);
-			}
-		}
-
-		int total = 0;
-		try {
-			for(JdbcClassInfo classInfo: objMap.keySet()){
-				
-				ps = getConnection().prepareStatement(classInfo.deleteSQL);
-				
-				for(Object obj: objMap.get(classInfo)){
-					addParameters(obj, classInfo.keys, ps, 1);
-					ps.addBatch();
-				}
-				
-				// TODO what to do with results of executeBatch ??????
-				int[] res = ps.executeBatch();
-				
-				total+=res.length;
-
-			}
-			return total;
-		} catch (SienaException e) {
-			throw e;
-		} catch (Exception e) {
-			throw new SienaException(e);
-		} finally {
-			JdbcDBUtils.closeStatement(ps);
-		}
+		return delete(Arrays.asList(objects));
 	}
 
 	public int delete(Iterable<?> objects) {
@@ -1634,31 +1459,12 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 		} catch (Exception e) {
 			throw new SienaException(e);
 		} finally {
-			JdbcDBUtils.closeStatement(ps);
+			JdbcDBUtils.closeStatementAndConnection(this, ps);
 		}
 	}
 
 	public <T> int deleteByKeys(Class<T> clazz, Object... keys) {
-		JdbcClassInfo classInfo = JdbcClassInfo.getClassInfo(clazz);
-		PreparedStatement ps = null;
-		try {
-			ps = getConnection().prepareStatement(classInfo.deleteSQL);
-			
-			for(Object key: keys){
-				setParameter(ps, 1, key);
-				ps.addBatch();
-			}
-				
-			// TODO what to do with results of executeBatch ??????
-			int res[] = ps.executeBatch();
-			return res.length;
-		} catch (SienaException e) {
-			throw e;
-		} catch (Exception e) {
-			throw new SienaException(e);
-		} finally {
-			JdbcDBUtils.closeStatement(ps);
-		}
+		return deleteByKeys(clazz, Arrays.asList(keys));
 	}
 
 	public <T> int deleteByKeys(Class<T> clazz, Iterable<?> keys) {
@@ -1681,55 +1487,13 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 		} catch (Exception e) {
 			throw new SienaException(e);
 		} finally {
-			JdbcDBUtils.closeStatement(ps);
+			JdbcDBUtils.closeStatementAndConnection(this, ps);
 		}
 	}
 
 
 	public <T> int update(Object... objects) {
-		//throw new NotImplementedException("update not implemented for JDBC yet");
-		Map<JdbcClassInfo, List<Object>> objMap = new HashMap<JdbcClassInfo, List<Object>>();
-		PreparedStatement ps = null;
-		
-		for(Object obj:objects){
-			JdbcClassInfo classInfo = JdbcClassInfo.getClassInfo(obj.getClass());
-			if(!objMap.containsKey(classInfo)){
-				List<Object> l = new ArrayList<Object>();
-				l.add(obj);
-				objMap.put(classInfo, l);
-			}else{
-				objMap.get(classInfo).add(obj);
-			}
-		}
-		
-		int total = 0;
-
-		try {
-			for(JdbcClassInfo classInfo: objMap.keySet()){
-				
-				ps = getConnection().prepareStatement(classInfo.updateSQL);
-				
-				for(Object obj: objMap.get(classInfo)){
-					int i = 1;
-					i = addParameters(obj, classInfo.updateFields, ps, i);
-					addParameters(obj, classInfo.keys, ps, i);
-					ps.addBatch();
-				}
-				
-				// TODO what to do with results of executeBatch ??????
-				int[] res = ps.executeBatch();
-				
-				total+=res.length;
-			}
-			
-			return total;
-		} catch (SienaException e) {
-			throw e;
-		} catch (Exception e) {
-			throw new SienaException(e);
-		} finally {
-			//JdbcDBUtils.closeStatement(ps);
-		}
+		return update(Arrays.asList(objects));
 	}
 
 	public <T> int update(Iterable<T> objects) {
@@ -1774,7 +1538,7 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 		} catch (Exception e) {
 			throw new SienaException(e);
 		} finally {
-			JdbcDBUtils.closeStatement(ps);
+			JdbcDBUtils.closeStatementAndConnection(this, ps);
 		}
 	}
 
@@ -1785,78 +1549,7 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 
 	@Override
 	public int save(Object... objects) {
-		Map<JdbcClassInfo, List<Object>> objMap = new HashMap<JdbcClassInfo, List<Object>>();
-		PreparedStatement ps = null;
-		
-		for(Object obj:objects){
-			JdbcClassInfo classInfo = JdbcClassInfo.getClassInfo(obj.getClass());
-			if(!objMap.containsKey(classInfo)){
-				List<Object> l = new ArrayList<Object>();
-				l.add(obj);
-				objMap.put(classInfo, l);
-			}else{
-				objMap.get(classInfo).add(obj);
-			}
-		}
-		
-		int total = 0;
-		try {
-			for(JdbcClassInfo classInfo: objMap.keySet()){
-				if (!classInfo.generatedKeys.isEmpty()) {
-					ps = getConnection().prepareStatement(classInfo.insertOrUpdateSQL,
-							Statement.RETURN_GENERATED_KEYS);
-				} else {
-					ps = getConnection().prepareStatement(classInfo.insertOrUpdateSQL);
-				}
-			
-				for(Object obj: objMap.get(classInfo)){
-					Field idField = classInfo.info.getIdField();
-					Object idVal = Util.readField(obj, idField);
-					
-					// only generates a UUID if the idVal is null
-					if(idVal == null){
-						for (Field field : classInfo.keys) {
-							Id id = field.getAnnotation(Id.class);
-							if (id.value() == Generator.UUID) {
-								field.set(obj, UUID.randomUUID().toString());
-							}
-						}
-					}
-					// TODO: implement primary key generation: SEQUENCE
-					int i = 1;
-					i = addParameters(obj, classInfo.allFields, ps, i);
-					addParameters(obj, classInfo.updateFields, ps, i);
-					ps.addBatch();
-				}
-			
-				int[] res = ps.executeBatch();
-				
-				if(!classInfo.generatedKeys.isEmpty()){
-					ResultSet gk = ps.getGeneratedKeys();
-					int i;
-					int idx = 0;
-					int sz = objMap.get(classInfo).size();
-					// apparently in the update case, it returns not only the generated keys but also all the updated field values
-					// so we take only the first SZ values which are the key values.
-					while(gk.next() && idx < sz) {
-						i=1;
-						for (Field field : classInfo.generatedKeys) {
-							field.setAccessible(true);
-							JdbcMappingUtils.setFromObject(objMap.get(classInfo).get(idx++), field, gk.getObject(i++));
-						}
-					}
-				}	
-				total+=res.length;
-			}
-			
-			return total;			
-		} catch (SienaException e) {
-			throw e;
-		} catch (Exception e) {
-			throw new SienaException(e);
-		} finally {
-			JdbcDBUtils.closeStatement(ps);
-		}
+		return save(Arrays.asList(objects));
 	}
 
 	@Override
@@ -1931,7 +1624,7 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 		} catch (Exception e) {
 			throw new SienaException(e);
 		} finally {
-			JdbcDBUtils.closeStatement(ps);
+			JdbcDBUtils.closeStatementAndConnection(this, ps);
 		}
 	}
 
