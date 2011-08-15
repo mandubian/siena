@@ -797,5 +797,15 @@ public abstract class BaseAggregatedTest extends TestCase {
 
 		AggregateChildManualModel eveAfter = AggregateChildManualModel.all().aggregated(god, "children").filter("id", 1L).get();		
 		assertEquals(eve, eveAfter);
+		
+		eveAfter.name+="_UPD";
+		eveAfter.update();
+		AggregateChildManualModel eveAfter2 = AggregateChildManualModel.all().aggregated(god, "children").filter("id", 1L).get();
+		assertEquals(eveAfter, eveAfter2);
+		
+		eveAfter2.name+="_UPD2";
+		eveAfter2.save();
+		AggregateChildManualModel eveAfter3 = AggregateChildManualModel.all().aggregated(god, "children").filter("id", 1L).get();
+		assertEquals(eveAfter2, eveAfter3);
 	}
 }

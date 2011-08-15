@@ -739,7 +739,7 @@ public class GaeMappingUtils {
 			// aggregators
 			QueryAggregated aggreg = aggregs.get(0);			
 			Relation rel = 
-				new Relation(RelationMode.AGGREGATION, aggreg.aggregator, aggreg.field.getName());
+				new Relation(RelationMode.AGGREGATION, aggreg.aggregator, aggreg.field);
 			Util.setField(obj, info.aggregator, rel);
 		}
 		else if(aggregs.size() > 1){
@@ -771,7 +771,7 @@ public class GaeMappingUtils {
 			QueryAggregated aggreg = aggregs.get(0);
 			
 			Relation rel = 
-				new Relation(RelationMode.AGGREGATION, aggreg.aggregator, aggreg.field.getName());
+				new Relation(RelationMode.AGGREGATION, aggreg.aggregator, aggreg.field);
 			for(T obj: objs){
 				Util.setField(obj, info.aggregator, rel);
 			}			
