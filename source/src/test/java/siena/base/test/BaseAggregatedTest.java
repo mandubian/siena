@@ -808,4 +808,33 @@ public abstract class BaseAggregatedTest extends TestCase {
 		AggregateChildManualModel eveAfter3 = AggregateChildManualModel.all().aggregated(god, "children").filter("id", 1L).get();
 		assertEquals(eveAfter2, eveAfter3);
 	}
+	
+	public void testAggregateDeleteParentFromQuery() {
+		AggregateParentManualModel god = new AggregateParentManualModel("god");
+		god.insert();
+		assertNotNull(god.id);
+		
+		AggregateChildManualModel adam1 = new AggregateChildManualModel(123L, "adam1");
+		adam1.aggregate(god, "child");
+		adam1.insert();
+		
+		AggregateChildManualModel adam2 = new AggregateChildManualModel(0L, "adam2");	
+		adam2.aggregate(god, "children");
+		adam2.insert();
+
+		AggregateChildManualModel eve = new AggregateChildManualModel(1L, "eve");
+		eve.aggregate(god, "children");
+		eve.insert();
+
+		AggregateChildManualModel bob = new AggregateChildManualModel(2L, "bob");
+		bob.aggregate(god, "children");
+		bob.insert();
+		
+		int nb = AggregateParentManualModel.all().filter("name", "god").delete();
+		assertEquals(5, nb);
+		
+		assertEquals(0, AggregateChildManualModel.all().aggregated(god, "children").count());
+		assertEquals(0, AggregateChildManualModel.all().aggregated(god, "child").count());
+		
+	}
 }

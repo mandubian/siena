@@ -174,6 +174,13 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 						Object aggObj = Util.readField(obj, f);
 						_deleteSingle(aggObj, keys, key, info, f);
 					}
+					else if(ClassInfo.isOne(f)){
+						One<?> one = (One<?>)Util.readField(obj, f);
+						Object target = one.get();
+						if(target != null){
+							_deleteSingle(target, keys, key, info, f);
+						}
+					}
 					else if(ClassInfo.isMany(f)){
 						Many<?> lq = (Many<?>)Util.readField(obj, f);
 						if(!lq.asList().isEmpty()){
@@ -1976,9 +1983,18 @@ public class GaePersistenceManager extends AbstractPersistenceManager {
 	public <T> int delete(Query<T> query) {
 		final ArrayList<Key> keys = new ArrayList<Key>();
 
-		for (final Entity entity : prepareKeysOnly(query).asIterable(
-				FetchOptions.Builder.withDefaults())) {
-			keys.add(entity.getKey());
+		Class<?> clazz = query.getQueriedClass();
+		ClassInfo info = ClassInfo.getClassInfo(clazz);
+				
+		if(!info.hasAggregatedFields){
+			for (final Entity entity : prepareKeysOnly(query).asIterable(
+					FetchOptions.Builder.withDefaults())) {
+				keys.add(entity.getKey());
+			}
+		}else {
+			// if aggregated fields, needs to retrieve all objects to scan & delete aggregated children
+			List<T> models = query.fetch();
+			_deleteMultiple(models, keys, null, null, null);
 		}
 
 		ds.delete(keys);

@@ -152,6 +152,12 @@ public class GaeAggregatedTest extends BaseAggregatedTest{
 		super.testAggregateMostSimpleManual();
 	}
 
+	@Override
+	public void testAggregateDeleteParentFromQuery() {
+		// TODO Auto-generated method stub
+		super.testAggregateDeleteParentFromQuery();
+	}
+
 
 	
 
