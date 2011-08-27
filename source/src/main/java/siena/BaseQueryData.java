@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import siena.core.QueryFilterEmbedded;
 import siena.core.options.QueryOption;
 import siena.core.options.QueryOptionFetchType;
 import siena.core.options.QueryOptionOffset;
@@ -25,12 +26,14 @@ public class BaseQueryData<T> implements QueryData<T> {
 	private static final long serialVersionUID = -5112648712321740542L;
 
 	protected Class<T> clazz;
-	
+
 	protected List<QueryFilter> filters;
 	protected List<QueryOrder> orders;
 	protected List<QueryFilterSearch> searches;
 	protected List<QueryJoin> joins;
-	
+	protected List<QueryAggregated> aggregatees;
+	protected List<QueryOwned> ownees;
+
 	protected Map<Integer, QueryOption> options = defaultOptions();
 	
 	public static Map<Integer, QueryOption> defaultOptions() {
@@ -50,6 +53,8 @@ public class BaseQueryData<T> implements QueryData<T> {
 		orders = new ArrayList<QueryOrder>();
 		searches = new ArrayList<QueryFilterSearch>();
 		joins = new ArrayList<QueryJoin>();
+		aggregatees = new ArrayList<QueryAggregated>();
+		ownees = new ArrayList<QueryOwned>();
 	}
 	
 	public BaseQueryData(Class<T> clazz) {
@@ -59,6 +64,8 @@ public class BaseQueryData<T> implements QueryData<T> {
 		orders = new ArrayList<QueryOrder>();
 		searches = new ArrayList<QueryFilterSearch>();
 		joins = new ArrayList<QueryJoin>();
+		aggregatees = new ArrayList<QueryAggregated>();
+		ownees = new ArrayList<QueryOwned>();
 	}
 	
 	public BaseQueryData(BaseQueryData<T> data) {
@@ -83,6 +90,8 @@ public class BaseQueryData<T> implements QueryData<T> {
 		this.orders = data.orders;
 		this.searches = data.searches;
 		this.joins = data.joins;
+		this.aggregatees = data.aggregatees;
+		this.ownees = data.ownees;
 
 		for(Integer key : data.options.keySet()){
 			this.options.put(key, data.options.get(key));
@@ -109,7 +118,14 @@ public class BaseQueryData<T> implements QueryData<T> {
 		return joins;
 	}
 
+	public List<QueryAggregated> getAggregatees() {
+		return aggregatees;
+	}
 	
+	public List<QueryOwned> getOwnees() {
+		return ownees;
+	}
+
 	public QueryOption option(int option) {
 		return options.get(option);
 	}
@@ -133,11 +149,53 @@ public class BaseQueryData<T> implements QueryData<T> {
 		}
 		fieldName = fieldName.trim();
 		
-		try {
+		// an embedded field can be a field containing "." or ":"
+		if(fieldName.contains(".")){
+			String[] parts = fieldName.split("\\.");
+			if(parts.length == 0) {
+				throw new SienaException("Filter field cannot have 0 fields to filter"); 
+			}
+			
+			List<Field> fields = new ArrayList<Field>();
+			Class<?> cl = clazz;
+			for(int i=0; i<parts.length; i++) {
+				String fName = parts[i];
+				Field f = Util.getField(cl, fName);
+				if(f==null) {
+					throw new SienaException("Filter field '"+fName+"' not found"); 
+				}
+				
+				fields.add(f);
+				cl = f.getType();
+			}
+						
+			filters.add(new QueryFilterEmbedded(fields, op, ".", value));
+		}else if(fieldName.contains(":")) {
+			String[] parts = fieldName.split("\\.");
+			if(parts.length == 0) {
+				throw new SienaException("Filter field cannot have 0 fields to filter"); 
+			}
+			
+			List<Field> fields = new ArrayList<Field>();
+			Class<?> cl = clazz;
+			for(int i=0; i<parts.length; i++) {
+				String fName = parts[i];
+				Field f = Util.getField(cl, fName);
+				if(f==null) {
+					throw new SienaException("Filter field '"+fName+"' not found"); 
+				}
+				
+				fields.add(f);
+				cl = f.getType();
+			}
+						
+			filters.add(new QueryFilterEmbedded(fields, op, ".", value));
+		}else {
 			Field field = Util.getField(clazz, fieldName);
+			if(field==null) {
+				throw new SienaException("Filter field '"+fieldName+"' not found"); 
+			}
 			filters.add(new QueryFilterSimple(field, op, value));
-		} catch (Exception e) {
-			throw new SienaException(e);
 		}
 	}
 	
@@ -148,12 +206,11 @@ public class BaseQueryData<T> implements QueryData<T> {
 			fieldName = fieldName.substring(1);
 			ascending = false;
 		}
-		try {
-			Field field = Util.getField(clazz, fieldName);
-			orders.add(new QueryOrder(field, ascending));
-		} catch(Exception e) {
-			throw new SienaException(e);
+		Field field = Util.getField(clazz, fieldName);
+		if(field==null) {
+			throw new SienaException("Order field '"+fieldName+"' not found"); 
 		}
+		orders.add(new QueryOrder(field, ascending));
 	}
 	
 	protected void addSearch(String match, String... fields) {
@@ -191,6 +248,31 @@ public class BaseQueryData<T> implements QueryData<T> {
 		} catch(Exception e) {
 			throw new SienaException(e);
 		}
+	}
+	
+	protected void addAggregated(Object aggregator, String fieldName){
+		Field field = Util.getField(aggregator.getClass(), fieldName);
+		// removes existing aggregatee (not very nice I know :) )
+		if(!aggregatees.isEmpty()) aggregatees.remove(0);
+		aggregatees.add(0, new QueryAggregated(aggregator, field));
+	}
+	
+	protected void addAggregated(Object aggregator, Field field){
+		if(!aggregatees.isEmpty()) aggregatees.remove(0);
+		aggregatees.add(0, new QueryAggregated(aggregator, field));
+	}
+	
+	protected void addOwned(Object owner, String fieldName){
+		Field field = Util.getField(this.getQueriedClass(), fieldName);
+		// removes existing ownee (not very nice I know :) )
+		if(!ownees.isEmpty()) ownees.remove(0);
+		ownees.add(0, new QueryOwned(owner, field));
+	}
+	
+	protected void addOwned(Object owner, Field field){
+		// removes existing ownee (not very nice I know :) )
+		if(!ownees.isEmpty()) ownees.remove(0);
+		ownees.add(0, new QueryOwned(owner, field));
 	}
 	
 	protected void optionPaginate(int pageSize) {
@@ -284,10 +366,12 @@ public class BaseQueryData<T> implements QueryData<T> {
 		orders.clear();
 		searches.clear();
 		joins.clear();
+		aggregatees.clear();
+		ownees.clear();
 		options = defaultOptions();
 	}
 	
-	protected void resetOptions() {
+	public void resetOptions() {
 		options = defaultOptions();
 	}
 

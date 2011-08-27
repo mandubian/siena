@@ -8,5 +8,11 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.FIELD)
 public @interface Embedded {
+	public enum Mode {
+		SERIALIZE_JSON,
+		SERIALIZE_JAVA,
+		NATIVE
+	}
 	
+	Mode mode() default Mode.SERIALIZE_JSON;
 }

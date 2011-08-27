@@ -29,7 +29,7 @@ public @interface DecimalPrecision {
 		STRING	// stored as a string (not padded with 0 yet)
 	}
 	
-	StorageType storateType() default StorageType.NATIVE;
+	StorageType storageType() default StorageType.NATIVE;
 	int size() default 19;
 	int scale() default 2;
 }

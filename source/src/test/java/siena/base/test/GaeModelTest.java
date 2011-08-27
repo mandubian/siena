@@ -1,13 +1,17 @@
 package siena.base.test;
 
+import java.util.ArrayList;
 import java.util.List;
 
+import siena.Model;
 import siena.PersistenceManager;
+import siena.PersistenceManagerFactory;
 import siena.SienaException;
+import siena.base.test.model.AggregateChildModel;
+import siena.base.test.model.AggregateParentModel;
+import siena.base.test.model.StringListModel;
 import siena.base.test.model.TransactionAccountFrom;
 import siena.base.test.model.TransactionAccountFromModel;
-import siena.base.test.model.TransactionAccountTo;
-import siena.base.test.model.TransactionAccountToModel;
 import siena.gae.GaePersistenceManager;
 
 import com.google.appengine.tools.development.testing.LocalDatastoreServiceTestConfig;
@@ -29,6 +33,9 @@ public class GaeModelTest extends BaseModelTest{
     public void setUp() throws Exception {
     	helper.setUp();
         super.setUp();
+		PersistenceManagerFactory.install(pm, AggregateChildModel.class);
+		PersistenceManagerFactory.install(pm, AggregateParentModel.class);
+		PersistenceManagerFactory.install(pm, StringListModel.class);
     }
 
     @Override
@@ -226,6 +233,7 @@ public class GaeModelTest extends BaseModelTest{
 		super.testFilterInheritance();
 	}
 
+
 	// SPECIFIC TESTS FOR GAE (transaction on one entity in a given group)
 	public void testTransactionSave() {
 		TransactionAccountFromModel accFrom = new TransactionAccountFromModel(1000L);
@@ -266,6 +274,53 @@ public class GaeModelTest extends BaseModelTest{
 		
 		TransactionAccountFrom accFromAfter = pm.getByKey(TransactionAccountFrom.class, accFrom.id);
 		assertTrue(1000L == accFromAfter.amount);
+	}
+	
+	
+	public void testStringListProperty() {
+		List<StringListModel> bobs = new ArrayList<StringListModel>();
+		for(int i=0; i<100; i++) {
+			StringListModel bob = new StringListModel("bob"+i);
+			final int nb = i;
+			bob.friends = new ArrayList<String>(){{
+				add("robert"+nb);
+				add("john"+nb);
+				add("brutus"+nb);
+			}};
+			bob.insert();
+			bobs.add(bob);
+		}
+		
+		StringListModel bobAfter = Model.all(StringListModel.class).filter("friends", "robert27").filter("friends", "john27").get();
+		assertEquals(bobs.get(27), bobAfter);
+	}
+	
+	public void testStringListProperty2() {
+		List<StringListModel> bobs = new ArrayList<StringListModel>();
+		for(int i=0; i<100; i++) {
+			StringListModel bob = new StringListModel("bob"+i);
+			final int nb = i;
+			if(i == 27 || i == 65 || i == 89){
+				bob.friends = new ArrayList<String>(){{
+					add("robert"+nb);
+					add("john_doe");
+					add("brutus_smith");
+				}};				
+			}else {
+				bob.friends = new ArrayList<String>(){{
+					add("robert"+nb);
+					add("john"+nb);
+					add("brutus"+nb);
+				}};
+			}
+			bob.insert();
+			bobs.add(bob);
+		}
+		
+		List<StringListModel> bobsAfter = Model.all(StringListModel.class).filter("friends", "brutus_smith").filter("friends", "john_doe").fetch();
+		assertEquals(bobs.get(27), bobsAfter.get(0));
+		assertEquals(bobs.get(65), bobsAfter.get(1));
+		assertEquals(bobs.get(89), bobsAfter.get(2));
 	}
 
 }

@@ -7,6 +7,7 @@ import java.util.Iterator;
 import java.util.NoSuchElementException;
 
 import siena.ClassInfo;
+import siena.PersistenceManager;
 import siena.Query;
 import siena.SienaException;
 import siena.core.options.QueryOptionPage;
@@ -19,6 +20,11 @@ import siena.core.options.QueryOptionState;
  *         its Iterator<Model>...
  */
 public class JdbcSienaIterable<T> implements Iterable<T> {
+	/**
+     * The wrapped <code>Statement</code>.
+     */
+    private final JdbcPersistenceManager pm;
+    
     /**
      * The wrapped <code>Statement</code>.
      */
@@ -34,7 +40,8 @@ public class JdbcSienaIterable<T> implements Iterable<T> {
      */
     private Query<T> query;
         
-	JdbcSienaIterable(Statement st, ResultSet rs, Query<T> query) {
+	JdbcSienaIterable(JdbcPersistenceManager pm, Statement st, ResultSet rs, Query<T> query) {
+		this.pm = pm;
 		this.st = st;
 		this.rs = rs;
 		this.query = query;
@@ -131,7 +138,7 @@ public class JdbcSienaIterable<T> implements Iterable<T> {
 		@Override
 		protected void finalize() throws Throwable {
 			JdbcDBUtils.closeResultSet(rs);
-			JdbcDBUtils.closeStatement(st);
+			JdbcDBUtils.closeStatementAndConnection(pm, st);
 			super.finalize();
 		}
 
@@ -140,7 +147,7 @@ public class JdbcSienaIterable<T> implements Iterable<T> {
 	@Override
 	protected void finalize() throws Throwable {
 		JdbcDBUtils.closeResultSet(rs);
-		JdbcDBUtils.closeStatement(st);
+		JdbcDBUtils.closeStatementAndConnection(pm, st);
 		super.finalize();
 	}
 

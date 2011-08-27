@@ -1733,4 +1733,21 @@ public class JdbcTest extends BaseTest {
 		super.testTransactionSaveBatchFailure();
 	}
 
+	@Override
+	public void testBatchGetByKeysNonExisting() {
+		// TODO Auto-generated method stub
+		super.testBatchGetByKeysNonExisting();
+	}
+	
+	@Override
+	public void testGetNonExisting() {
+		// TODO Auto-generated method stub
+		super.testGetNonExisting();
+	}
+
+	public void testGetByKeyNonExisting() {
+		// TODO Auto-generated method stub
+		super.testGetByKeyNonExisting();
+	}
+
 }

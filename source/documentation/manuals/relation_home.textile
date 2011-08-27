@@ -1,0 +1,34 @@
+h1. Relations In Siena
+
+In Siena, we have classified relations between models in 4 categories (at least for the time being):
+
+h2(#reference). Reference relations
+ 
+This is the simplest type of relation when a model is simply linked to another one in a free association. Generally, the relation is directed from an originating model to a targeted model but it doesn't own the relation nor the linked entity (generally called _unowned_). The originating entity holds a reference to the targeted entity and this reference (the key or id) is stored in the table representing the originating model (in SQL or NoSQL).
+
+One example: a Person has a friend who is another person.
+
+To have more info, go "there":./relation_referenced.textile
+   
+h2(#owned). Owned relations
+
+This is the classical relational association in SQL world using foreign constraints. This relation is a directed and tight relation between an owning model and an owned model. It represents an entity owning one or more entities. For example: a Person has one or more dogs and one dog knows its master.
+Generally, the database table representing the owning entity (in SQL & NoSQL) doesn't hold any reference to its owned entities. But the table of the owned model generally holds a reference to its owning model (the key/id plus a foreign constraint in SQL in general)
+
+To have more info, go "there":./relation_owned.textile
+
+
+h2(#aggregated). Aggregation relations
+
+This is something coming from the NoSQL world where pure relational normalized models are not the most efficient and where redundancy and denormalization is generally a good manner.
+In GAE, this is represented by the _entities group_ feature.
+In SQL, it doesn't exist but can be represented using ghost tables and foreign constraints.
+
+Here is a sample: consider a car as a group of pieces. A piece can be considered outside a car and can be stored in the "piece" table representing all the pieces available to build cars. A piece is not meant to be mounted into a given car and could be used in other things than car. But when a given piece is mounted into a car, then it belongs to this car and no other car. Moreover the car is made of these pieces and without them, it's not really a car. In this case, _we tell the car piece is aggregated to the car and the car is an aggregation of car pieces_. 
+
+To have more info, go "there":./relation_aggregated.textile
+
+h2(#aggregated). Embedding relations
+
+*UNDER CONSTRUCTION*
+*TO BE CONTINUED*

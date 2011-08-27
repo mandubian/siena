@@ -32,7 +32,7 @@ import siena.base.test.model.BigDecimalModel;
 import siena.base.test.model.BigDecimalModelNoPrecision;
 import siena.base.test.model.BigDecimalStringModel;
 import siena.base.test.model.Contact;
-import siena.base.test.model.ContainerModel;
+import siena.base.test.model.EmbeddedContainerModel;
 import siena.base.test.model.DataTypes;
 import siena.base.test.model.DataTypes.EnumLong;
 import siena.base.test.model.Discovery;
@@ -115,7 +115,7 @@ public abstract class BaseTest extends TestCase {
 		classes.add(PolymorphicModel.class);
 		classes.add(EmbeddedModel.class);
 		classes.add(EmbeddedSubModel.class);
-		classes.add(ContainerModel.class);
+		classes.add(EmbeddedContainerModel.class);
 		classes.add(DiscoveryNoColumn.class);
 		classes.add(DiscoveryNoColumnMultipleKeys.class);
 		classes.add(DiscoveryLifeCycle.class);
@@ -134,28 +134,9 @@ public abstract class BaseTest extends TestCase {
 				pm.createQuery(clazz).delete();			
 			}
 		}
-		
-//		pm.insert(UUID_TESLA);
-//		pm.insert(UUID_CURIE);
-//		pm.insert(UUID_EINSTEIN);
-//
-//		pm.insert(LongAutoID_TESLA);
-//		pm.insert(LongAutoID_CURIE);
-//		pm.insert(LongAutoID_EINSTEIN);
-//
-//		pm.insert(LongManualID_TESLA);
-//		pm.insert(LongManualID_CURIE);
-//		pm.insert(LongManualID_EINSTEIN);
-//
-//		pm.insert(StringID_TESLA);
-//		pm.insert(StringID_CURIE);
-//		pm.insert(StringID_EINSTEIN);
 
 		pm.insert(UUID_TESLA, UUID_CURIE, UUID_EINSTEIN);
 		pm.insert(LongAutoID_TESLA, LongAutoID_CURIE, LongAutoID_EINSTEIN);
-		//pm.insert(LongAutoID_TESLA);
-		//pm.insert(LongAutoID_CURIE);
-		//pm.insert(LongAutoID_EINSTEIN);
 		pm.insert(LongManualID_TESLA, LongManualID_CURIE, LongManualID_EINSTEIN);
 		pm.insert(StringID_TESLA, StringID_CURIE, StringID_EINSTEIN);
 	}
@@ -1005,6 +986,16 @@ public abstract class BaseTest extends TestCase {
 		assertEquals(UUID_CURIE, curie);
 	}
 
+	public void testGetNonExisting() {
+		try {
+		PersonLongAutoID pers = getPersonLongAutoID(1234567L);
+		}catch(SienaException e){
+			return;
+		}
+		
+		fail();
+	}
+	
 	public void testGetLongAutoID() {
 		PersonLongAutoID curie = getPersonLongAutoID(LongAutoID_CURIE.id);
 		assertEquals(LongAutoID_CURIE, curie);
@@ -3313,6 +3304,15 @@ public abstract class BaseTest extends TestCase {
 		}		
 	}
 	
+	public void testBatchGetByKeysNonExisting() {
+		List<PersonStringID> res = pm.getByKeys(PersonStringID.class, "TESLA", "CURIE", "CHBOING");
+		
+		assertEquals(3, res.size());
+		assertEquals(StringID_TESLA, res.get(0));
+		assertEquals(StringID_CURIE, res.get(1));
+		assertNull(res.get(2));
+	}
+	
 	private PersonUUID getPersonUUID(String id) {
 		PersonUUID p = new PersonUUID();
 		p.id = id;
@@ -5132,6 +5132,11 @@ public abstract class BaseTest extends TestCase {
 		
 	}
 	
+	public void testGetByKeyNonExisting() {
+		PersonLongAutoID pers = getByKeyPersonLongAutoID(12345678L);
+		assertNull(pers);
+	}
+	
 	public void testGetByKeyUUID() {
 		PersonUUID curie = getByKeyPersonUUID(UUID_CURIE.id);
 		assertEquals(UUID_CURIE, curie);
@@ -5384,20 +5389,36 @@ public abstract class BaseTest extends TestCase {
 		embed.id = "embed";
 		embed.alpha = "test";
 		embed.beta = 123;
+		embed.setGamma(true);
 		pm.insert(embed);
 		
-		ContainerModel container = new ContainerModel();
+		EmbeddedModel embed2 = new EmbeddedModel();
+		embed2.id = "embed2";
+		embed2.alpha = "test2";
+		embed2.beta = 1234;
+		embed2.setGamma(true);
+		pm.insert(embed2);
+		
+		EmbeddedContainerModel container = new EmbeddedContainerModel();
 		container.id = "container";
 		container.embed = embed;
+		container.embeds = new ArrayList<EmbeddedModel>();
+		container.embeds.add(embed);
+		container.embeds.add(embed2);
 		pm.insert(container);
 
-		ContainerModel afterContainer = pm.getByKey(ContainerModel.class, container.id);
+		EmbeddedContainerModel afterContainer = pm.getByKey(EmbeddedContainerModel.class, container.id);
 		assertNotNull(afterContainer);
 		assertEquals(container.id, afterContainer.id);
 		assertNotNull(afterContainer.embed);
 		assertEquals(embed.id, afterContainer.embed.id);
 		assertEquals(null, afterContainer.embed.alpha);
 		assertEquals(embed.beta, afterContainer.embed.beta);
+		int i=0;
+		for(EmbeddedModel mod: afterContainer.embeds){
+			assertEquals(container.embeds.get(i++).id, mod.id);
+		}
+		assertEquals(embed.isGamma(), afterContainer.embed.isGamma());
 	}
 
 	public void testNoColumn() {
@@ -5550,12 +5571,12 @@ public abstract class BaseTest extends TestCase {
 		subEmbed.id = "subembed";
 		subEmbed.parent = embed;
 		
-		ContainerModel container = new ContainerModel();
+		EmbeddedContainerModel container = new EmbeddedContainerModel();
 		container.id = "container";
 		container.embed = embed;
 		pm.insert(container);
 		
-		ContainerModel afterContainer = pm.getByKey(ContainerModel.class, container.id);
+		EmbeddedContainerModel afterContainer = pm.getByKey(EmbeddedContainerModel.class, container.id);
 		assertNotNull(afterContainer);
 		assertEquals(container.id, afterContainer.id);
 		assertNotNull(afterContainer.embed);

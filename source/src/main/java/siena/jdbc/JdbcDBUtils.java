@@ -1,6 +1,7 @@
 package siena.jdbc;
 
 import java.lang.reflect.Field;
+import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -8,6 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import siena.ClassInfo;
+import siena.PersistenceManager;
 import siena.Query;
 import siena.QueryJoin;
 import siena.QueryOrder;
@@ -28,7 +30,7 @@ public class JdbcDBUtils {
 			st.close();
 		} catch (SQLException e) {
 			throw new SienaException(e);
-		}
+		} 
 	}
 
 	public static void closeResultSet(ResultSet rs) {
@@ -39,7 +41,29 @@ public class JdbcDBUtils {
 			throw new SienaException(e);
 		}
 	}
-		
+
+	public static void closeStatementAndConnection(JdbcPersistenceManager pm, Statement st) {
+		try {
+			if(st != null){
+				st.close();
+			}
+		} catch (SQLException e) {
+			throw new SienaException(e);
+		} finally {
+			try {
+				if(pm.getConnection().getAutoCommit()){
+					pm.closeConnection();
+				}
+			} 
+			catch(SQLException ex){
+				// don't do anything with it
+			}
+			catch(SienaException ex){
+				// don't do anything with it
+			}
+		}
+	}
+	
 	public static <T> StringBuilder buildSqlSelect(Query<T> query) {
 		Class<T> clazz = query.getQueriedClass();
 		JdbcClassInfo info = JdbcClassInfo.getClassInfo(clazz);

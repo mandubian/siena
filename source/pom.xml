@@ -5,7 +5,7 @@
 	<groupId>siena</groupId>
 	<artifactId>siena</artifactId>
 	<name>siena</name>
-	<version>1.0.0-b5</version>
+	<version>1.0.0-b6-SNAPSHOT</version>
 	<url>http://www.sienaproject.com</url>
 	<description>
 		Siena is a persistence abstraction layer made in Java with various implementations:
@@ -367,6 +367,9 @@
 								<exclude>**/BaseAsyncTest.java</exclude>
 								<exclude>**/BaseModelTest.java</exclude>
 								<exclude>**/BaseMassTest.java</exclude>
+								<exclude>**/BaseEmbeddedTest.java</exclude>
+								<exclude>**/BaseAggregatedTest.java</exclude>
+								<exclude>**/BaseRelatedTest.java</exclude>
 								<exclude>**/TestAll.java</exclude>
 								<exclude>**/Person.java</exclude>
 								<exclude>**/Message.java</exclude>
@@ -374,6 +377,8 @@
 							</excludes>
 							<includes>
 								<include>**/GaeTest.java</include>
+								<exclude>**/GaeAggregatedTest.java</exclude>
+								<exclude>**/GaeRelatedTest.java</exclude>
 								<include>**/GaeAsyncTest.java</include>
 								<include>**/GaeModelTest.java</include>
 								<include>**/JdbcModelTest.java</include>
@@ -404,6 +409,9 @@
 								<exclude>**/BaseAsyncTest.java</exclude>
 								<exclude>**/BaseModelTest.java</exclude>
 								<exclude>**/BaseMassTest.java</exclude>
+								<exclude>**/BaseEmbeddedTest.java</exclude>
+								<exclude>**/BaseAggregatedTest.java</exclude>
+								<exclude>**/BaseRelatedTest.java</exclude>
 								<exclude>**/TestAll.java</exclude>
 								<exclude>**/Person.java</exclude>
 								<exclude>**/Message.java</exclude>
@@ -413,6 +421,9 @@
 								<include>**/GaeTest.java</include>
 								<include>**/GaeAsyncTest.java</include>
 								<include>**/GaeModelTest.java</include>
+								<include>**/GaeEmbeddedTest.java</include>
+								<exclude>**/GaeAggregatedTest.java</exclude>
+								<exclude>**/GaeRelatedTest.java</exclude>
 								<!--include>**/GaeMassTest.java</include-->
 							</includes>
 						</configuration>
@@ -433,6 +444,9 @@
 								<exclude>**/BaseAsyncTest.java</exclude>
 								<exclude>**/BaseModelTest.java</exclude>
 								<exclude>**/BaseMassTest.java</exclude>
+								<exclude>**/BaseEmbeddedTest.java</exclude>
+								<exclude>**/BaseAggregatedTest.java</exclude>
+								<exclude>**/BaseRelatedTest.java</exclude>
 								<exclude>**/DrizzleTest.java</exclude>
 								<exclude>**/TestAll.java</exclude>
 								<exclude>**/Person.java</exclude>
@@ -442,6 +456,7 @@
 							<includes>
 								<include>**/JdbcTest.java</include>
 								<include>**/JdbcModelTest.java</include>
+								<include>**/JdbcMultiThreadTest.java</include>
 							</includes>
 						</configuration>
 					</plugin>
@@ -461,6 +476,9 @@
 								<exclude>**/BaseAsyncTest.java</exclude>
 								<exclude>**/BaseModelTest.java</exclude>
 								<exclude>**/BaseMassTest.java</exclude>
+								<exclude>**/BaseEmbeddedTest.java</exclude>
+								<exclude>**/BaseAggregatedTest.java</exclude>
+								<exclude>**/BaseRelatedTest.java</exclude>
 								<exclude>**/TestAll.java</exclude>
 								<exclude>**/Person.java</exclude>
 								<exclude>**/Message.java</exclude>
@@ -468,6 +486,7 @@
 							</excludes>
 							<includes>
 								<include>**/PostgresTest.java</include>
+								<include>**/PostgresMultiThreadTest.java</include>
 							</includes>
 						</configuration>
 					</plugin>
@@ -487,6 +506,9 @@
 								<exclude>**/BaseAsyncTest.java</exclude>
 								<exclude>**/BaseModelTest.java</exclude>
 								<exclude>**/BaseMassTest.java</exclude>
+								<exclude>**/BaseEmbeddedTest.java</exclude>
+								<exclude>**/BaseAggregatedTest.java</exclude>
+								<exclude>**/BaseRelatedTest.java</exclude>
 								<exclude>**/TestAll.java</exclude>
 								<exclude>**/Person.java</exclude>
 								<exclude>**/Message.java</exclude>
@@ -494,6 +516,7 @@
 							</excludes>
 							<includes>
 								<include>**/H2Test.java</include>
+								<include>**/H2MultiThreadTest.java</include>
 							</includes>
 						</configuration>
 					</plugin>
@@ -513,6 +536,9 @@
 								<exclude>**/BaseAsyncTest.java</exclude>
 								<exclude>**/BaseModelTest.java</exclude>
 								<exclude>**/BaseMassTest.java</exclude>
+								<exclude>**/BaseEmbeddedTest.java</exclude>
+								<exclude>**/BaseAggregatedTest.java</exclude>
+								<exclude>**/BaseRelatedTest.java</exclude>
 								<exclude>**/TestAll.java</exclude>
 								<exclude>**/Person.java</exclude>
 								<exclude>**/Message.java</exclude>

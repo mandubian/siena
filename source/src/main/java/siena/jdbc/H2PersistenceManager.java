@@ -23,7 +23,6 @@ import siena.Query;
 import siena.QueryFilterSearch;
 import siena.SienaException;
 import siena.Util;
-import siena.jdbc.JdbcPersistenceManager.JdbcClassInfo;
 import siena.jdbc.h2.FullText;
 
 public class H2PersistenceManager extends JdbcPersistenceManager {
@@ -46,6 +45,13 @@ public class H2PersistenceManager extends JdbcPersistenceManager {
 		this.dbMode = dbMode; 
 	}
 	
+	@Override
+	public void closeConnection() {
+		// In H2, if we close the connection, the DB is closed even when using DB_CLOSE_DELAY=-1
+		// H2 Bug???
+		//super.closeConnection();
+	}
+
 	/*
 	 * Overrides the batch insert since H2 getGeneratedKeys doesn't return all generated identities but only the last one.
 	 * This is a known limitation: http://markmail.org/message/hsgzgktbj4srz657
@@ -129,7 +135,7 @@ public class H2PersistenceManager extends JdbcPersistenceManager {
 		} catch (Exception e) {
 			throw new SienaException(e);
 		} finally {
-			JdbcDBUtils.closeStatement(ps);
+			JdbcDBUtils.closeStatementAndConnection(this, ps);
 		}
 	}
 	
@@ -137,81 +143,7 @@ public class H2PersistenceManager extends JdbcPersistenceManager {
 
 	@Override
 	public int save(Object... objects) {
-		Map<JdbcClassInfo, List<Object>> generatedObjMap = new HashMap<JdbcClassInfo, List<Object>>();
-		Map<JdbcClassInfo, List<Object>> objMap = new HashMap<JdbcClassInfo, List<Object>>();
-		PreparedStatement ps = null;
-		
-		for(Object obj:objects){
-			JdbcClassInfo classInfo = JdbcClassInfo.getClassInfo(obj.getClass());
-			Field idField = classInfo.info.getIdField();
-			Object idVal = Util.readField(obj, idField);
-			
-			if(idVal == null && !classInfo.generatedKeys.isEmpty()){
-				if(!generatedObjMap.containsKey(classInfo)){
-					List<Object> l = new ArrayList<Object>();
-					l.add(obj);
-					generatedObjMap.put(classInfo, l);
-				}else{
-					generatedObjMap.get(classInfo).add(obj);
-				}
-			} else {
-				if(!objMap.containsKey(classInfo)){
-					List<Object> l = new ArrayList<Object>();
-					l.add(obj);
-					objMap.put(classInfo, l);
-				}else{
-					objMap.get(classInfo).add(obj);
-				}
-			}
-		}
-		
-		int total = 0;
-		try {
-			// these are the insertions with generated keys
-			for(JdbcClassInfo classInfo: generatedObjMap.keySet()){
-				total += insert(generatedObjMap.get(classInfo));
-			}
-			
-			// these are the insertions or updates without generated keys
-			// can't use batch in Postgres with generated keys... known bug
-			// http://postgresql.1045698.n5.nabble.com/PreparedStatement-batch-statement-impossible-td3406927.html
-			for(JdbcClassInfo classInfo: objMap.keySet()){
-				List<String> keyNames = new ArrayList<String>();
-				for (Field field : classInfo.keys) {
-					keyNames.add(field.getName());
-				}
-				
-				// in H2 "on duplicate" is not supported but MERGE is
-				// merge into employees (id, first_name, last_name) values(1, 'test2', 'test2');
-				List<String> allColumns = new ArrayList<String>();
-				JdbcClassInfo.calculateColumns(classInfo.allFields, allColumns, null, "");
-				String[] is = new String[allColumns.size()];
-				Arrays.fill(is, "?");
-			
-				ps = getConnection().prepareStatement(
-						"MERGE INTO "+ classInfo.tableName + " (" + Util.join(allColumns, ",") + ") " 
-						+ "VALUES(" + Util.join(Arrays.asList(is), ",") + ")"  
-				);
-				
-				for(Object obj: objMap.get(classInfo)){				
-					int i = 1;
-					i = addParameters(obj, classInfo.allFields, ps, i);
-					ps.addBatch();
-				}
-				
-				int[] res = ps.executeBatch();
-				
-				total+=res.length;
-			}
-			
-			return total;			
-		} catch (SienaException e) {
-			throw e;
-		} catch (Exception e) {
-			throw new SienaException(e);
-		} finally {
-			JdbcDBUtils.closeStatement(ps);
-		}
+		return save(Arrays.asList(objects));
 	}
 
 	@Override
@@ -289,7 +221,7 @@ public class H2PersistenceManager extends JdbcPersistenceManager {
 		} catch (Exception e) {
 			throw new SienaException(e);
 		} finally {
-			JdbcDBUtils.closeStatement(ps);
+			JdbcDBUtils.closeStatementAndConnection(this, ps);
 		}
 	}
 		
@@ -345,13 +277,25 @@ public class H2PersistenceManager extends JdbcPersistenceManager {
 			
 			ResultSet rs = FullText.searchData(conn, searchString, limit, offset);
 			List<T> res = new ArrayList<T>();
+			Field idField = ci.getIdField();
+			Class<?> idClass = idField.getType();
 			while(rs.next()) {
 				//String queryStr = rs.getString("QUERY");
 				//String score = rs.getString("SCORE");
 				//Array columns = rs.getArray("COLUMNS");
 				Object[] keys = (Object[])rs.getArray("KEYS").getArray();
-				if(res == null) res = this.getByKeys(query.getQueriedClass(), keys);
-				else res.addAll(this.getByKeys(query.getQueriedClass(), keys));
+				// convert keys into real type if the key is not a string
+				Object[] realKeys = null;
+				if(idField.getType() != String.class){
+					realKeys = new Object[keys.length];
+					for(int i=0; i< keys.length; i++){
+						realKeys[i] = Util.fromString(idClass, (String)keys[i]);
+					}
+				}else {
+					realKeys = keys;
+				}
+				if(res == null) res = this.getByKeys(query.getQueriedClass(), realKeys);
+				else res.addAll(this.getByKeys(query.getQueriedClass(), realKeys));
 			}
 			return res;
 		} catch (SQLException e) {

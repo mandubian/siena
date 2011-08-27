@@ -3,7 +3,6 @@ package siena.gae;
 import java.util.Iterator;
 
 import siena.core.async.QueryAsync;
-import siena.core.async.SienaFuture;
 
 /**
  * @author mandubian
@@ -21,7 +20,7 @@ public class SienaIterableAsyncPerPage<T> implements Iterable<T> {
     /**
      * The pageSize
      */
-    private int pageSize;
+    //private int pageSize;
     
     /**
      * The wrapped <code>Iterable</code>.
@@ -30,7 +29,7 @@ public class SienaIterableAsyncPerPage<T> implements Iterable<T> {
     
 	public SienaIterableAsyncPerPage(QueryAsync<T> query, int pageSize, Iterable<T> iterable) {
 		this.query = query;
-		this.pageSize = pageSize;
+		//this.pageSize = pageSize;
 		
 		this.iterable = iterable;
 	}

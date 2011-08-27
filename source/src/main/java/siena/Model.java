@@ -18,18 +18,22 @@ package siena;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.lang.reflect.Field;
-import java.lang.reflect.ParameterizedType;
-import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
-import siena.core.InheritFilter;
+import siena.ClassInfo.FieldMapKeys;
+import siena.core.Aggregator;
+import siena.core.Many4PM;
+import siena.core.One;
+import siena.core.One4PM;
+import siena.core.Relation;
+import siena.core.RelationMode;
+import siena.core.SyncList;
 import siena.core.async.ModelAsync;
 import siena.core.async.QueryAsync;
 import siena.core.batch.Batch;
 import siena.core.options.QueryOption;
+import siena.core.options.QueryOptionState;
 
 /**
  * This is the base abstract class to extend your domain classes.
@@ -50,7 +54,15 @@ import siena.core.options.QueryOption;
 public abstract class Model {
 
 	transient private PersistenceManager persistenceManager;
-
+	
+	// this is a technical field used by Siena to represent a relation
+	// between this model and another one. For ex, it will be used to
+	// identify the ancestor in an aggregation relation
+	// has transient modifier to prevent serialization FOR THE TIME BEING
+	// TODO IS THE TRANSIENT REQUIRED OR CAN IT BE A PB?
+	@Aggregator
+	private Relation relation;
+	
 	public Model() {
 		init();
 	}
@@ -97,6 +109,30 @@ public abstract class Model {
 	public ModelAsync async() {
 		return new ModelAsync(this);
 	}
+
+	public boolean hasRelation(RelationMode mode) {
+		if(mode == RelationMode.AGGREGATION){
+			return Util.readField(
+					this, ClassInfo.getClassInfo(this.getClass()).aggregator) != null;
+		}
+		return false;
+	}
+	
+	public Model setRelation(Relation relation){
+		Util.setField(this, ClassInfo.getClassInfo(this.getClass()).aggregator, relation);
+		
+		return this;
+	}
+	
+	public Relation getRelation(){
+		return (Relation)Util.readField(this, 
+					ClassInfo.getClassInfo(this.getClass()).aggregator);
+	}
+	
+	public Model aggregate(Object aggregator, String fieldName){
+		return setRelation(
+				new Relation(RelationMode.AGGREGATION, aggregator, Util.getField(aggregator.getClass(), fieldName)));
+	}
 	
 	public boolean equals(Object that) {
 		if(this == that) { return true; }
@@ -140,43 +176,58 @@ public abstract class Model {
 		Class<?> clazz = getClass();
 		
 		// Takes into account superclass fields for inheritance!!!!
-		List<Class<?>> classH = new ArrayList<Class<?>>();
-		Class<?> cl = clazz;
-		Set<String> removedFields = new HashSet<String>();
-        while (cl!=null) {
-        	classH.add(0, cl);
-        	// add exceptFields
-        	InheritFilter iFilter = cl.getAnnotation(InheritFilter.class);
-        	if(iFilter != null){
-        		String[] efs = iFilter.removedFields();
-	        	for(String ef:efs){
-	        		removedFields.add(ef);
-	        	}
-        	}
-        	cl = cl.getSuperclass();        	
-        }
-        
-        for(Class<?> c: classH) {		
-			for (Field field : c.getDeclaredFields()) {
-				if(field.getType() != Query.class) { continue; }
-				if(removedFields.contains(field.getName())) continue;
-	
-				Filter filter = field.getAnnotation(Filter.class);
-				if(filter == null) {
-					throw new SienaException("Found Query<T> field without @Filter annotation at "
-							+c.getName()+"."+field.getName());
-				}
-	
-				ParameterizedType pt = (ParameterizedType) field.getGenericType();
-				cl = (Class<?>) pt.getActualTypeArguments()[0];
-	
-				try {
-					field.set(this, new ProxyQuery(cl, filter.value(), this));
-				} catch (Exception e) {
-					throw new SienaException(e);
-				}
+		ClassInfo info = ClassInfo.getClassInfo(clazz);
+		for(Field field:info.queryFieldMap.keySet()){
+			try {
+				Map<FieldMapKeys, Object> map = info.queryFieldMap.get(field);
+				Util.setField(this, field, 
+						new ProxyQuery((Class<?>)map.get(FieldMapKeys.CLASS), (String)map.get(FieldMapKeys.FILTER), this));
+			} catch (Exception e) {
+				throw new SienaException(e);
 			}
-        }
+		}
+		
+		for(Field field:info.manyFieldMap.keySet()){
+			try {
+				Map<FieldMapKeys, Object> map = info.manyFieldMap.get(field);
+				RelationMode mode = (RelationMode)map.get(FieldMapKeys.MODE);
+				switch(mode){
+				case AGGREGATION:
+					Util.setField(this, field, 
+							new ProxyMany((Class<?>)map.get(FieldMapKeys.CLASS), this, 
+									(RelationMode)map.get(FieldMapKeys.MODE), field));
+					break;
+				case RELATION:
+					Util.setField(this, field, 
+							new ProxyMany((Class<?>)map.get(FieldMapKeys.CLASS), this, 
+									(RelationMode)map.get(FieldMapKeys.MODE), (Field)map.get(FieldMapKeys.FIELD)));
+					break;
+				}				
+			} catch (Exception e) {
+				throw new SienaException(e);
+			}
+		}
+		
+		for(Field field:info.oneFieldMap.keySet()){
+			try {
+				Map<FieldMapKeys, Object> map = info.oneFieldMap.get(field);
+				RelationMode mode = (RelationMode)map.get(FieldMapKeys.MODE);
+				switch(mode){
+				case AGGREGATION:
+					Util.setField(this, field, 
+							new ProxyOne((Class<?>)map.get(FieldMapKeys.CLASS), this, 
+									(RelationMode)map.get(FieldMapKeys.MODE), field));
+					break;
+				case RELATION:
+					Util.setField(this, field, 
+							new ProxyOne((Class<?>)map.get(FieldMapKeys.CLASS), this, 
+									(RelationMode)map.get(FieldMapKeys.MODE), (Field)map.get(FieldMapKeys.FIELD)));
+					break;
+				}				
+			} catch (Exception e) {
+				throw new SienaException(e);
+			}
+		}
 	}
 
 	class ProxyQuery<T> implements Query<T> {
@@ -185,7 +236,8 @@ public abstract class Model {
 		private String filter;
 		private Class<T> clazz;
 		private Model obj;
-
+		private Query<T> query;
+		
 		public ProxyQuery(Class<T> clazz, String filter, Model obj) {
 			this.filter = filter;
 			this.clazz = clazz;
@@ -193,7 +245,17 @@ public abstract class Model {
 		}
 
 		private Query<T> createQuery() {
-			return getPersistenceManager().createQuery(clazz).filter(filter, obj);
+			//return getPersistenceManager().createQuery(clazz).filter(filter, obj);
+			
+			// initializes once the query and reuses it
+			// it is not initialized in the constructor because the persistencemanager might not be
+			// initialized correctly with the Model
+			if(this.query == null){
+				this.query = obj.getPersistenceManager().createQuery(clazz);				
+			}
+			else if(((QueryOptionState)this.query.option(QueryOptionState.ID)).isStateless())
+				this.query.release();
+			return this.query.filter(filter, obj);
 		}
 
 		public int count() {
@@ -239,6 +301,14 @@ public abstract class Model {
 			return createQuery().join(field, sortFields);
 		}
 
+		public Query<T> aggregated(Object aggregator, String fieldName) {
+			return createQuery().aggregated(aggregator, fieldName);
+		}
+		
+		public Query<T> owned(Object owner, String fieldName) {
+			return createQuery().owned(owner, fieldName);
+		}
+
 		public T get() {
 			return createQuery().get();
 		}
@@ -259,7 +329,7 @@ public abstract class Model {
 			return createQuery().iterPerPage(limit);
 		}	
 		
-		public ProxyQuery<T> clone() {
+		public ProxyQuery<T> copy() {
 			return new ProxyQuery<T>(clazz, filter, obj);
 		}
 
@@ -298,6 +368,14 @@ public abstract class Model {
 
 		public List<QueryJoin> getJoins() {
 			return createQuery().getJoins();
+		}
+
+		public List<QueryAggregated> getAggregatees() {
+			return createQuery().getAggregatees();
+		}
+
+		public List<QueryOwned> getOwnees() {
+			return createQuery().getOwnees();
 		}
 
 		@Deprecated
@@ -408,4 +486,145 @@ public abstract class Model {
 		
 	}
 
+	class ProxyMany<T> implements Many4PM<T> {
+		private static final long serialVersionUID = -4540064249546783019L;
+		
+		private Class<T> 		clazz;
+		private Model 			obj;
+		private Many4PM<T> 		many;
+		private RelationMode 	mode;
+		private Field			field;	
+
+		public ProxyMany(Class<T> clazz, Model obj, RelationMode mode, Field field) {
+			this.clazz = clazz;
+			this.obj = obj;
+			this.mode = mode;
+			this.field = field;
+		}
+
+		private Many4PM<T> createMany() {
+			if(this.many == null){
+				this.many = obj.getPersistenceManager().createMany(clazz);
+			}
+			//else if(((QueryOptionState)this.listQuery.asQuery().option(QueryOptionState.ID)).isStateless()){
+			//	this.listQuery.asQuery().release();				
+			//}
+			switch(mode){
+			case AGGREGATION:
+				aggregationMode(obj, field);
+				break;
+			case RELATION:
+				relationMode(obj, field);				
+				break;
+			}
+			
+			return this.many;
+		}
+
+		public SyncList<T> asList() {
+			return createMany().asList();
+		}
+
+		public Query<T> asQuery() {
+			return createMany().asQuery();
+		}
+
+		public List<T> asList2Remove() {
+			return ((Many4PM<T>)createMany()).asList2Remove();
+		}
+
+		public List<T> asList2Add() {
+			return ((Many4PM<T>)createMany()).asList2Add();
+		}
+
+		public Many4PM<T> aggregationMode(Object aggregator, Field field) {
+			return this.many.aggregationMode(aggregator, field);
+		}
+
+		public Many4PM<T> relationMode(Object owner, Field field) {
+			return this.many.relationMode(owner, field);
+		}
+
+		public Many4PM<T> setSync(boolean isSync) {
+			return createMany().setSync(isSync);
+		}
+
+	}
+	
+	
+	class ProxyOne<T> implements One4PM<T> {
+		
+		private Class<T> 		clazz;
+		private Model 			ancestor;
+		private One4PM<T> 		one;
+		private RelationMode 	mode;
+		private Field			field;	
+
+		public ProxyOne(Class<T> clazz, Model ancestor, RelationMode mode, Field field) {
+			this.clazz = clazz;
+			this.ancestor = ancestor;
+			this.mode = mode;
+			this.field = field;
+		}
+
+		private One4PM<T> createOne() {
+			if(this.one == null){
+				this.one = ancestor.getPersistenceManager().createOne(clazz);
+				switch(mode){
+				case AGGREGATION:
+					aggregationMode(ancestor, field);
+					break;
+				case RELATION:
+					relationMode(ancestor, field);				
+					break;
+				}
+			}
+			
+			return this.one;
+		}
+
+		
+		public One4PM<T> aggregationMode(Object aggregator, Field field) {
+			return this.one.aggregationMode(aggregator, field);
+		}
+
+		public One4PM<T> relationMode(Object owner, Field field) {
+			return this.one.relationMode(owner, field);
+		}
+
+		public T get() {
+			return createOne().get();
+		}
+
+		public void set(T obj) {
+			createOne().set(obj);
+		}
+
+		public One<T> sync() {
+			return createOne().sync();
+		}
+
+		public One<T> forceSync() {
+			return createOne().forceSync();
+
+		}
+
+		public boolean isModified() {
+			return createOne().isModified();
+		}
+
+		public One4PM<T> setModified(boolean isModified) {
+			return createOne().setModified(isModified);
+
+		}
+
+		public T getPrev() {
+			return createOne().getPrev();
+		}
+
+		public One4PM<T> setSync(boolean isSync) {
+			return createOne().setSync(isSync);
+		}
+
+	}
 }

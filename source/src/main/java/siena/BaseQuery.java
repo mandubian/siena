@@ -5,6 +5,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
+import java.lang.reflect.Field;
 import java.util.List;
 import java.util.Map;
 
@@ -22,10 +23,10 @@ import siena.embed.JsonSerializer;
 public class BaseQuery<T> extends BaseQueryData<T> implements Query<T> {
 	private static final long serialVersionUID = 3533080111146350262L;
 
-	transient private PersistenceManager pm;
+	transient protected PersistenceManager pm;
 
 	@Deprecated
-	private Object nextOffset;
+	transient protected Object nextOffset;
 
 	
 	public BaseQuery() {
@@ -83,6 +84,26 @@ public class BaseQuery<T> extends BaseQueryData<T> implements Query<T> {
 
 	public Query<T> join(String fieldName, String... sortFields) {
 		addJoin(fieldName, sortFields);
+		return this;
+	}
+	
+	public Query<T> aggregated(Object aggregator, String fieldName) {
+		addAggregated(aggregator, fieldName);
+		return this;
+	}
+	
+	public Query<T> aggregated(Object aggregator, Field field) {
+		addAggregated(aggregator, field);
+		return this;
+	}
+
+	public Query<T> owned(Object owner, String fieldName) {
+		addOwned(owner, fieldName);
+		return this;
+	}
+	
+	public Query<T> owned(Object owner, Field field) {
+		addOwned(owner, field);
 		return this;
 	}
 	
@@ -151,18 +172,13 @@ public class BaseQuery<T> extends BaseQueryData<T> implements Query<T> {
 	}
 	
 	
-	public Query<T> clone() {
+	public Query<T> copy() {
 		// TODO code a real deep clone function
 		return new BaseQuery<T>(this);
 	}
 	
 	public Class<T> getQueriedClass() {
 		return clazz;
-	}
-
-	public Object raw(String request) {
-		// TODO Auto-generated method stub
-		return null;
 	}
 
 	@Deprecated

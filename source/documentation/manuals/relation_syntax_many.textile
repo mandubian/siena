@@ -1,0 +1,29 @@
+h1. <a name="relation-syntax-many">Using the new syntax @Many<T>@</a>
+
+<pre><code>This is a new syntax to represent:
+
+* the relation from the owner/aggregator entity to the children or aggregated entities in a One2Many/Many2One relation
+* the owner side in a multiple owned relation
+* the aggregator side in a multiple aggregated relation
+* a versatile way to retrieve the children of the relation as a List or as a Query. 
+
+p(note). *Note* with @Many<T>@, you don't have to choose in your model how you want to manipulate your child  entities: you will be able to do it through a simple list retrieved at once or through a query with limits, offsets, filters, ordering etc... 
+
+h3. Siena DO
+
+* _manage the relation_ but not the full life-cycle of related entities.
+* _manage relation change_ when you add a child to the One2Many relation. 
+* _auto-insert the related entities_ at the same time as the parent (or when updating it) if not done yet.
+* _lazy-load the related entities_ only when required.
+* _delete-cascade the aggregated entities_ because an aggregated entity can't exist outside its aggregator. *This is the ONLY accepted delete cascade*. 
+
+h3. Siena DOESN'T
+
+* _manage the updates of data within the related entities_. You must save them yourself.
+* _delete the owned entities when you delete the owner_ since an owned entity can change owner. Nevertheless, the owned entity is no more associated to any owner.
+</code></pre>
+
+h2. <a name="relation-syntax-one-owner">@Many<T>@ in an owned relation</a>
+
+*UNDER CONSTRUCTION*
+*TO BE CONTINUED...*

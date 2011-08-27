@@ -1,17 +1,21 @@
 package siena.base.test;
 
 import java.lang.reflect.Modifier;
-import java.sql.Connection;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
 import junit.framework.TestCase;
+import siena.Model;
 import siena.PersistenceManager;
 import siena.PersistenceManagerFactory;
 import siena.Query;
 import siena.SienaException;
+import siena.base.test.model.AggregateChildModel;
+import siena.base.test.model.AggregateParentModel;
 import siena.base.test.model.DiscoveryModel;
 import siena.base.test.model.PersonLongAutoIDAbstract;
 import siena.base.test.model.PersonLongAutoIDExtended;
@@ -56,6 +60,8 @@ public abstract class BaseModelTest extends TestCase {
 		classes.add(PersonLongAutoIDExtendedFilter.class);
 		classes.add(TransactionAccountFromModel.class);
 		classes.add(TransactionAccountToModel.class);
+//		classes.add(AggregateChildModel.class);
+//		classes.add(AggregateParentModel.class);
 
 		pm = createPersistenceManager(classes);
 		PersistenceManagerFactory.install(pm, classes);
@@ -915,4 +921,6 @@ public abstract class BaseModelTest extends TestCase {
 		TransactionAccountTo accToAfter = pm.getByKey(TransactionAccountTo.class, accTo.id);
 		assertTrue(1000L == accToAfter.amount);
 	}
+	
+
 }

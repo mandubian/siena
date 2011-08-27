@@ -2,6 +2,10 @@ package siena;
 
 import java.util.List;
 
+import siena.core.BaseMany;
+import siena.core.BaseOne;
+import siena.core.Many4PM;
+import siena.core.One4PM;
 import siena.core.SienaIterablePerPage;
 import siena.core.batch.BaseBatch;
 import siena.core.batch.Batch;
@@ -24,6 +28,14 @@ public abstract class AbstractPersistenceManager implements PersistenceManager {
 		return new BaseBatch<T>(this, clazz);
 	}
 
+	public <T> Many4PM<T> createMany(Class<T> clazz) {
+		return new BaseMany<T>(this, clazz);
+	}
+	
+	public <T> One4PM<T> createOne(Class<T> clazz) {
+		return new BaseOne<T>(this, clazz);
+	}	
+	
 	public <T> T get(Query<T> query) {
 		List<T> list = fetch(query, 1);
 		if(list.isEmpty()) { return null; }
@@ -32,14 +44,14 @@ public abstract class AbstractPersistenceManager implements PersistenceManager {
 
 	public <T> void release(Query<T> query) {
 		QueryOptionOffset offset = (QueryOptionOffset)query.option(QueryOptionOffset.ID);
-		QueryOption reuse = query.option(QueryOptionState.ID);
+		QueryOption state = query.option(QueryOptionState.ID);
 		
 		// resets offset
 		if(offset.isActive()) 
 			offset.offset=0;
 		// disables reusable and cludge
-		if(reuse.isActive()){
-			reuse.passivate();
+		if(state.isActive()){
+			state.passivate();
 		}
 	}
 

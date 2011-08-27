@@ -3,12 +3,9 @@ package siena.core.async;
 import java.util.List;
 
 import siena.BaseQueryData;
-import siena.Query;
-import siena.core.SienaIterablePerPage;
 import siena.core.batch.BaseBatchAsync;
 import siena.core.batch.BatchAsync;
 import siena.core.options.QueryOption;
-import siena.core.options.QueryOptionFetchType;
 import siena.core.options.QueryOptionOffset;
 import siena.core.options.QueryOptionState;
 

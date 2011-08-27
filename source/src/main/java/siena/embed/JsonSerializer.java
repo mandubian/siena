@@ -6,8 +6,6 @@ import static siena.Json.map;
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -169,16 +167,6 @@ public class JsonSerializer {
 		return result;
 	}
 	
-	private static Class<?> getGenericClass(Field f, int n) {
-		Type genericFieldType = f.getGenericType();
-		if(genericFieldType instanceof ParameterizedType){
-		    ParameterizedType aType = (ParameterizedType) genericFieldType;
-		    Type[] fieldArgTypes = aType.getActualTypeArguments();
-		    return (Class<?>) fieldArgTypes[n];
-		}
-		return null;
-	}
-	
 	public static Object deserializeMap(Class<?> clazz, Json data) {
 		if(!data.isMap()) {
 			throw new SienaException("Error while deserializating class "+clazz
@@ -332,7 +320,7 @@ public class JsonSerializer {
 			}
 			Map<String, Object> map = new HashMap<String, Object>();
 			for (String key : data.keys()) {
-				map.put(key, deserialize(getGenericClass(f, 1), data.get(key)));
+				map.put(key, deserialize(Util.getGenericClass(f, 1), data.get(key)));
 			}
 			return map;
 		}
@@ -349,7 +337,7 @@ public class JsonSerializer {
 				collection = new HashSet<Object>();
 			}
 			for (Json value : data) {
-				collection.add(deserialize(getGenericClass(f, 0), value));
+				collection.add(deserialize(Util.getGenericClass(f, 0), value));
 			}
 			return collection;
 		}

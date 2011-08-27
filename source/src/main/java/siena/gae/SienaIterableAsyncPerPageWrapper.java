@@ -1,7 +1,5 @@
 package siena.gae;
 
-import java.util.Iterator;
-
 import siena.core.async.QueryAsync;
 import siena.core.async.SienaFuture;
 

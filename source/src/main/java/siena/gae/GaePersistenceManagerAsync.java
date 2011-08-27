@@ -1047,7 +1047,7 @@ public class GaePersistenceManagerAsync extends AbstractPersistenceManagerAsync 
 	public <T> SienaFuture<Integer> deleteByKeys(Class<T> clazz, Object... keys) {
 		final List<Key> gaeKeys = new ArrayList<Key>();
 		for(Object key:keys){
-			gaeKeys.add(GaeMappingUtils.makeKey(clazz, key));
+			gaeKeys.add(GaeMappingUtils.makeKeyFromId(clazz, key));
 		}
 		
 		Future<Void> future = ds.delete(gaeKeys);
@@ -1066,7 +1066,7 @@ public class GaePersistenceManagerAsync extends AbstractPersistenceManagerAsync 
 	public <T> SienaFuture<Integer> deleteByKeys(Class<T> clazz, Iterable<?> keys) {
 		final List<Key> gaeKeys = new ArrayList<Key>();
 		for(Object key:keys){
-			gaeKeys.add(GaeMappingUtils.makeKey(clazz, key));
+			gaeKeys.add(GaeMappingUtils.makeKeyFromId(clazz, key));
 		}
 		
 		Future<Void> future = ds.delete(gaeKeys);
@@ -1130,7 +1130,7 @@ public class GaePersistenceManagerAsync extends AbstractPersistenceManagerAsync 
 	}
 	
 	public <T> SienaFuture<T> getByKey(final Class<T> clazz, final Object key) {
-		Key gkey = GaeMappingUtils.makeKey(clazz, key);
+		Key gkey = GaeMappingUtils.makeKeyFromId(clazz, key);
 		try {
 			Future<Entity> future = ds.get(gkey);
 			
@@ -1153,7 +1153,7 @@ public class GaePersistenceManagerAsync extends AbstractPersistenceManagerAsync 
 	public <T> SienaFuture<List<T>> getByKeys(final Class<T> clazz, final Object... keys) {
 		List<Key> gaeKeys = new ArrayList<Key>();
 		for(Object key:keys){
-			gaeKeys.add(GaeMappingUtils.makeKey(clazz, key));
+			gaeKeys.add(GaeMappingUtils.makeKeyFromId(clazz, key));
 		}
 		
 		Future<Map<Key, Entity>> future = ds.get(gaeKeys);
@@ -1164,7 +1164,7 @@ public class GaePersistenceManagerAsync extends AbstractPersistenceManagerAsync 
             {
             	List<T> models = new ArrayList<T>(entityMap.size());
             	for(Object key:keys){
-        			models.add(GaeMappingUtils.mapEntity(entityMap.get(GaeMappingUtils.makeKey(clazz, key)), clazz));
+        			models.add(GaeMappingUtils.mapEntity(entityMap.get(GaeMappingUtils.makeKeyFromId(clazz, key)), clazz));
         		}
         		
         		return models;
@@ -1177,7 +1177,7 @@ public class GaePersistenceManagerAsync extends AbstractPersistenceManagerAsync 
 	public <T> SienaFuture<List<T>> getByKeys(final Class<T> clazz, final Iterable<?> keys) {
 		List<Key> gaeKeys = new ArrayList<Key>();
 		for(Object key:keys){
-			gaeKeys.add(GaeMappingUtils.makeKey(clazz, key));
+			gaeKeys.add(GaeMappingUtils.makeKeyFromId(clazz, key));
 		}
 		
 		Future<Map<Key, Entity>> future = ds.get(gaeKeys);
@@ -1188,7 +1188,7 @@ public class GaePersistenceManagerAsync extends AbstractPersistenceManagerAsync 
             {
             	List<T> models = new ArrayList<T>(entityMap.size());
             	for(Object key:keys){
-        			models.add(GaeMappingUtils.mapEntity(entityMap.get(GaeMappingUtils.makeKey(clazz, key)), clazz));
+        			models.add(GaeMappingUtils.mapEntity(entityMap.get(GaeMappingUtils.makeKeyFromId(clazz, key)), clazz));
         		}
         		
         		return models;
@@ -1206,8 +1206,7 @@ public class GaePersistenceManagerAsync extends AbstractPersistenceManagerAsync 
 		for(Object obj:objects){
 			Class<?> clazz = obj.getClass();
 			ClassInfo info = ClassInfo.getClassInfo(clazz);
-			Field idField = info.getIdField();
-			Entity entity = GaeMappingUtils.createEntityInstanceForUpdate(idField, info, obj);
+			Entity entity = GaeMappingUtils.createEntityInstanceForUpdate(info, obj);
 			GaeMappingUtils.fillEntity(obj, entity);
 			entities.add(entity);
 		}
@@ -1232,8 +1231,7 @@ public class GaePersistenceManagerAsync extends AbstractPersistenceManagerAsync 
 		for(Object obj:objects){
 			Class<?> clazz = obj.getClass();
 			ClassInfo info = ClassInfo.getClassInfo(clazz);
-			Field idField = info.getIdField();
-			Entity entity = GaeMappingUtils.createEntityInstanceForUpdate(idField, info, obj);
+			Entity entity = GaeMappingUtils.createEntityInstanceForUpdate(info, obj);
 			GaeMappingUtils.fillEntity(obj, entity);
 			entities.add(entity);
 		}
@@ -1270,7 +1268,7 @@ public class GaePersistenceManagerAsync extends AbstractPersistenceManagerAsync 
 		}
 		// id with not null value means update
 		else{
-			entity = GaeMappingUtils.createEntityInstanceForUpdate(idField, info, obj);			
+			entity = GaeMappingUtils.createEntityInstanceForUpdate(info, obj);			
 		}
 		
 		GaeMappingUtils.fillEntity(obj, entity);
@@ -1305,7 +1303,7 @@ public class GaePersistenceManagerAsync extends AbstractPersistenceManagerAsync 
 			}
 			// id with not null value means update
 			else{
-				entity = GaeMappingUtils.createEntityInstanceForUpdate(idField, info, obj);			
+				entity = GaeMappingUtils.createEntityInstanceForUpdate(info, obj);			
 			}
 			
 			GaeMappingUtils.fillEntity(obj, entity);
@@ -1350,7 +1348,7 @@ public class GaePersistenceManagerAsync extends AbstractPersistenceManagerAsync 
 			}
 			// id with not null value means update
 			else{
-				entity = GaeMappingUtils.createEntityInstanceForUpdate(idField, info, obj);			
+				entity = GaeMappingUtils.createEntityInstanceForUpdate(info, obj);			
 			}
 			
 			GaeMappingUtils.fillEntity(obj, entity);

@@ -37,7 +37,10 @@ public interface Query<T> extends QueryData<T>{
 	Query<T> join(String field, String... sortFields);	
 	Query<T> search(String match, String... fields);
 	Query<T> search(String match, QueryOption opt, String... fields);
-	
+
+	Query<T> aggregated(Object aggregator, String fieldName);	
+	Query<T> owned(Object owner, String fieldName);	
+
 	T get();
 	int delete();
 	int update(Map<String, ?> fieldValues);
@@ -59,7 +62,7 @@ public interface Query<T> extends QueryData<T>{
 	
 	Iterable<T> iterPerPage(int limit);
 		
-	Query<T> clone();
+	Query<T> copy();
 	
 	/**
 	 * sets the limit number of entities to fetch

@@ -15,8 +15,11 @@
  */
 package siena;
 
+import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.math.BigDecimal;
 import java.security.MessageDigest;
 import java.text.ParseException;
@@ -27,6 +30,7 @@ import java.util.Iterator;
 import java.util.TimeZone;
 
 import siena.embed.Embedded;
+import siena.embed.JavaSerializer;
 import siena.embed.JsonSerializer;
 import siena.jdbc.JdbcPersistenceManager.JdbcClassInfo;
 
@@ -200,12 +204,21 @@ public class Util {
 	}
 	
 	public static Object fromObject(Field field, Object value) {
+		Class<?> type = field.getType();
 		if(value == null) {
-			if(field.getType().isPrimitive()) return 0;
+			if(type.isPrimitive()){
+				if(byte.class==type)    return (byte)0;
+				else if(Character.TYPE==type) return (char)0;
+				else if(Short.TYPE==type)   return (short)0;
+				else if(Integer.TYPE==type) return (int)0;
+				else if(Long.TYPE==type)    return (long)0;
+				else if(Float.TYPE==type)   return (float)0;
+				else if(Double.TYPE==type)  return (double)0;
+				else if(Boolean.TYPE==type) return false;
+			}
 			return null;
 		}
 		
-		Class<?> type = field.getType();
 		if(Number.class.isAssignableFrom(value.getClass())) {
 			Number number = (Number) value;
 			if(byte.class==type || Byte.class==type)    return number.byteValue();
@@ -217,17 +230,39 @@ public class Util {
 			else if(Boolean.TYPE==type || Boolean.class==type) return number!=(Number)0 ? true:false;
 			else if(BigDecimal.class==type) return (BigDecimal)value;
 		} 
-		else if(String.class.isAssignableFrom(value.getClass()) && Json.class.isAssignableFrom(type)) {
+		
+		if(String.class.isAssignableFrom(value.getClass()) && Json.class.isAssignableFrom(type)) {
 			return Json.loads((String) value);
 		} 
-		else if(field.getAnnotation(Embedded.class) != null && String.class.isAssignableFrom(value.getClass())) {
-			Json data = Json.loads((String) value);
-			return JsonSerializer.deserialize(field, data);
+		
+		Embedded embed = field.getAnnotation(Embedded.class);
+		if(embed != null) {
+			switch(embed.mode()){
+			case SERIALIZE_JSON:
+				if(String.class.isAssignableFrom(value.getClass())) {
+					Json data = Json.loads((String) value);
+					return JsonSerializer.deserialize(field, data);
+				}
+				break;
+			case SERIALIZE_JAVA:
+				try {
+					return JavaSerializer.deserialize((byte[])value);
+				} catch (IOException e) {
+					throw new SienaException(e);
+				} catch (ClassNotFoundException e) {
+					throw new SienaException(e);
+				}
+			case NATIVE:
+				break;
+			}
+			
 		}
-		else if(String.class.isAssignableFrom(value.getClass())&& type.isEnum()) {
+		
+		if(String.class.isAssignableFrom(value.getClass())&& type.isEnum()) {
 			return Enum.valueOf((Class<Enum>) type, (String)value);
 		}
-		else if(String.class.isAssignableFrom(value.getClass())&& type != String.class) {
+		
+		if(String.class.isAssignableFrom(value.getClass())&& type != String.class) {
 			return fromString(field.getType(), (String)value, true);
 		}
 		return value;
@@ -345,4 +380,16 @@ public class Util {
 			Util.setField(objTo, field, Util.readField(objFrom, field));
 		}
 	}
+	
+	public static Class<?> getGenericClass(Field f, int n) {
+		Type genericFieldType = f.getGenericType();
+		if(genericFieldType instanceof ParameterizedType){
+		    ParameterizedType aType = (ParameterizedType) genericFieldType;
+		    Type[] fieldArgTypes = aType.getActualTypeArguments();
+		    return (Class<?>) fieldArgTypes[n];
+		}
+		return null;
+	}
+
+
 }

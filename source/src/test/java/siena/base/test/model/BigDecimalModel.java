@@ -29,7 +29,7 @@ public class BigDecimalModel {
 	@Id(Generator.AUTO_INCREMENT)
 	public Long id;
 	
-	@DecimalPrecision(storateType=StorageType.NATIVE, size=21, scale=10)
+	@DecimalPrecision(storageType=StorageType.NATIVE, size=21, scale=10)
 	public BigDecimal big;
 
 	public BigDecimalModel() {

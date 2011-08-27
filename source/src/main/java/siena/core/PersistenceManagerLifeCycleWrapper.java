@@ -39,6 +39,16 @@ public class PersistenceManagerLifeCycleWrapper implements PersistenceManager{
 	public <T> Batch<T> createBatch(Class<T> clazz) {
 		return pm.createBatch(clazz);
 	}
+	
+	@Override
+	public <T> Many4PM<T> createMany(Class<T> clazz) {
+		return pm.createMany(clazz);
+	}
+	
+	@Override
+	public <T> One4PM<T> createOne(Class<T> clazz) {
+		return pm.createOne(clazz);
+	}
 
 	@Override
 	public void get(Object obj) {

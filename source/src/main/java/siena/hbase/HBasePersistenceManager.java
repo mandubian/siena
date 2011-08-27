@@ -23,11 +23,15 @@ import siena.BaseQueryData;
 import siena.ClassInfo;
 import siena.PersistenceManager;
 import siena.Query;
+import siena.QueryAggregated;
 import siena.QueryFilter;
 import siena.QueryFilterSearch;
 import siena.QueryJoin;
 import siena.QueryOrder;
+import siena.QueryOwned;
 import siena.SienaException;
+import siena.core.Many4PM;
+import siena.core.One4PM;
 import siena.core.async.PersistenceManagerAsync;
 import siena.core.async.QueryAsync;
 import siena.core.batch.Batch;
@@ -500,6 +504,36 @@ public class HBasePersistenceManager implements PersistenceManager {
 			return null;
 		}
 
+		@Override
+		public Query<T> copy() {
+			// TODO Auto-generated method stub
+			return null;
+		}
+
+		@Override
+		public List<QueryAggregated> getAggregatees() {
+			// TODO Auto-generated method stub
+			return null;
+		}
+
+		@Override
+		public Query<T> aggregated(Object aggregator, String fieldName) {
+			// TODO Auto-generated method stub
+			return null;
+		}
+
+		@Override
+		public Query<T> owned(Object owner, String fieldName) {
+			// TODO Auto-generated method stub
+			return null;
+		}
+
+		@Override
+		public List<QueryOwned> getOwnees() {
+			// TODO Auto-generated method stub
+			return null;
+		}
+
 
 
 	}
@@ -747,6 +781,18 @@ public class HBasePersistenceManager implements PersistenceManager {
 	public <T> int update(Query<T> query, Map<String, ?> fieldValues) {
 		// TODO Auto-generated method stub
 		return 0;
+	}
+
+	@Override
+	public <T> Many4PM<T> createMany(Class<T> clazz) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public <T> One4PM<T> createOne(Class<T> clazz) {
+		// TODO Auto-generated method stub
+		return null;
 	}
 
 
