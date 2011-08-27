@@ -8,6 +8,7 @@ import java.util.List;
 
 import junit.framework.TestCase;
 import siena.PersistenceManager;
+import siena.SienaException;
 import siena.base.test.model.PersonStringID;
 import siena.redis.RedisPersistenceManager;
 
@@ -36,7 +37,7 @@ public class RedisTest extends TestCase {
 		createPersistenceManager(classes);
 	}
 	
-	public void testInsertStringID() {
+	public void testInsertPersonStringID() {
 		PersonStringID maxwell = new PersonStringID();
 		maxwell.id = "MAXWELL";
 		maxwell.firstName = "James Clerk";
@@ -45,5 +46,34 @@ public class RedisTest extends TestCase {
 		maxwell.n = 4;
 
 		pm.insert(maxwell);
+		assertEquals(maxwell.id, "MAXWELL");
+
+		PersonStringID maxwellbis = new PersonStringID();
+		maxwellbis.id = "MAXWELL";
+		pm.get(maxwellbis);
+
+		assertEquals(maxwell, maxwellbis);
+
+		maxwell.firstName = "James Clerk UPD";
+		maxwell.lastName = "Maxwell UPD";
+		maxwell.city = "Edinburgh UPD";
+		maxwell.n = 5;
+
+		pm.update(maxwell);
+
+		maxwellbis = new PersonStringID();
+		maxwellbis.id = "MAXWELL";
+		pm.get(maxwellbis);
+
+		assertEquals(maxwell, maxwellbis);
+
+		pm.delete(maxwell);
+                
+		try {
+                    pm.get(maxwell);
+		} catch(SienaException ex){
+                    return;
+		}
+		fail();
 	}
 }

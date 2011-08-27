@@ -31,6 +31,8 @@ import siena.ClassInfo;
 import siena.PersistenceManager;
 import siena.Query;
 import siena.Util;
+import siena.core.Many4PM;
+import siena.core.One4PM;
 import siena.core.async.PersistenceManagerAsync;
 import siena.core.batch.Batch;
 
@@ -116,7 +118,27 @@ public class RedisPersistenceManager implements PersistenceManager{
 	
         @Override
 	public void get(Object obj) {
-		// TODO Auto-generated method stub
+           try {
+                Class<?> clazz = obj.getClass();
+                ClassInfo info = ClassInfo.getClassInfo(clazz);
+                
+                final String[] fields = new String[info.updateFields.size()];
+                final Map<String, String> map = new HashMap<String, String>();
+                
+                for (int i = 0; i < info.updateFields.size(); i++) {
+                    fields[i] = ClassInfo.getColumnNames(info.updateFields.get(i))[0];
+                }
+                final String key = info.tableName + ":" + Util.readField(obj, info.getIdField());
+                System.out.println("getting " + key);
+                jedis().multi(new TransactionBlock() {
+                    @Override
+                    public void execute() throws JedisException {
+                        hmget(key, fields);
+                    }
+                });
+            } finally {
+                returnJedis();
+            }
 		
 	}
 
@@ -427,5 +449,15 @@ public class RedisPersistenceManager implements PersistenceManager{
 		// TODO Auto-generated method stub
 		return 0;
 	}
+
+    @Override
+    public <T> Many4PM<T> createMany(Class<T> clazz) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public <T> One4PM<T> createOne(Class<T> clazz) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
 
 }
