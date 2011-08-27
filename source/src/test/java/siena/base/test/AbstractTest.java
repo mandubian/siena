@@ -18,6 +18,12 @@ public abstract class AbstractTest extends TestCase {
 	public abstract PersistenceManager createPersistenceManager(List<Class<?>> classes) throws Exception;
 	public abstract void postInit();
 
+	public abstract boolean supportsAutoincrement();
+	public abstract boolean supportsMultipleKeys();
+	public abstract boolean supportsDeleteException();
+	public abstract boolean supportsSearchStart();
+	public abstract boolean supportsSearchEnd();
+
 	@Override
 	protected void setUp() throws Exception {
 		super.setUp();

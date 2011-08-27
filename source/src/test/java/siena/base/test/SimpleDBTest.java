@@ -32,7 +32,7 @@ public class SimpleDBTest extends AbstractTest {
 		return sdb;
 	}
 
-	/*@Override
+	@Override
 	public boolean supportsAutoincrement() {
 		return false;
 	}
@@ -41,7 +41,26 @@ public class SimpleDBTest extends AbstractTest {
 	public boolean supportsMultipleKeys() {
 		return false;
 	}
+
+	@Override
+	public boolean supportsDeleteException() {
+		// TODO Auto-generated method stub
+		return false;
+	}
 	
+	@Override
+	public boolean supportsSearchStart() {
+		// TODO Auto-generated method stub
+		return true;
+	}
+
+	@Override
+	public boolean supportsSearchEnd() {
+		// TODO Auto-generated method stub
+		return true;
+	}
+	
+	/*
 	@Override
 	public boolean mustFilterToOrder() {
 		return true;
@@ -449,4 +468,6 @@ public class SimpleDBTest extends AbstractTest {
 		pm.delete(l);
 
 	}
+
+
 }

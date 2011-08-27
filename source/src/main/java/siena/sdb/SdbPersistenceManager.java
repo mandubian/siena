@@ -19,6 +19,7 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -26,6 +27,7 @@ import java.util.Properties;
 import siena.AbstractPersistenceManager;
 import siena.ClassInfo;
 import siena.Query;
+import siena.QueryJoin;
 import siena.SienaException;
 import siena.Util;
 import siena.core.async.PersistenceManagerAsync;
@@ -33,8 +35,11 @@ import siena.core.options.QueryOptionFetchType;
 import siena.core.options.QueryOptionOffset;
 import siena.core.options.QueryOptionPage;
 import siena.core.options.QueryOptionState;
+import siena.gae.GaeMappingUtils;
+import siena.gae.GaeQueryUtils;
 
 import com.amazonaws.AmazonClientException;
+import com.amazonaws.AmazonServiceException;
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.services.simpledb.AmazonSimpleDB;
 import com.amazonaws.services.simpledb.AmazonSimpleDBClient;
@@ -47,14 +52,19 @@ import com.amazonaws.services.simpledb.model.GetAttributesResult;
 import com.amazonaws.services.simpledb.model.ReplaceableItem;
 import com.amazonaws.services.simpledb.model.SelectRequest;
 import com.amazonaws.services.simpledb.model.SelectResult;
+import com.google.appengine.api.datastore.Entity;
+import com.google.appengine.api.datastore.Key;
 
 public class SdbPersistenceManager extends AbstractPersistenceManager {
 	public static final String DB = "SDB";
-	private static final String[] supportedOperators = { "<", ">", ">=", "<=", "!=", "=", "like", "not like", "in" };
+	private static final String[] supportedOperators = { "<", ">", ">=", "<=", "!=", "=", "LIKE", "NOT LIKE", "IN" };
 
     public final static PmOptionSdbReadConsistency CONSISTENT_READ = new PmOptionSdbReadConsistency(true);
     public final static PmOptionSdbReadConsistency NOT_CONSISTENT_READ = new PmOptionSdbReadConsistency(false);
 	
+    public final static int MAX_ITEMS_PER_CALL = 25;
+    public final static int MAX_ATTR_PER_SELECT = 20;
+
 	private AmazonSimpleDB sdb;
 	private String prefix;
 	private List<String> domains;
@@ -126,7 +136,16 @@ public class SdbPersistenceManager extends AbstractPersistenceManager {
 			for(String domain: doMap.keySet()){
 				checkDomain(domain);			
 				List<ReplaceableItem> doList = doMap.get(domain);
-				sdb.batchPutAttributes(new BatchPutAttributesRequest(domain, doList));			
+				
+				int len = doList.size()> MAX_ITEMS_PER_CALL ? MAX_ITEMS_PER_CALL: doList.size();
+				for(int i=0; i < doList.size(); i += len){
+					sdb.batchPutAttributes(
+							new BatchPutAttributesRequest(
+									domain, 
+									doList.subList(i, i+len)));			
+
+				}
+				
 			}
 		}catch(AmazonClientException ex){
 			throw new SienaException(ex);
@@ -136,6 +155,7 @@ public class SdbPersistenceManager extends AbstractPersistenceManager {
 	
 	public void get(Object obj) {
 		Class<?> clazz = obj.getClass();
+		ClassInfo info = ClassInfo.getClassInfo(obj.getClass());
 		
 		String domain = SdbMappingUtils.getDomainName(clazz, prefix);
 		try {
@@ -149,6 +169,11 @@ public class SdbPersistenceManager extends AbstractPersistenceManager {
 			}
 				
 			SdbMappingUtils.fillModel(req.getItemName(), res, clazz, obj);
+			
+			// join management
+			if(!info.joinFields.isEmpty()){
+				mapJoins(obj);
+			}
 		}catch(AmazonClientException ex){
 			throw new SienaException(ex);
 		}
@@ -158,17 +183,50 @@ public class SdbPersistenceManager extends AbstractPersistenceManager {
 		return get(Arrays.asList(models));
 	}
 
-	public <T> int get(Iterable<T> models) {
+	protected <T> int rawGet(Iterable<T> models) {
 		StringBuffer domainBuf = new StringBuffer();
 		SelectRequest req = SdbMappingUtils.buildBatchGetQuery(models, prefix, domainBuf);
 		req.setConsistentRead(isReadConsistent());
 		try {	
 			checkDomain(domainBuf.toString());
 			SelectResult res = sdb.select(req);
-			return SdbMappingUtils.mapSelectResult(res, models);
+			int nb = SdbMappingUtils.mapSelectResult(res, models);
+			
+			// join management
+			// gets class
+			Class<?> clazz = null;
+			for(T obj: models){
+				if(clazz == null){
+					clazz = obj.getClass();
+					break;
+				}
+			}
+			if(!ClassInfo.getClassInfo(clazz).joinFields.isEmpty()){
+				mapJoins(models);
+			}
+			
+			return nb;
 		}catch(AmazonClientException ex){
 			throw new SienaException(ex);
 		}
+	}
+
+	
+	public <T> int get(Iterable<T> models) {
+		Iterator<T> it = models.iterator();
+		
+		int total = 0;
+		while(it.hasNext()){
+			List<T> subList = new ArrayList<T>();
+			for(int i=0; i < MAX_ATTR_PER_SELECT && it.hasNext();i++){
+				subList.add(it.next());
+			}
+			if(!subList.isEmpty()){
+				total += rawGet(subList);
+			}
+		}
+		
+		return total;
 	}
 
 	
@@ -209,7 +267,14 @@ public class SdbPersistenceManager extends AbstractPersistenceManager {
 			for(String domain: doMap.keySet()){
 				checkDomain(domain);			
 				List<ReplaceableItem> doList = doMap.get(domain);
-				sdb.batchPutAttributes(new BatchPutAttributesRequest(domain, doList));			
+				
+				int len = doList.size()> MAX_ITEMS_PER_CALL ? MAX_ITEMS_PER_CALL: doList.size();
+				for(int i=0; i < doList.size(); i += len){
+					sdb.batchPutAttributes(
+							new BatchPutAttributesRequest(
+									domain, 
+									doList.subList(i, i+len)));			
+				}
 			}
 		}catch(AmazonClientException ex){
 			throw new SienaException(ex);
@@ -255,8 +320,15 @@ public class SdbPersistenceManager extends AbstractPersistenceManager {
 			for(String domain: doMap.keySet()){
 				checkDomain(domain);			
 				List<DeletableItem> doList = doMap.get(domain);
-				sdb.batchDeleteAttributes(new BatchDeleteAttributesRequest(domain, doList));			
-			}
+				int len = doList.size() > MAX_ITEMS_PER_CALL ? MAX_ITEMS_PER_CALL: doList.size();
+				for(int i=0; i < doList.size(); i += len){
+					sdb.batchDeleteAttributes(
+							new BatchDeleteAttributesRequest(
+									domain, 
+									doList.subList(i, i + len)));			
+
+				}
+			}		
 		}catch(AmazonClientException ex){
 			throw new SienaException(ex);
 		}
@@ -325,6 +397,11 @@ public class SdbPersistenceManager extends AbstractPersistenceManager {
 
 			SdbMappingUtils.fillModel(req.getItemName(), res, clazz, obj);
 			
+			// join management
+			if(!ClassInfo.getClassInfo(clazz).joinFields.isEmpty()){
+				mapJoins(obj);
+			}
+			
 			return obj;
 		}catch(AmazonClientException ex){
 			throw new SienaException(ex);
@@ -335,7 +412,7 @@ public class SdbPersistenceManager extends AbstractPersistenceManager {
 		return getByKeys(clazz, Arrays.asList(keys));
 	}
 	
-	public <T> List<T> getByKeys(Class<T> clazz, Iterable<?> keys) {
+	protected <T> List<T> rawGetByKeys(Class<T> clazz, Iterable<?> keys) {
 		try {	
 			StringBuffer domainBuf = new StringBuffer();
 
@@ -343,11 +420,36 @@ public class SdbPersistenceManager extends AbstractPersistenceManager {
 			checkDomain(domainBuf.toString());
 			req.setConsistentRead(isReadConsistent());
 			SelectResult res = sdb.select(req);
-			return SdbMappingUtils.mapSelectResultToList(res, clazz);
+			List<T> models = SdbMappingUtils.mapSelectResultToListOrderedFromKeys(res, clazz, keys);
+			
+			// join management
+			if(!ClassInfo.getClassInfo(clazz).joinFields.isEmpty()){
+				mapJoins(models);
+			}
+			
+			return models;
 		}catch(AmazonClientException ex){
 			throw new SienaException(ex);
 		}
 	}
+	
+	public <T> List<T> getByKeys(Class<T> clazz, Iterable<?> keys) {
+		Iterator<?> it = keys.iterator();
+		
+		List<T> list = new ArrayList<T>();
+		while(it.hasNext()){
+			List<Object> subList = new ArrayList<Object>();
+			for(int i=0; i < MAX_ATTR_PER_SELECT && it.hasNext();i++){
+				subList.add(it.next());
+			}
+			if(!subList.isEmpty()){
+				list.addAll(rawGetByKeys(clazz, subList));
+			}
+		}
+		
+		return list;
+	}
+
 
 	public <T> int count(Query<T> query) {
 		StringBuffer domainBuf = new StringBuffer();
@@ -447,6 +549,8 @@ public class SdbPersistenceManager extends AbstractPersistenceManager {
 			else {
 				if(limit != Integer.MAX_VALUE){
 					sdbCtx.realPageSize = limit;
+				}else {
+					sdbCtx.realPageSize = 0;
 				}
 			}
 		}else {
@@ -463,7 +567,7 @@ public class SdbPersistenceManager extends AbstractPersistenceManager {
 		}
 		
 		// if previousPage has detected there is no more data, simply returns an empty list
-		if(sdbCtx.noMoreDataBefore){
+		if(sdbCtx.noMoreDataBefore || sdbCtx.noMoreDataAfter){
 			return new ArrayList<T>();
 		}
 						
@@ -477,11 +581,12 @@ public class SdbPersistenceManager extends AbstractPersistenceManager {
 			
 			// activates the SdbCtx now that it is initialised
 			sdbCtx.activate();
+									
 			// sets the current cursor (in stateful mode, cursor is always kept for further use)
 			if(pag.isPaginating()){
 				String token = res.getNextToken();
 				if(token!=null){
-					sdbCtx.addToken(token);
+					sdbCtx.addToken(token, sdbCtx.realOffset+sdbCtx.realPageSize+offset);
 				}
 				
 				// if paginating and 0 results then no more data else resets noMoreDataAfter
@@ -491,9 +596,16 @@ public class SdbPersistenceManager extends AbstractPersistenceManager {
 					sdbCtx.noMoreDataAfter = false;
 				}
 			}else{
+				// follows the real offset
+				sdbCtx.realOffset += sdbCtx.realPageSize + offset;
+				
 				String token = res.getNextToken();
 				if(token!=null){
-					sdbCtx.addAndMoveToken(token);
+					sdbCtx.addAndMoveToken(token, sdbCtx.realOffset);
+				}else {
+					// forces to go to next token to invalidate current one
+					// if there are no token after, currentToken will be null
+					sdbCtx.nextToken();
 				}
 			}		
 			// cursor not yet created
@@ -507,9 +619,26 @@ public class SdbPersistenceManager extends AbstractPersistenceManager {
 			case NORMAL:
 			default:
 				if(off.isActive()){
-					return SdbMappingUtils.mapSelectResultToList(res, query.getQueriedClass(), off.offset);
+					List<T> results = SdbMappingUtils.mapSelectResultToList(res, query.getQueriedClass(), off.offset);
+					
+					// join management
+					if(!query.getJoins().isEmpty() 
+							|| !ClassInfo.getClassInfo(query.getQueriedClass()).joinFields.isEmpty())
+						mapJoins(query, results);
+					
+					if(state.isStateless()){
+						off.passivate();
+					}
+					return results;
 				}else {
-					return SdbMappingUtils.mapSelectResultToList(res, query.getQueriedClass());
+					List<T> results = SdbMappingUtils.mapSelectResultToList(res, query.getQueriedClass());
+					
+					// join management
+					if(!query.getJoins().isEmpty() 
+							|| !ClassInfo.getClassInfo(query.getQueriedClass()).joinFields.isEmpty())
+						mapJoins(query, results);
+					
+					return results;
 				}
 			}			
 		}
@@ -531,7 +660,7 @@ public class SdbPersistenceManager extends AbstractPersistenceManager {
 			if(pag.isPaginating()){
 				token = res.getNextToken();
 				if(token!=null){
-					sdbCtx.addToken(token);
+					sdbCtx.addToken(token, sdbCtx.realOffset + sdbCtx.realPageSize + offset);
 				}
 				// if paginating and 0 results then no more data else resets noMoreDataAfter
 				if(res.getItems().size()==0){
@@ -540,18 +669,40 @@ public class SdbPersistenceManager extends AbstractPersistenceManager {
 					sdbCtx.noMoreDataAfter = false;
 				}
 			}else{
+				// follows the real offset
+				sdbCtx.realOffset += sdbCtx.realPageSize + offset;
+				
 				token = res.getNextToken();
 				if(token!=null){
-					sdbCtx.addAndMoveToken(token);
+					sdbCtx.addAndMoveToken(token, sdbCtx.realOffset);
+				}else {
+					// forces to go to next token to invalidate current one
+					// if there are no token after, currentToken will be null
+					sdbCtx.nextToken();
 				}
 			}
 			
 			switch(fetchType.fetchType){
 			case KEYS_ONLY:
-				return SdbMappingUtils.mapSelectResultToListKeysOnly(res, query.getQueriedClass());
+				if(off.isActive()){
+					return SdbMappingUtils.mapSelectResultToListKeysOnly(res, query.getQueriedClass(), off.offset);
+				} else {
+					return SdbMappingUtils.mapSelectResultToListKeysOnly(res, query.getQueriedClass());					
+				}
 			case NORMAL:
 			default:
-				return SdbMappingUtils.mapSelectResultToList(res, query.getQueriedClass());
+				List<T> results = null;
+				if(off.isActive()){
+					results = SdbMappingUtils.mapSelectResultToList(res, query.getQueriedClass(), off.offset);
+				} else {
+					results = SdbMappingUtils.mapSelectResultToList(res, query.getQueriedClass());
+				}
+				// join management
+				if(!query.getJoins().isEmpty() 
+						|| !ClassInfo.getClassInfo(query.getQueriedClass()).joinFields.isEmpty())
+					mapJoins(query, results);
+				
+				return results;
 			}
 		}
 	}
@@ -587,6 +738,8 @@ public class SdbPersistenceManager extends AbstractPersistenceManager {
 			else {
 				if(limit != Integer.MAX_VALUE){
 					sdbCtx.realPageSize = limit;
+				}else {
+					sdbCtx.realPageSize = 0;
 				}
 			}
 		}else {
@@ -603,7 +756,7 @@ public class SdbPersistenceManager extends AbstractPersistenceManager {
 		}
 		
 		// if previousPage has detected there is no more data, simply returns an empty list
-		if(sdbCtx.noMoreDataBefore){
+		if(sdbCtx.noMoreDataBefore || sdbCtx.noMoreDataAfter){
 			return new ArrayList<T>();
 		}
 						
@@ -621,7 +774,7 @@ public class SdbPersistenceManager extends AbstractPersistenceManager {
 			if(pag.isPaginating()){
 				String token = res.getNextToken();
 				if(token!=null){
-					sdbCtx.addToken(token);
+					sdbCtx.addToken(token, sdbCtx.realOffset + sdbCtx.realPageSize + offset);
 				}
 				
 				// if paginating and 0 results then no more data else resets noMoreDataAfter
@@ -633,11 +786,15 @@ public class SdbPersistenceManager extends AbstractPersistenceManager {
 			}else{
 				String token = res.getNextToken();
 				if(token!=null){
-					sdbCtx.addAndMoveToken(token);
+					sdbCtx.addAndMoveToken(token, sdbCtx.realOffset + sdbCtx.realPageSize + offset);
+				}else {
+					// forces to go to next token to invalidate current one
+					// if there are no token after, currentToken will be null
+					sdbCtx.nextToken();
 				}
 			}		
 			
-			return new SdbSienaIterable<T>(res.getItems(), query);
+			return new SdbSienaIterable<T>(this, res.getItems(), query);
 		}
 		else {
 			// we prepare the query each time
@@ -657,7 +814,7 @@ public class SdbPersistenceManager extends AbstractPersistenceManager {
 			if(pag.isPaginating()){
 				token = res.getNextToken();
 				if(token!=null){
-					sdbCtx.addToken(token);
+					sdbCtx.addToken(token, sdbCtx.realOffset + sdbCtx.realPageSize + offset);
 				}
 				// if paginating and 0 results then no more data else resets noMoreDataAfter
 				if(res.getItems().size()==0){
@@ -668,11 +825,15 @@ public class SdbPersistenceManager extends AbstractPersistenceManager {
 			}else{
 				token = res.getNextToken();
 				if(token!=null){
-					sdbCtx.addAndMoveToken(token);
+					sdbCtx.addAndMoveToken(token, sdbCtx.realOffset + sdbCtx.realPageSize + offset);
+				}else {
+					// forces to go to next token to invalidate current one
+					// if there are no token after, currentToken will be null
+					sdbCtx.nextToken();
 				}
 			}
 			
-			return new SdbSienaIterable<T>(res.getItems(), query);
+			return new SdbSienaIterable<T>(this, res.getItems(), query);
 		}
 	}
 	
@@ -706,23 +867,25 @@ public class SdbPersistenceManager extends AbstractPersistenceManager {
 
 	@Override
 	public <T> int deleteByKeys(Class<T> clazz, Object... keys) {
-		// TODO Auto-generated method stub
-		return 0;
+		return deleteByKeys(clazz, Arrays.asList(keys));
 	}
 
 
 	@Override
 	public <T> void nextPage(Query<T> query) {
-		// TODO Auto-generated method stub
-		
+		SdbMappingUtils.nextPage(query);
 	}
 
 	@Override
 	public <T> void previousPage(Query<T> query) {
-		// TODO Auto-generated method stub
-		
+		SdbMappingUtils.previousPage(query);
 	}
 
+	@Override
+	public <T> void paginate(Query<T> query) {
+		// NOTHING TO DO
+	}
+	
 	@Override
 	public <T> PersistenceManagerAsync async() {
 		// TODO Auto-generated method stub
@@ -730,11 +893,7 @@ public class SdbPersistenceManager extends AbstractPersistenceManager {
 	}
 
 
-	@Override
-	public <T> void paginate(Query<T> query) {
-		// TODO Auto-generated method stub
-		
-	}
+
 
 
 	
@@ -749,10 +908,213 @@ public class SdbPersistenceManager extends AbstractPersistenceManager {
 
 	@Override
 	public <T> int deleteByKeys(Class<T> clazz, Iterable<?> keys) {
-		// TODO Auto-generated method stub
-		return 0;
+		List<DeletableItem> doList = new ArrayList<DeletableItem>(); 
+		int nb = 0;
+		String domain = SdbMappingUtils.getDomainName(clazz, prefix);
+		for(Object key: keys){
+			doList.add(SdbMappingUtils.createDeletableItemFromKey(clazz, key));			
+			nb++;
+		}
+		try {
+			checkDomain(domain);			
+			int len = doList.size() > MAX_ITEMS_PER_CALL ? MAX_ITEMS_PER_CALL: doList.size();
+			for(int i=0; i < doList.size(); i += len){
+				sdb.batchDeleteAttributes(
+					new BatchDeleteAttributesRequest(
+						domain, 
+						doList.subList(i, i + len)));			
+			}
+		}catch(AmazonClientException ex){
+			throw new SienaException(ex);
+		}
+		return nb;
 	}
 
 
 
+	protected <T> T mapJoins(T model) {
+		// join queries
+		Map<Class<?>, Map<String, Object>> classMap = new HashMap<Class<?>, Map<String, Object>>();
+		
+		// sorts by class and itemName
+		for(Field field: ClassInfo.getClassInfo(model.getClass()).joinFields)
+		{
+			Map<String, Object> strMap = classMap.get(field.getType());
+			if(strMap == null){
+				strMap = new HashMap<String, Object>();
+				classMap.put(field.getType(), strMap);
+			}
+			
+			String itemName = SdbMappingUtils.toString(Util.readField(model, field));
+			strMap.put(itemName, null);
+		}
+		
+		for(Class<?> clazz: classMap.keySet()){
+			List<?> objs = this.getByKeys(clazz, classMap.get(clazz).keySet());
+			Map<String, Object> strMap = classMap.get(clazz);
+			for(Object obj:objs){
+				String itemName = SdbMappingUtils.getItemName(clazz, obj);
+				strMap.put(itemName, obj);
+			}
+		}
+					
+		for(Field field: ClassInfo.getClassInfo(model.getClass()).joinFields){			
+			String itemName = SdbMappingUtils.toString(Util.readField(model, field));
+			Util.setField(model, field, classMap.get(field.getType()).get(itemName));
+		}
+
+		return model;	
+	}
+	
+	protected <T> void mapJoins(Iterable<T> models) {
+		
+		// join queries
+		Map<Class<?>, Map<String, Object>> classMap = new HashMap<Class<?>, Map<String, Object>>();
+		
+		for(T model: models){
+			// sorts by class and itemName
+			for(Field field: ClassInfo.getClassInfo(model.getClass()).joinFields)
+			{
+				Map<String, Object> strMap = classMap.get(field.getType());
+				if(strMap == null){
+					strMap = new HashMap<String, Object>();
+					classMap.put(field.getType(), strMap);
+				}
+				
+				String itemName = SdbMappingUtils.toString(Util.readField(model, field));
+				strMap.put(itemName, null);
+			}
+		}
+		
+		for(Class<?> clazz: classMap.keySet()){
+			List<?> objs = this.getByKeys(clazz, classMap.get(clazz).keySet());
+			Map<String, Object> strMap = classMap.get(clazz);
+			for(Object obj:objs){
+				String itemName = SdbMappingUtils.getItemName(clazz, obj);
+				strMap.put(itemName, obj);
+			}
+		}
+					
+		for(T model: models){
+			for(Field field: ClassInfo.getClassInfo(model.getClass()).joinFields){			
+				String itemName = SdbMappingUtils.toString(Util.readField(model, field));
+				Util.setField(model, field, classMap.get(field.getType()).get(itemName));
+			}
+		}
+	}
+	
+	protected <T> T mapJoins(Query<T> query, T model) {
+		List<QueryJoin> joins = query.getJoins();
+		
+		// join queries
+		Map<Class<?>, Map<String, Object>> classMap = new HashMap<Class<?>, Map<String, Object>>();
+		
+		// sorts by class and itemName
+		// joins in query
+		for (QueryJoin join : joins)
+		{
+			Field field = join.field;
+			Map<String, Object> strMap = classMap.get(field.getType());
+			if(strMap == null){
+				strMap = new HashMap<String, Object>();
+				classMap.put(field.getType(), strMap);
+			}
+			
+			String itemName = SdbMappingUtils.toString(Util.readField(model, field));
+			strMap.put(itemName, null);
+		}
+		
+		// join annotations
+		for(Field field: 
+			ClassInfo.getClassInfo(query.getQueriedClass()).joinFields)
+		{
+			Map<String, Object> strMap = classMap.get(field.getType());
+			if(strMap == null){
+				strMap = new HashMap<String, Object>();
+				classMap.put(field.getType(), strMap);
+			}
+			
+			String itemName = SdbMappingUtils.toString(Util.readField(model, field));
+			strMap.put(itemName, null);
+		}
+		
+		for(Class<?> clazz: classMap.keySet()){
+			List<?> objs = this.getByKeys(clazz, classMap.get(clazz).keySet());
+			Map<String, Object> strMap = classMap.get(clazz);
+			for(Object obj:objs){
+				String itemName = SdbMappingUtils.getItemName(clazz, obj);
+				strMap.put(itemName, obj);
+			}
+		}
+					
+		for(Field field: ClassInfo.getClassInfo(model.getClass()).joinFields){			
+			String itemName = SdbMappingUtils.toString(Util.readField(model, field));
+			Util.setField(model, field, classMap.get(field.getType()).get(itemName));
+		}
+
+		return model;	
+	}
+	
+	protected <T> List<T> mapJoins(Query<T> query, List<T> models) {
+		List<QueryJoin> joins = query.getJoins();
+		
+		// join queries
+		Map<Class<?>, Map<String, Object>> classMap = new HashMap<Class<?>, Map<String, Object>>();
+		
+		// sorts by class and itemName
+		// joins in query
+		for (final T model : models) {
+			for (QueryJoin join : joins)
+			{
+				Field field = join.field;
+				Map<String, Object> strMap = classMap.get(field.getType());
+				if(strMap == null){
+					strMap = new HashMap<String, Object>();
+					classMap.put(field.getType(), strMap);
+				}
+				
+				String itemName = SdbMappingUtils.toString(Util.readField(model, field));
+				strMap.put(itemName, null);
+			}
+			
+			// join annotations
+			for(Field field: 
+				ClassInfo.getClassInfo(query.getQueriedClass()).joinFields)
+			{
+				Map<String, Object> strMap = classMap.get(field.getType());
+				if(strMap == null){
+					strMap = new HashMap<String, Object>();
+					classMap.put(field.getType(), strMap);
+				}
+				
+				String itemName = SdbMappingUtils.toString(Util.readField(model, field));
+				strMap.put(itemName, null);
+			}
+		}
+		
+		for(Class<?> clazz: classMap.keySet()){
+			List<?> objs = this.getByKeys(clazz, classMap.get(clazz).keySet());
+			Map<String, Object> strMap = classMap.get(clazz);
+			for(Object obj:objs){
+				String itemName = SdbMappingUtils.getItemName(clazz, obj);
+				strMap.put(itemName, obj);
+			}
+		}
+					
+		for(T model: models){
+			for (QueryJoin join : joins){
+				Field field = join.field;
+				String itemName = SdbMappingUtils.toString(Util.readField(model, field));
+				Util.setField(model, field, classMap.get(field.getType()).get(itemName));
+			}
+			for(Field field: ClassInfo.getClassInfo(model.getClass()).joinFields){			
+				String itemName = SdbMappingUtils.toString(Util.readField(model, field));
+				Util.setField(model, field, classMap.get(field.getType()).get(itemName));
+			}
+		}
+
+		return models;
+	}
+
+		
 }

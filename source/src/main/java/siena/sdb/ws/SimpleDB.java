@@ -233,7 +233,10 @@ public class SimpleDB {
 	}
 	
 	public static String quote(String s) {
-		return "\""+s.replace("'", "''")+"\"";
+		if(s != null){
+			return "\""+s.replace("'", "''")+"\"";
+		}
+		return null;
 	}
 
 } abstract class BaseHandler extends DefaultHandler {

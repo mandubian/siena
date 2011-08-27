@@ -14,6 +14,7 @@ public class QueryOptionSdbContext extends QueryOption{
     public static final int ID 	= 0x3001;
 	
     public List<String> tokens = new ArrayList<String>();
+    public List<Integer> tokenOffsets = new ArrayList<Integer>();
     // -1 means empty
     public int tokenIdx = -1;
     public boolean useToken = true;
@@ -22,6 +23,7 @@ public class QueryOptionSdbContext extends QueryOption{
     public boolean noMoreDataBefore = false;
     public boolean noMoreDataAfter = false;
     public int realPageSize = 0;
+    public int realOffset = 0;
    //public PreparedQuery query;
 	public QueryOptionSdbContext() {
 		super(ID);
@@ -35,50 +37,64 @@ public class QueryOptionSdbContext extends QueryOption{
 	public QueryOptionSdbContext(QueryOptionSdbContext option) {
 		super(option);
 		Collections.copy(this.tokens, option.tokens);
+		Collections.copy(this.tokenOffsets, option.tokenOffsets);
 		this.tokenIdx = option.tokenIdx;
 		this.useToken = option.useToken;
 		this.noMoreDataBefore = option.noMoreDataBefore;
 		this.noMoreDataAfter = option.noMoreDataAfter;
 		this.realPageSize = option.realPageSize;
+		this.realOffset = option.realOffset;
 		//this.query = option.query;
 	}
 	
-	public void addToken(String token){
+	public void addToken(String token, int offset){
 		// if cursor in the middle of the list, replace next one
 		if(tokenIdx < tokens.size()-1 && tokenIdx>=0){
 			tokens.set(tokenIdx+1, token);
+			tokenOffsets.set(tokenIdx+1, offset);
 		}
 		// if first or last cursor in the list, adds a new cursor
 		else{
 			tokens.add(tokenIdx+1, token);
+			tokenOffsets.add(tokenIdx+1, offset);
 		}
 	}
 	
-	public void addAndMoveToken(String token){
+	public void addAndMoveToken(String token, int offset){
 		// if cursor in the middle of the list, replace next one
 		if(tokenIdx < tokens.size()-1 && tokenIdx>=0){
 			tokens.set(++tokenIdx, token);
+			tokenOffsets.set(tokenIdx, offset);
 		}
 		// if first or last cursor in the list, adds a new cursor
 		else{
 			tokens.add(++tokenIdx, token);
+			tokenOffsets.add(tokenIdx, offset);
 		}
 	}
 	
-	public void setCurrentToken(String token){
+	public void setCurrentToken(String token, int offset){
 		// replaces the cursor at current index (useful for iterators)
 		if(tokenIdx!=-1)
 			tokens.set(tokenIdx, token);
 		else {
-			addAndMoveToken(token);
+			addAndMoveToken(token, offset);
 		}
 	}
 	
 	public String currentToken() {
-		if(tokenIdx!=-1){
+		if(tokenIdx!=-1 && tokenIdx != tokens.size()){
 			return tokens.get(tokenIdx);
 		}else {
 			return null;
+		}
+	}
+	
+	public int currentTokenOffset() {
+		if(tokenIdx!=-1 && tokenIdx != tokens.size()){
+			return tokenOffsets.get(tokenIdx);
+		}else {
+			return 0;
 		}
 	}
 	
@@ -91,8 +107,19 @@ public class QueryOptionSdbContext extends QueryOption{
 				return tokens.get(++tokenIdx);
 			}
 			else {
-				return tokens.get(tokenIdx);
+				tokenIdx = sz;
+				//return tokens.get(tokenIdx);
+				return null;
 			}
+		}
+	}
+	
+	public boolean hasToken(){
+		int sz = tokens.size();
+		if(sz==0){
+			return false;
+		}else {
+			return true;
 		}
 	}
 	
@@ -101,9 +128,14 @@ public class QueryOptionSdbContext extends QueryOption{
 		if(sz==0){
 			return false;
 		}else {
-			return true;
+			if(tokenIdx<sz-1){
+				return true;
+			}
+			else {
+				return false;
+			}
 		}
-	}
+	}	
 	
 	public String previousToken(){
 		int sz = tokens.size();
