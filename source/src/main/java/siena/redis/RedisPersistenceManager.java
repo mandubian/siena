@@ -24,6 +24,7 @@ import java.util.Properties;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.JedisPoolConfig;
+import redis.clients.jedis.Response;
 import redis.clients.jedis.TransactionBlock;
 import redis.clients.jedis.exceptions.JedisException;
 import siena.BaseQueryData;
@@ -116,28 +117,29 @@ public class RedisPersistenceManager implements PersistenceManager{
         }
 	
         @Override
-	public void get(Object obj) {
+	public void get(final Object obj) {
+           List<Object> res = null;
            try {
                 Class<?> clazz = obj.getClass();
                 ClassInfo info = ClassInfo.getClassInfo(clazz);
-                
+
                 final String[] fields = new String[info.updateFields.size()];
-                
+
                 for (int i = 0; i < info.updateFields.size(); i++) {
                     fields[i] = ClassInfo.getColumnNames(info.updateFields.get(i))[0];
                 }
                 final String key = info.tableName + ":" + Util.readField(obj, info.getIdField());
                 System.out.println("getting " + key);
-                jedis().multi(new TransactionBlock() {
-                    @Override
-                    public void execute() throws JedisException {
-                        hmget(key, fields);
-                    }
-                });
+                res = jedis().multi(new TransactionBlock() {
+                     @Override
+                     public void execute() throws JedisException {
+                         hmget(key, fields).get();
+                     }
+                 });
             } finally {
+                RedisMappingUtils.fillModel(obj, res);
                 returnJedis();
             }
-		
 	}
 
 	@Override
