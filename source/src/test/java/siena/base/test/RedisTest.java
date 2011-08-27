@@ -51,7 +51,7 @@ public class RedisTest extends TestCase {
 		PersonStringID maxwellbis = new PersonStringID();
 		maxwellbis.id = "MAXWELL";
 		pm.get(maxwellbis);
-
+                
 		assertEquals(maxwell, maxwellbis);
 
 		maxwell.firstName = "James Clerk UPD";
@@ -75,5 +75,62 @@ public class RedisTest extends TestCase {
                     return;
 		}
 		fail();
+	}
+        
+        public void testInsertPersonStringIDMultiple() {
+            // INSERTS
+            ArrayList<PersonStringID> l = new ArrayList<PersonStringID>();
+            for(int i=0; i<10; i++){
+                    PersonStringID maxwell = new PersonStringID();
+                    maxwell.id = "MAXWELL"+i;
+                    maxwell.firstName = "James"+i;
+                    maxwell.lastName = "Maxwell"+i;
+                    maxwell.city = "Edinburgh"+i;
+                    maxwell.n = i;
+                    l.add(maxwell);
+            }
+
+            int nb = pm.insert(l);
+            assertEquals(10, nb);
+
+            // GETS
+            ArrayList<PersonStringID> l2 = new ArrayList<PersonStringID>();
+            for(int i=0; i<10; i++){
+                    PersonStringID maxwell = new PersonStringID();
+                    maxwell.id = "MAXWELL"+i;
+                    l2.add(maxwell);
+            }
+            nb = pm.get(l2);
+            assertEquals(10, nb);
+
+            for(int i=0; i<10; i++){
+                    assertEquals(l.get(i), l2.get(i));
+            }
+
+            // UPDATES
+            for(int i=0; i<10; i++){
+                    PersonStringID maxwell = l.get(i);
+                    maxwell.firstName = "James UPD"+i;
+                    maxwell.lastName = "Maxwell UPD"+i;
+                    maxwell.city = "Edinburgh UPD"+i;
+                    maxwell.n = i+5;
+            }
+
+            nb = pm.update(l);
+            assertEquals(10, nb);
+
+            nb = pm.get(l2);
+            assertEquals(10, nb);
+
+            for(int i=0; i<10; i++){
+                    assertEquals(l.get(i), l2.get(i));
+            }
+
+            // DELETES
+            pm.delete(l);
+
+            nb = pm.get(l2);
+            assertEquals(0, nb);
+
 	}
 }

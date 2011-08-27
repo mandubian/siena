@@ -104,7 +104,6 @@ public class RedisPersistenceManager implements PersistenceManager{
                 final String key = info.tableName + ":" + Util.readField(obj, info.getIdField());
                 System.out.println("saving " + key + ": " + map);
                 jedis().multi(new TransactionBlock() {
-
                     @Override
                     public void execute() throws JedisException {
                         del(key);
@@ -123,7 +122,6 @@ public class RedisPersistenceManager implements PersistenceManager{
                 ClassInfo info = ClassInfo.getClassInfo(clazz);
                 
                 final String[] fields = new String[info.updateFields.size()];
-                final Map<String, String> map = new HashMap<String, String>();
                 
                 for (int i = 0; i < info.updateFields.size(); i++) {
                     fields[i] = ClassInfo.getColumnNames(info.updateFields.get(i))[0];
@@ -164,8 +162,7 @@ public class RedisPersistenceManager implements PersistenceManager{
 
 	@Override
 	public void update(Object obj) {
-		// TODO Auto-generated method stub
-		
+            insert(obj);
 	}
 
 	@Override
