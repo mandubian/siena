@@ -72,6 +72,10 @@ public class GaeQueryUtils {
 				// IN and NOT_EQUAL doesn't allow to use cursors
 				if(op == FilterOperator.IN || op == FilterOperator.NOT_EQUAL){
 					QueryOptionGaeContext gaeCtx = (QueryOptionGaeContext)query.option(QueryOptionGaeContext.ID);
+					if(gaeCtx==null){
+						gaeCtx = new QueryOptionGaeContext();
+						query.options().put(gaeCtx.type, gaeCtx);
+					}
 					gaeCtx.useCursor = false;
 					query.option(QueryOptionOffset.ID).activate();					
 				}
@@ -265,6 +269,10 @@ public class GaeQueryUtils {
 				// IN and NOT_EQUAL doesn't allow to use cursors
 				if(op == FilterOperator.IN || op == FilterOperator.NOT_EQUAL){
 					QueryOptionGaeContext gaeCtx = (QueryOptionGaeContext)query.option(QueryOptionGaeContext.ID);
+					if(gaeCtx==null){
+						gaeCtx = new QueryOptionGaeContext();
+						query.options().put(gaeCtx.type, gaeCtx);
+					}
 					gaeCtx.useCursor = false;
 					query.option(QueryOptionOffset.ID).activate();					
 				}
