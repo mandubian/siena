@@ -1045,6 +1045,18 @@ public class GaeTest extends BaseTest {
 	}
 
 	@Override
+	public void testCountFilterNotEqual() {
+		// TODO Auto-generated method stub
+		super.testCountFilterNotEqual();
+	}
+
+	@Override
+	public void testCountFilterIn() {
+		// TODO Auto-generated method stub
+		super.testCountFilterIn();
+	}
+
+	@Override
 	public void testCountFilterUUID() {
 		// TODO Auto-generated method stub
 		super.testCountFilterUUID();

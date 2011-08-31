@@ -784,6 +784,14 @@ public abstract class BaseTest extends TestCase {
 		assertEquals(2, pm.createQuery(PersonUUID.class).filter("n<", 3).count());
 	}
 
+	public void testCountFilterNotEqual() {
+		assertEquals(2, pm.createQuery(PersonUUID.class).filter("n!=", 3).count());
+	}
+
+	public void testCountFilterIn() {
+		assertEquals(2, pm.createQuery(PersonUUID.class).filter("n IN", Arrays.asList(1, 2)).count());
+	}
+
 	public void testCountFilterUUID() {
 		List<PersonUUID> l = getOrderedPersonUUIDs();
 		assertEquals(2, pm.createQuery(PersonUUID.class).filter("id<", l.get(2).id).count());
