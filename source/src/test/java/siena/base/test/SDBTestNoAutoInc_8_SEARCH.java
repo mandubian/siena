@@ -59,30 +59,6 @@ public class SDBTestNoAutoInc_8_SEARCH extends BaseTestNoAutoInc_8_SEARCH {
 	}
 
 	@Override
-	public void testSearchSingle() {
-		// TODO Auto-generated method stub
-		super.testSearchSingle();
-	}
-
-	@Override
-	public void testSearchSingleKeysOnly() {
-		// TODO Auto-generated method stub
-		super.testSearchSingleKeysOnly();
-	}
-
-	@Override
-	public void testSearchSingleTwice() {
-		// TODO Auto-generated method stub
-		super.testSearchSingleTwice();
-	}
-
-	@Override
-	public void testSearchSingleCount() {
-		// TODO Auto-generated method stub
-		super.testSearchSingleCount();
-	}
-
-	@Override
 	public boolean supportsSearchStart() {
 		// TODO Auto-generated method stub
 		return true;
@@ -95,15 +71,16 @@ public class SDBTestNoAutoInc_8_SEARCH extends BaseTestNoAutoInc_8_SEARCH {
 	}
 
 	@Override
-	public void testSearchMultipleMultipleWords() {
+	public boolean supportsTransaction() {
 		// TODO Auto-generated method stub
-		super.testSearchMultipleMultipleWords();
+		return false;
 	}
 
-	
+	@Override
+	public boolean supportsListStore() {
+		// TODO Auto-generated method stub
+		return false;
+	}
 
-	
-	
-	
 	
 }

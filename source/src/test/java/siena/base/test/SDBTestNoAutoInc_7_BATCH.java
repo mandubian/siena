@@ -69,4 +69,17 @@ public class SDBTestNoAutoInc_7_BATCH extends BaseTestNoAutoInc_7_BATCH {
 		// TODO Auto-generated method stub
 		return true;
 	}
+
+	@Override
+	public boolean supportsTransaction() {
+		// TODO Auto-generated method stub
+		return false;
+	}
+
+	@Override
+	public boolean supportsListStore() {
+		// TODO Auto-generated method stub
+		return false;
+	}
+
 }

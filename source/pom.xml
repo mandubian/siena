@@ -557,7 +557,8 @@
 						<artifactId>maven-surefire-plugin</artifactId>
 						<configuration>
 							<excludes>
-								<exclude>**/BaseTest.java</exclude>
+								<exclude>**/AbstractTest.java</exclude>
+								<exclude>**/BaseTest*.java</exclude>
 								<exclude>**/BaseAsyncTest.java</exclude>
 								<exclude>**/BaseModelTest.java</exclude>
 								<exclude>**/BaseMassTest.java</exclude>
@@ -570,7 +571,7 @@
 								<exclude>**/Discovery.java</exclude>
 							</excludes>
 							<includes>
-								<include>**/FusionTest.java</include>
+								<include>**/SDBTest*.java</include>
 							</includes>
 						</configuration>
 					</plugin>

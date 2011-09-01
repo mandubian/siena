@@ -68,8 +68,11 @@ public class QueryOptionSdbContext extends QueryOption{
 		}
 		// if first or last cursor in the list, adds a new cursor
 		else{
-			tokens.add(++tokenIdx, token);
-			tokenOffsets.add(tokenIdx, offset);
+			tokens.add(token);
+			tokenOffsets.add(offset);
+			tokenIdx++;
+			//tokens.add(++tokenIdx, token);
+			//tokenOffsets.add(tokenIdx, offset);
 		}
 	}
 	
@@ -151,6 +154,32 @@ public class QueryOptionSdbContext extends QueryOption{
 			} else {
 				return null;
 			}
+		}
+	}
+		
+	public void resetAll(){
+		tokenIdx = -1;
+		realPageSize = 0;
+		realOffset = 0;
+		tokens.clear();
+		tokenOffsets.clear();
+	}
+
+	public void reset(boolean recursing){
+		// if reslist is not empty, it means we are recursing on tokens
+		// in this case, doesn't reset the tokens
+		if(!recursing){
+			tokenIdx = -1;
+			realPageSize = 0;
+			realOffset = 0;
+			tokens.clear();
+			tokenOffsets.clear();
+		}else {
+			// if there are no token in the list, takes care of resetting the tokenIdx
+			if(!hasToken())	tokenIdx = -1;
+			//else tokenIdx = -1;
+			realPageSize = 0;
+			realOffset = 0;
 		}
 	}
 	

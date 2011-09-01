@@ -2,31 +2,27 @@ package siena.base.test;
 
 import static siena.Json.map;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 
-import siena.Query;
-import siena.SienaRestrictedApiException;
 import siena.base.test.model.Address;
 import siena.base.test.model.AutoInc;
+import siena.base.test.model.BigDecimalDoubleModelStringId;
+import siena.base.test.model.BigDecimalModelNoPrecisionStringId;
+import siena.base.test.model.BigDecimalModelStringId;
+import siena.base.test.model.BigDecimalStringModelStringId;
 import siena.base.test.model.Contact;
 import siena.base.test.model.DataTypes;
 import siena.base.test.model.DataTypes.EnumLong;
-import siena.base.test.model.Discovery4JoinStringId;
-import siena.base.test.model.DiscoveryPrivate;
 import siena.base.test.model.DiscoveryStringId;
 import siena.base.test.model.MultipleKeys;
-import siena.base.test.model.PersonLongAutoID;
-import siena.base.test.model.PersonLongManualID;
-import siena.base.test.model.PersonStringAutoIncID;
-import siena.base.test.model.PersonStringID;
 import siena.base.test.model.PersonUUID;
-import siena.sdb.SdbPersistenceManager;
+import siena.base.test.model.PolymorphicModel;
+import siena.base.test.model.PolymorphicModelStringId;
 
 public abstract class BaseTestNoAutoInc_4_SPECIALS extends BaseTestNoAutoInc_BASE {
 	
@@ -154,5 +150,125 @@ public abstract class BaseTestNoAutoInc_4_SPECIALS extends BaseTestNoAutoInc_BAS
 		assertEqualsDataTypes(dataTypes, same);
 	}
 	
+	public void testBigDecimal() {
+		BigDecimalModelStringId bigdec = 
+			new BigDecimalModelStringId("test", new BigDecimal("123456789.0123456890"));
+		pm.insert(bigdec);
+		
+		BigDecimalModelStringId bigdec2 = pm.getByKey(BigDecimalModelStringId.class, bigdec.id);
+		assertEquals(bigdec, bigdec2);
+		
+		bigdec = 
+			new BigDecimalModelStringId("test2",
+					new BigDecimal("999999999.9999999999"));
+		pm.insert(bigdec);
+		
+		bigdec2 = pm.getByKey(BigDecimalModelStringId.class, bigdec.id);
+		assertEquals(bigdec, bigdec2);
+		
+		//-100.5
+		bigdec = 
+			new BigDecimalModelStringId("test3", new BigDecimal("-100.5000000000"));
+		pm.insert(bigdec);
+		
+		bigdec2 = pm.getByKey(BigDecimalModelStringId.class, bigdec.id);
+		assertEquals(bigdec, bigdec2);
+	}
 	
+	public void testBigDecimalNoPrecision() {
+		BigDecimalModelNoPrecisionStringId bigdec = 
+			new BigDecimalModelNoPrecisionStringId("test", new BigDecimal("123456789.01"));
+		pm.insert(bigdec);
+		
+		BigDecimalModelNoPrecisionStringId bigdec2 = pm.getByKey(BigDecimalModelNoPrecisionStringId.class, bigdec.id);
+		assertEquals(bigdec, bigdec2);
+		
+		bigdec = 
+			new BigDecimalModelNoPrecisionStringId(
+					"test2", 
+					new BigDecimal("999999999.99"));
+		pm.insert(bigdec);
+		
+		bigdec2 = pm.getByKey(BigDecimalModelNoPrecisionStringId.class, bigdec.id);
+		assertEquals(bigdec, bigdec2);
+		
+		//-100.5
+		bigdec = 
+			new BigDecimalModelNoPrecisionStringId("test3", new BigDecimal("-100.50"));
+		pm.insert(bigdec);
+		
+		bigdec2 = pm.getByKey(BigDecimalModelNoPrecisionStringId.class, bigdec.id);
+		assertEquals(bigdec, bigdec2);
+	}
+	
+	public void testBigDecimalString() {
+		BigDecimalStringModelStringId bigdec = 
+			new BigDecimalStringModelStringId("test", new BigDecimal("123456789.0123456890"));
+		pm.insert(bigdec);
+		
+		BigDecimalStringModelStringId bigdec2 = pm.getByKey(BigDecimalStringModelStringId.class, bigdec.id);
+		assertEquals(bigdec, bigdec2);
+		
+		bigdec = 
+			new BigDecimalStringModelStringId(
+					"test2",
+					new BigDecimal("999999999.9999999999"));
+		pm.insert(bigdec);
+		
+		bigdec2 = pm.getByKey(BigDecimalStringModelStringId.class, bigdec.id);
+		assertEquals(bigdec, bigdec2);
+		
+		//-100.5
+		bigdec = 
+			new BigDecimalStringModelStringId("test3", new BigDecimal("-100.5000000000"));
+		pm.insert(bigdec);
+		
+		bigdec2 = pm.getByKey(BigDecimalStringModelStringId.class, bigdec.id);
+		assertEquals(bigdec, bigdec2);
+	}
+	
+	public void testBigDecimalDouble() {
+		BigDecimalDoubleModelStringId bigdec = 
+			new BigDecimalDoubleModelStringId("test", new BigDecimal("123456789.012345"));
+		pm.insert(bigdec);
+		
+		BigDecimalDoubleModelStringId bigdec2 = pm.getByKey(BigDecimalDoubleModelStringId.class, bigdec.id);
+		assertEquals(bigdec, bigdec2);
+		
+		bigdec = 
+			new BigDecimalDoubleModelStringId(
+					"test2",
+					new BigDecimal("999999999.9999999999"));
+		pm.insert(bigdec);
+		
+		bigdec2 = pm.getByKey(BigDecimalDoubleModelStringId.class, bigdec.id);
+		assertEquals(bigdec, bigdec2);
+		
+		//-100.5
+		bigdec = 
+			new BigDecimalDoubleModelStringId("test3", new BigDecimal("-100.5000000000"));
+		pm.insert(bigdec);
+		
+		bigdec2 = pm.getByKey(BigDecimalDoubleModelStringId.class, bigdec.id);
+		assertEquals(bigdec, bigdec2);
+	}
+	
+	public void testPolymorphic() {
+		PolymorphicModelStringId<String> poly = new PolymorphicModelStringId<String>("test", "test2");
+		pm.insert(poly);
+		
+		PolymorphicModelStringId poly2 = pm.getByKey(PolymorphicModelStringId.class, poly.id);
+		assertEquals(poly, poly2);
+	}
+	
+	public void testPolymorphic2() {
+		List<String> arr = new ArrayList<String>();
+		arr.add("alpha");
+		arr.add("beta");
+		PolymorphicModelStringId<List<String>> poly = new PolymorphicModelStringId<List<String>>("test", arr);
+		pm.insert(poly);
+		
+		PolymorphicModelStringId<List<String>> poly2 = pm.getByKey(PolymorphicModelStringId.class, poly.id);
+		assertEquals(poly, poly2);
+	}
 }

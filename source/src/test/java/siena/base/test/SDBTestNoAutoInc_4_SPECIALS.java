@@ -68,4 +68,36 @@ public class SDBTestNoAutoInc_4_SPECIALS extends BaseTestNoAutoInc_4_SPECIALS {
 		// TODO Auto-generated method stub
 		return true;
 	}
+
+	@Override
+	public boolean supportsTransaction() {
+		// TODO Auto-generated method stub
+		return false;
+	}
+
+	@Override
+	public void testRelationship() {
+		// TODO Auto-generated method stub
+		super.testRelationship();
+	}
+
+	@Override
+	public void testPolymorphic() {
+		// TODO Auto-generated method stub
+		super.testPolymorphic();
+	}
+
+	@Override
+	public void testPolymorphic2() {
+		// TODO Auto-generated method stub
+		super.testPolymorphic2();
+	}
+
+	@Override
+	public boolean supportsListStore() {
+		// TODO Auto-generated method stub
+		return false;
+	}
+
+
 }

@@ -9,7 +9,7 @@ import siena.Util;
 import siena.core.options.QueryOptionFetchType;
 import siena.core.options.QueryOptionOffset;
 import siena.core.options.QueryOptionPage;
-import siena.gae.GaePersistenceManager;
+import siena.core.options.QueryOptionState;
 
 import com.amazonaws.services.simpledb.model.Item;
 
@@ -41,6 +41,8 @@ public class SdbSienaIterable<Model> implements Iterable<Model> {
 
 		QueryOptionPage pag;
 		QueryOptionSdbContext sdbCtx;
+		QueryOptionState state;
+		QueryOptionOffset off;
 
 		SdbSienaIterator(Query<T> query, Iterable<Item> items) {
 			this.query = query;
@@ -50,9 +52,10 @@ public class SdbSienaIterable<Model> implements Iterable<Model> {
 			// if paginating and 0 results then no more data else resets noMoreDataAfter
 			pag = (QueryOptionPage)query.option(QueryOptionPage.ID);
 			sdbCtx = (QueryOptionSdbContext)query.option(QueryOptionSdbContext.ID);
-			
+			state = (QueryOptionState)query.option(QueryOptionState.ID);
+
 			// if has offset, advances in the iterator
-			QueryOptionOffset off = (QueryOptionOffset)query.option(QueryOptionOffset.ID);
+			off = (QueryOptionOffset)query.option(QueryOptionOffset.ID);
 			if(off!=null && off.offset != 0){
 				for(int i=0; i<off.offset; i++){
 					if(it.hasNext()){
@@ -61,8 +64,8 @@ public class SdbSienaIterable<Model> implements Iterable<Model> {
 				}
 				
 				// moves real offset if not paginating
-				if(!pag.isPaginating())
-					sdbCtx.realOffset += off.offset;
+				//if(!pag.isPaginating())
+				//	sdbCtx.realOffset += off.offset;
 			}
 			
 			if(pag.isPaginating()){
@@ -78,27 +81,59 @@ public class SdbSienaIterable<Model> implements Iterable<Model> {
 		public boolean hasNext() {
 			boolean n = it.hasNext();
 			if(!n){
+				//pm.postMapping(query);
+				
+				int pageSize = sdbCtx.realPageSize-idx;
 				if(!pag.isPaginating()){
 					// not paginating = we get current token as the move has already been done 
 					// tries to fetch new items if has a live token
-					if(sdbCtx.currentToken() != null && idx < sdbCtx.realPageSize){
-						SdbSienaIterable<Model> iter = (SdbSienaIterable<Model>)pm.iter(query);
+					String token = null;
+					if(state.isStateful()){
+						token = sdbCtx.currentToken();
+					
+						if(!pag.isActive()){
+							pageSize = Integer.MAX_VALUE;
+						}
+					}
+					else {
+						token = sdbCtx.nextToken();			
+						if(pag.isActive()){
+							pag.passivate();
+							pag.pageSize = 0;
+						}else {
+							pageSize = Integer.MAX_VALUE;
+						}
+						if(off.isActive()){
+							off.passivate();
+							off.offset = 0;
+						}
+					}
+					
+					if(token != null && pageSize > 0){
+						SdbSienaIterable<Model> iter = 
+							(SdbSienaIterable<Model>)pm.doFetchIterable(query, pageSize, 0, true);
 						items = iter.items;
 						it = items.iterator();
 						idx = 0;
 						return it.hasNext();
+					}else if(token == null){
+						sdbCtx.noMoreDataAfter = true;
 					}
 				}else {
 					// paginating = if has next token & not already at the last element of the page
 					// moves to next token (but not before verifying it has next token)
-					if(sdbCtx.hasNextToken() && idx < pag.pageSize){
+					boolean b = sdbCtx.hasNextToken(); 
+					if(b && pageSize > 0){
 						sdbCtx.nextToken();
-						SdbSienaIterable<Model> iter = (SdbSienaIterable<Model>)pm.iter(query);
+						SdbSienaIterable<Model> iter = 
+							(SdbSienaIterable<Model>)pm.doFetchIterable(query, pageSize, 0, true);
 						items = iter.items;
 						it = items.iterator();
 						idx = 0;
 						
 						return it.hasNext();
+					}else if(!b){
+						sdbCtx.noMoreDataAfter = true;
 					}
 				}
 				
@@ -112,9 +147,9 @@ public class SdbSienaIterable<Model> implements Iterable<Model> {
 			idx++;
 			
 			// moves realoffset if not paginating
-			if(!pag.isPaginating()){
-				sdbCtx.realOffset++;
-			}
+			//if(!pag.isPaginating()){
+			//	sdbCtx.realOffset++;
+			//}
 			
 			
 			Class<T> clazz = query.getQueriedClass();

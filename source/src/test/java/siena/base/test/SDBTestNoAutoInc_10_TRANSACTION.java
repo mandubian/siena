@@ -1,18 +1,13 @@
 package siena.base.test;
 
 import java.io.FileInputStream;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
 
 import siena.PersistenceManager;
-import siena.Query;
-import siena.SienaException;
-import siena.SienaRestrictedApiException;
-import siena.base.test.model.PersonStringID;
 import siena.sdb.SdbPersistenceManager;
 
-public class SDBTestNoAutoInc_6_FETCH_ITER extends BaseTestNoAutoInc_6_FETCH_ITER {
+public class SDBTestNoAutoInc_10_TRANSACTION extends BaseTestNoAutoInc_10_TRANSACTION {
 
 	@Override
 	public PersistenceManager createPersistenceManager(List<Class<?>> classes)
@@ -86,5 +81,5 @@ public class SDBTestNoAutoInc_6_FETCH_ITER extends BaseTestNoAutoInc_6_FETCH_ITE
 		// TODO Auto-generated method stub
 		return false;
 	}
-	
+
 }

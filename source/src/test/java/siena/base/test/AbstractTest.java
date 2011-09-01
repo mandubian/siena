@@ -23,6 +23,8 @@ public abstract class AbstractTest extends TestCase {
 	public abstract boolean supportsDeleteException();
 	public abstract boolean supportsSearchStart();
 	public abstract boolean supportsSearchEnd();
+	public abstract boolean supportsTransaction();
+	public abstract boolean supportsListStore();
 
 	@Override
 	protected void setUp() throws Exception {

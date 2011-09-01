@@ -7,23 +7,28 @@ import siena.Index;
 import siena.Max;
 import siena.Table;
 
-@Table("discoveries_search_stringid")
-public class Discovery4SearchStringId {
-	
+@Table("discoveries_search2_stringid")
+public class Discovery4Search2StringId {
+
 	@Id(Generator.NONE)
 	@Max(100)
-	@Index("name")
+	@Index("discoveries_search2_name")
 	public String name;
+	
+	@Max(100)
+	@Index("discoveries_search2_body")
+	public String body;
 	
 	@Column("discoverer")
 	public PersonStringID discoverer;
 
-	public Discovery4SearchStringId(String name, PersonStringID discoverer) {
+	public Discovery4Search2StringId(String name, String body, PersonStringID discoverer) {
 		this.name = name;
+		this.body = body;
 		this.discoverer = discoverer;
 	}
 	
-	public Discovery4SearchStringId() {
+	public Discovery4Search2StringId() {
 	}
 
 	@Override
@@ -31,9 +36,11 @@ public class Discovery4SearchStringId {
 		if (obj == null || getClass() != obj.getClass())
 			return false;
 
-		Discovery4SearchStringId other = (Discovery4SearchStringId) obj;
+		Discovery4Search2StringId other = (Discovery4Search2StringId) obj;
 		
 		if(other.name != null && other.name.equals(name))
+			return true;
+		if(other.body != null && other.body.equals(body))
 			return true;
 		if(other.discoverer != null && other.discoverer.equals(discoverer))
 			return true;
@@ -42,13 +49,10 @@ public class Discovery4SearchStringId {
 	}
 	
 	public boolean isOnlyIdFilled() {
-		if(this.name != null && 
-				this.discoverer == null
+		if(this.name != null
+			&& this.body == null
+			&& this.discoverer == null
 		) return true;
 		return false;
-	}
-	
-	public String toString(){
-		return "name:"+this.name+" - discoverer:"+discoverer;
 	}
 }

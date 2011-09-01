@@ -67,4 +67,16 @@ public class SDBTestNoAutoInc_3_ITER extends BaseTestNoAutoInc_3_ITER {
 		// TODO Auto-generated method stub
 		return true;
 	}
+
+	@Override
+	public boolean supportsTransaction() {
+		// TODO Auto-generated method stub
+		return false;
+	}
+
+	@Override
+	public boolean supportsListStore() {
+		// TODO Auto-generated method stub
+		return false;
+	}
 }

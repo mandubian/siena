@@ -68,5 +68,17 @@ public class SDBTestNoAutoInc_1_CRUD extends BaseTestNoAutoInc_1_CRUD {
 		// TODO Auto-generated method stub
 		return true;
 	}
+
+	@Override
+	public boolean supportsTransaction() {
+		// TODO Auto-generated method stub
+		return false;
+	}
+
+	@Override
+	public boolean supportsListStore() {
+		// TODO Auto-generated method stub
+		return false;
+	}
 	
 }

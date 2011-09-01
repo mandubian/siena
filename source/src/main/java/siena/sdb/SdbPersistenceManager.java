@@ -420,7 +420,9 @@ public class SdbPersistenceManager extends AbstractPersistenceManager {
 			checkDomain(domainBuf.toString());
 			req.setConsistentRead(isReadConsistent());
 			SelectResult res = sdb.select(req);
-			List<T> models = SdbMappingUtils.mapSelectResultToListOrderedFromKeys(res, clazz, keys);
+			List<T> models = new ArrayList<T>(); 
+				
+			SdbMappingUtils.mapSelectResultToListOrderedFromKeys(res, models, clazz, keys);
 			
 			// join management
 			if(!ClassInfo.getClassInfo(clazz).joinFields.isEmpty()){
@@ -466,48 +468,58 @@ public class SdbPersistenceManager extends AbstractPersistenceManager {
 	}
 
 	public <T> List<T> fetch(Query<T> query) {
-		return doFetchList(query, Integer.MAX_VALUE, 0);
+		List<T> models = new ArrayList<T>(); 
+		doFetchList(query, Integer.MAX_VALUE, 0, models, 0);
+		return models;
 	}
 	
 	public <T> List<T> fetch(Query<T> query, int limit) {
-		return doFetchList(query, limit, 0);
+		List<T> models = new ArrayList<T>(); 
+		doFetchList(query, limit, 0, models, 0);
+		return models;
 	}
 
 	public <T> List<T> fetch(Query<T> query, int limit, Object offset) {
-		return doFetchList(query, limit, (Integer)offset);
+		List<T> models = new ArrayList<T>(); 
+		doFetchList(query, limit, (Integer)offset, models, 0);
+		return models;
 	}
 
 	public <T> List<T> fetchKeys(Query<T> query) {
 		((QueryOptionFetchType)query.option(QueryOptionFetchType.ID)).fetchType=QueryOptionFetchType.Type.KEYS_ONLY;
-
-		return doFetchList(query, Integer.MAX_VALUE, 0);
+		List<T> models = new ArrayList<T>(); 
+		doFetchList(query, Integer.MAX_VALUE, 0, models, 0);		
+		return models;
 	}
 
 	public <T> List<T> fetchKeys(Query<T> query, int limit) {
 		((QueryOptionFetchType)query.option(QueryOptionFetchType.ID)).fetchType=QueryOptionFetchType.Type.KEYS_ONLY;
-
-		return doFetchList(query, limit, 0);
+		List<T> models = new ArrayList<T>(); 
+		doFetchList(query, limit, 0, models, 0);
+		return models;
 	}
 
 	public <T> List<T> fetchKeys(Query<T> query, int limit, Object offset) {
 		((QueryOptionFetchType)query.option(QueryOptionFetchType.ID)).fetchType=QueryOptionFetchType.Type.KEYS_ONLY;
 
-		return doFetchList(query, limit, (Integer)offset);
+		List<T> models = new ArrayList<T>(); 
+		doFetchList(query, limit, (Integer)offset, models, 0);
+		return models;
 	}
 	
 	public <T> Iterable<T> iter(Query<T> query) {
 		((QueryOptionFetchType)query.option(QueryOptionFetchType.ID)).fetchType=QueryOptionFetchType.Type.ITER;
-		return doFetchIterable(query, Integer.MAX_VALUE, 0);
+		return doFetchIterable(query, Integer.MAX_VALUE, 0, false);
 	}
 
 	public <T> Iterable<T> iter(Query<T> query, int limit) {
 		((QueryOptionFetchType)query.option(QueryOptionFetchType.ID)).fetchType=QueryOptionFetchType.Type.ITER;
-		return doFetchIterable(query, limit, 0);
+		return doFetchIterable(query, limit, 0, false);
 	}
 
 	public <T> Iterable<T> iter(Query<T> query, int limit, Object offset) {
 		((QueryOptionFetchType)query.option(QueryOptionFetchType.ID)).fetchType=QueryOptionFetchType.Type.ITER;
-		return doFetchIterable(query, limit, (Integer)offset);
+		return doFetchIterable(query, limit, (Integer)offset, false);
 	}
 
 	
@@ -517,38 +529,144 @@ public class SdbPersistenceManager extends AbstractPersistenceManager {
 		return delete(l);
 	}
 	
-	private <T> List<T> doFetchList(Query<T> query, int limit, int offset) {
+	protected <T> void postMapping(Query<T> query){
+		QueryOptionPage pag = (QueryOptionPage)query.option(QueryOptionPage.ID);
 		QueryOptionSdbContext sdbCtx = (QueryOptionSdbContext)query.option(QueryOptionSdbContext.ID);
+		QueryOptionState state = (QueryOptionState)query.option(QueryOptionState.ID);
+		QueryOptionOffset off = (QueryOptionOffset)query.option(QueryOptionOffset.ID);
+
+		// desactivates paging & offset in stateless mode
+		if(state.isStateless() && !pag.isPaginating()){
+			pag.passivate();
+			pag.pageSize = 0;
+			sdbCtx.resetAll();
+		}
+		// offset if not kept as it is never reused as is even in stateful
+		// mode. the stateful mode only keeps the realOffset/pagination alive
+		off.passivate();
+		off.offset = 0;
+	}
+	
+	protected <T> void continueFetchNextToken(Query<T> query, List<T> results, int depth){
+		QueryOptionPage pag = (QueryOptionPage)query.option(QueryOptionPage.ID);
+		QueryOptionSdbContext sdbCtx = (QueryOptionSdbContext)query.option(QueryOptionSdbContext.ID);
+		QueryOptionState state = (QueryOptionState)query.option(QueryOptionState.ID);
+		QueryOptionOffset off = (QueryOptionOffset)query.option(QueryOptionOffset.ID);
+		
+		// desactivates offset not to use if fetching more items from next token
+		if(state.isStateless()){
+			off.passivate();
+		}
+		
+		if(!pag.isActive()){
+			if(state.isStateless()){
+				// retrieves next token
+				if(sdbCtx.nextToken()!=null){
+					doFetchList(query, Integer.MAX_VALUE, 0, results, depth+1);
+				}
+			}else {
+				if(sdbCtx.currentToken()!=null){
+					// desactivates offset because we don't to go on using offset while going to next tokens
+					boolean b = off.isActive();
+					off.passivate();
+					doFetchList(query, Integer.MAX_VALUE, 0, results, depth+1);
+					// reactivate it if it was activated
+					if(b) off.activate();
+				}
+			}
+		}
+	}
+	
+	protected <T> void postFetch(Query<T> query, SelectResult res) {
+		QueryOptionPage pag = (QueryOptionPage)query.option(QueryOptionPage.ID);
+		QueryOptionSdbContext sdbCtx = (QueryOptionSdbContext)query.option(QueryOptionSdbContext.ID);
+		QueryOptionState state = (QueryOptionState)query.option(QueryOptionState.ID);
+		QueryOptionOffset off = (QueryOptionOffset)query.option(QueryOptionOffset.ID);
+		
+		if(sdbCtx.realPageSize == 0){
+			sdbCtx.realPageSize = res.getItems().size();
+		}
+		
+		String token = null;
+		// sets the current cursor (in stateful mode, cursor is always kept for further use)
+		if(pag.isPaginating()){
+			token = res.getNextToken();
+			if(token!=null){
+				sdbCtx.addToken(token, sdbCtx.realOffset + sdbCtx.realPageSize + off.offset);
+			}
+			// if paginating and 0 results then no more data else resets noMoreDataAfter
+			if(res.getItems().size()==0){
+				sdbCtx.noMoreDataAfter = true;
+			} else {
+				sdbCtx.noMoreDataAfter = false;
+			}
+		}else{
+			if(state.isStateless()){
+				// in stateless, doesn't follow real offset & stays where it is
+				sdbCtx.realOffset = off.offset;
+				
+				token = res.getNextToken();
+				if(token!=null){
+					sdbCtx.addToken(token, /*sdbCtx.realOffset +*/ sdbCtx.realPageSize);
+				}
+			}else {
+				// follows the real offset in stateful mode
+				sdbCtx.realOffset += sdbCtx.realPageSize /*+ off.offset*/;
+				
+				token = res.getNextToken();
+				if(token!=null){
+					sdbCtx.addAndMoveToken(token, sdbCtx.realOffset);
+				}else {
+					// forces to go to next token to invalidate current one
+					// if there are no token after, currentToken will be null
+					sdbCtx.nextToken();
+				}
+			}
+			
+			
+		}
+	}
+	
+	protected <T> void preFetch(Query<T> query, int limit, int offset, boolean recursing){
+		QueryOptionSdbContext sdbCtx = (QueryOptionSdbContext)query.option(QueryOptionSdbContext.ID);
+		QueryOptionState state = (QueryOptionState)query.option(QueryOptionState.ID);
+		QueryOptionPage pag = (QueryOptionPage)query.option(QueryOptionPage.ID);
+		QueryOptionOffset off = (QueryOptionOffset)query.option(QueryOptionOffset.ID);
+
 		if(sdbCtx==null){
 			sdbCtx = new QueryOptionSdbContext();
 			query.customize(sdbCtx);
 		}
 		
-		QueryOptionState state = (QueryOptionState)query.option(QueryOptionState.ID);
-		QueryOptionFetchType fetchType = (QueryOptionFetchType)query.option(QueryOptionFetchType.ID);
-
-		QueryOptionPage pag = (QueryOptionPage)query.option(QueryOptionPage.ID);
 		if(!pag.isPaginating()){
+			if(state.isStateless()){
+				// if not empty, it means we are recursing on tokens
+				sdbCtx.reset(recursing);				
+			}
 			// no pagination but pageOption active
-			if(pag.isActive()){
+			if(pag.isActive()){				
 				// if local limit is set, it overrides the pageOption.pageSize
 				if(limit!=Integer.MAX_VALUE){
-					sdbCtx.realPageSize = limit;
+					sdbCtx.realPageSize = limit;				
+					// DONT DO THAT BECAUSE IT PREVENTS GOING TO NEXT TOKENS USING PAGE SIZE
 					// pageOption is passivated to be sure it is not reused
-					pag.passivate();
+					//pag.passivate();
 				}
 				// using pageOption.pageSize
 				else {
 					sdbCtx.realPageSize = pag.pageSize;
+					// DONT DO THAT BECAUSE IT PREVENTS GOING TO NEXT TOKENS USING PAGE SIZE
 					// passivates the pageOption in stateless mode not to keep anything between 2 requests
-					if(state.isStateless()){
-						pag.passivate();
-					}						
+					//if(state.isStateless()){
+					//	pag.passivate();
+					//}						
 				}
 			}
 			else {
 				if(limit != Integer.MAX_VALUE){
 					sdbCtx.realPageSize = limit;
+					// activates paging (but not pagination)
+					pag.activate();
 				}else {
 					sdbCtx.realPageSize = 0;
 				}
@@ -559,16 +677,30 @@ public class SdbPersistenceManager extends AbstractPersistenceManager {
 			sdbCtx.realPageSize = pag.pageSize;
 		}
 		
-		QueryOptionOffset off = (QueryOptionOffset)query.option(QueryOptionOffset.ID);
 		// if local offset has been set, uses it
 		if(offset!=0){
 			off.activate();
 			off.offset = offset;
 		}
+	}
+	
+	
+	protected final int MAX_DEPTH = 25;
+	
+	protected <T> void doFetchList(Query<T> query, int limit, int offset, List<T> resList, int depth) {
+		if(depth >= MAX_DEPTH){
+			throw new SienaException("Reached maximum depth of recursion when retrieving more data ("+MAX_DEPTH+")");
+		}
+			
+		preFetch(query, limit, offset, !resList.isEmpty());
+		
+		QueryOptionSdbContext sdbCtx = (QueryOptionSdbContext)query.option(QueryOptionSdbContext.ID);
+		QueryOptionFetchType fetchType = (QueryOptionFetchType)query.option(QueryOptionFetchType.ID);
+		QueryOptionOffset off = (QueryOptionOffset)query.option(QueryOptionOffset.ID);
 		
 		// if previousPage has detected there is no more data, simply returns an empty list
 		if(sdbCtx.noMoreDataBefore || sdbCtx.noMoreDataAfter){
-			return new ArrayList<T>();
+			return;
 		}
 						
 		// manages cursor limitations for IN and != operators with offsets
@@ -579,68 +711,35 @@ public class SdbPersistenceManager extends AbstractPersistenceManager {
 			checkDomain(domainBuf.toString());
 			SelectResult res = sdb.select(req);
 			
-			// activates the SdbCtx now that it is initialised
+			// activates the SdbCtx now that it is really initialised
 			sdbCtx.activate();
 									
-			// sets the current cursor (in stateful mode, cursor is always kept for further use)
-			if(pag.isPaginating()){
-				String token = res.getNextToken();
-				if(token!=null){
-					sdbCtx.addToken(token, sdbCtx.realOffset+sdbCtx.realPageSize+offset);
-				}
-				
-				// if paginating and 0 results then no more data else resets noMoreDataAfter
-				if(res.getItems().size()==0){
-					sdbCtx.noMoreDataAfter = true;
-				} else {
-					sdbCtx.noMoreDataAfter = false;
-				}
-			}else{
-				// follows the real offset
-				sdbCtx.realOffset += sdbCtx.realPageSize + offset;
-				
-				String token = res.getNextToken();
-				if(token!=null){
-					sdbCtx.addAndMoveToken(token, sdbCtx.realOffset);
-				}else {
-					// forces to go to next token to invalidate current one
-					// if there are no token after, currentToken will be null
-					sdbCtx.nextToken();
-				}
-			}		
+			postFetch(query, res);
+			
 			// cursor not yet created
 			switch(fetchType.fetchType){
 			case KEYS_ONLY:
 				if(off.isActive()){
-					return SdbMappingUtils.mapSelectResultToListKeysOnly(res, query.getQueriedClass(), off.offset);
+					SdbMappingUtils.mapSelectResultToListKeysOnly(res, resList, query.getQueriedClass(), off.offset);
 				}else {
-					return SdbMappingUtils.mapSelectResultToListKeysOnly(res, query.getQueriedClass());
-				}
+					SdbMappingUtils.mapSelectResultToListKeysOnly(res, resList, query.getQueriedClass());
+				}				
+				break;
 			case NORMAL:
 			default:
 				if(off.isActive()){
-					List<T> results = SdbMappingUtils.mapSelectResultToList(res, query.getQueriedClass(), off.offset);
-					
-					// join management
-					if(!query.getJoins().isEmpty() 
-							|| !ClassInfo.getClassInfo(query.getQueriedClass()).joinFields.isEmpty())
-						mapJoins(query, results);
-					
-					if(state.isStateless()){
-						off.passivate();
-					}
-					return results;
+					SdbMappingUtils.mapSelectResultToList(res, resList, query.getQueriedClass(), off.offset);
 				}else {
-					List<T> results = SdbMappingUtils.mapSelectResultToList(res, query.getQueriedClass());
-					
-					// join management
-					if(!query.getJoins().isEmpty() 
-							|| !ClassInfo.getClassInfo(query.getQueriedClass()).joinFields.isEmpty())
-						mapJoins(query, results);
-					
-					return results;
+					SdbMappingUtils.mapSelectResultToList(res, resList, query.getQueriedClass());
 				}
-			}			
+				// join management
+				if(!query.getJoins().isEmpty() 
+						|| !ClassInfo.getClassInfo(query.getQueriedClass()).joinFields.isEmpty())
+					mapJoins(query, resList);
+			}
+			
+			continueFetchNextToken(query, resList, depth);
+			postMapping(query);
 		}
 		else {
 			// we prepare the query each time
@@ -649,111 +748,45 @@ public class SdbPersistenceManager extends AbstractPersistenceManager {
 			req.setConsistentRead(isReadConsistent());
 			checkDomain(domainBuf.toString());
 			// we can't use real asynchronous function with cursors
-			// so the page is extracted at once and wrapped into a SienaFuture
+			// so the page is extracted at once and wrapped into a SienaFuture			
 			String token = sdbCtx.currentToken();
 			if(token!=null){
 				req.setNextToken(token);
 			}
 			SelectResult res = sdb.select(req);
-									
-			// sets the current cursor (in stateful mode, cursor is always kept for further use)
-			if(pag.isPaginating()){
-				token = res.getNextToken();
-				if(token!=null){
-					sdbCtx.addToken(token, sdbCtx.realOffset + sdbCtx.realPageSize + offset);
-				}
-				// if paginating and 0 results then no more data else resets noMoreDataAfter
-				if(res.getItems().size()==0){
-					sdbCtx.noMoreDataAfter = true;
-				} else {
-					sdbCtx.noMoreDataAfter = false;
-				}
-			}else{
-				// follows the real offset
-				sdbCtx.realOffset += sdbCtx.realPageSize + offset;
 				
-				token = res.getNextToken();
-				if(token!=null){
-					sdbCtx.addAndMoveToken(token, sdbCtx.realOffset);
-				}else {
-					// forces to go to next token to invalidate current one
-					// if there are no token after, currentToken will be null
-					sdbCtx.nextToken();
-				}
-			}
+			postFetch(query, res);
 			
 			switch(fetchType.fetchType){
-			case KEYS_ONLY:
+			case KEYS_ONLY: 
 				if(off.isActive()){
-					return SdbMappingUtils.mapSelectResultToListKeysOnly(res, query.getQueriedClass(), off.offset);
-				} else {
-					return SdbMappingUtils.mapSelectResultToListKeysOnly(res, query.getQueriedClass());					
+					SdbMappingUtils.mapSelectResultToListKeysOnly(res, resList, query.getQueriedClass(), off.offset);
+				}else {
+					SdbMappingUtils.mapSelectResultToListKeysOnly(res, resList, query.getQueriedClass());
 				}
+				break;
 			case NORMAL:
 			default:
-				List<T> results = null;
 				if(off.isActive()){
-					results = SdbMappingUtils.mapSelectResultToList(res, query.getQueriedClass(), off.offset);
+					SdbMappingUtils.mapSelectResultToList(res, resList, query.getQueriedClass(), off.offset);
 				} else {
-					results = SdbMappingUtils.mapSelectResultToList(res, query.getQueriedClass());
+					SdbMappingUtils.mapSelectResultToList(res, resList, query.getQueriedClass());
 				}
 				// join management
 				if(!query.getJoins().isEmpty() 
 						|| !ClassInfo.getClassInfo(query.getQueriedClass()).joinFields.isEmpty())
-					mapJoins(query, results);
-				
-				return results;
+					mapJoins(query, resList);
 			}
+			
+			continueFetchNextToken(query, resList, depth);
+			postMapping(query);
 		}
 	}
 	
-	private <T> Iterable<T> doFetchIterable(Query<T> query, int limit, int offset) {
+	protected <T> Iterable<T> doFetchIterable(Query<T> query, int limit, int offset, boolean recursing) {
+		preFetch(query, limit, offset, recursing);
+		
 		QueryOptionSdbContext sdbCtx = (QueryOptionSdbContext)query.option(QueryOptionSdbContext.ID);
-		if(sdbCtx==null){
-			sdbCtx = new QueryOptionSdbContext();
-			query.customize(sdbCtx);
-		}
-		
-		QueryOptionState state = (QueryOptionState)query.option(QueryOptionState.ID);
-
-		QueryOptionPage pag = (QueryOptionPage)query.option(QueryOptionPage.ID);
-		if(!pag.isPaginating()){
-			// no pagination but pageOption active
-			if(pag.isActive()){
-				// if local limit is set, it overrides the pageOption.pageSize
-				if(limit!=Integer.MAX_VALUE){
-					sdbCtx.realPageSize = limit;
-					// pageOption is passivated to be sure it is not reused
-					pag.passivate();
-				}
-				// using pageOption.pageSize
-				else {
-					sdbCtx.realPageSize = pag.pageSize;
-					// passivates the pageOption in stateless mode not to keep anything between 2 requests
-					if(state.isStateless()){
-						pag.passivate();
-					}						
-				}
-			}
-			else {
-				if(limit != Integer.MAX_VALUE){
-					sdbCtx.realPageSize = limit;
-				}else {
-					sdbCtx.realPageSize = 0;
-				}
-			}
-		}else {
-			// paginating so use the pagesize and don't passivate pageOption
-			// local limit is not taken into account
-			sdbCtx.realPageSize = pag.pageSize;
-		}
-		
-		QueryOptionOffset off = (QueryOptionOffset)query.option(QueryOptionOffset.ID);
-		// if local offset has been set, uses it
-		if(offset!=0){
-			off.activate();
-			off.offset = offset;
-		}
 		
 		// if previousPage has detected there is no more data, simply returns an empty list
 		if(sdbCtx.noMoreDataBefore || sdbCtx.noMoreDataAfter){
@@ -770,29 +803,8 @@ public class SdbPersistenceManager extends AbstractPersistenceManager {
 			
 			// activates the SdbCtx now that it is initialised
 			sdbCtx.activate();
-			// sets the current cursor (in stateful mode, cursor is always kept for further use)
-			if(pag.isPaginating()){
-				String token = res.getNextToken();
-				if(token!=null){
-					sdbCtx.addToken(token, sdbCtx.realOffset + sdbCtx.realPageSize + offset);
-				}
-				
-				// if paginating and 0 results then no more data else resets noMoreDataAfter
-				if(res.getItems().size()==0){
-					sdbCtx.noMoreDataAfter = true;
-				} else {
-					sdbCtx.noMoreDataAfter = false;
-				}
-			}else{
-				String token = res.getNextToken();
-				if(token!=null){
-					sdbCtx.addAndMoveToken(token, sdbCtx.realOffset + sdbCtx.realPageSize + offset);
-				}else {
-					// forces to go to next token to invalidate current one
-					// if there are no token after, currentToken will be null
-					sdbCtx.nextToken();
-				}
-			}		
+			
+			postFetch(query, res);		
 			
 			return new SdbSienaIterable<T>(this, res.getItems(), query);
 		}
@@ -810,28 +822,7 @@ public class SdbPersistenceManager extends AbstractPersistenceManager {
 			}
 			SelectResult res = sdb.select(req);
 									
-			// sets the current cursor (in stateful mode, cursor is always kept for further use)
-			if(pag.isPaginating()){
-				token = res.getNextToken();
-				if(token!=null){
-					sdbCtx.addToken(token, sdbCtx.realOffset + sdbCtx.realPageSize + offset);
-				}
-				// if paginating and 0 results then no more data else resets noMoreDataAfter
-				if(res.getItems().size()==0){
-					sdbCtx.noMoreDataAfter = true;
-				} else {
-					sdbCtx.noMoreDataAfter = false;
-				}
-			}else{
-				token = res.getNextToken();
-				if(token!=null){
-					sdbCtx.addAndMoveToken(token, sdbCtx.realOffset + sdbCtx.realPageSize + offset);
-				}else {
-					// forces to go to next token to invalidate current one
-					// if there are no token after, currentToken will be null
-					sdbCtx.nextToken();
-				}
-			}
+			postFetch(query, res);
 			
 			return new SdbSienaIterable<T>(this, res.getItems(), query);
 		}
@@ -883,7 +874,22 @@ public class SdbPersistenceManager extends AbstractPersistenceManager {
 
 	@Override
 	public <T> void paginate(Query<T> query) {
-		// NOTHING TO DO
+		QueryOptionSdbContext sdbCtx = (QueryOptionSdbContext)query.option(QueryOptionSdbContext.ID);
+		QueryOptionState state = (QueryOptionState)query.option(QueryOptionState.ID);
+
+		if(sdbCtx==null){
+			sdbCtx = new QueryOptionSdbContext();
+			query.customize(sdbCtx);
+		}
+		
+		// in stateless, resetting pagination resets everything in the context
+		if(state.isStateless()){
+			sdbCtx.resetAll();			
+		}
+		
+		QueryOptionOffset off = (QueryOptionOffset)query.option(QueryOptionOffset.ID);
+		off.passivate();
+		off.offset = 0;
 	}
 	
 	@Override

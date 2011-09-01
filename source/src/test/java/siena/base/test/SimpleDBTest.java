@@ -67,6 +67,12 @@ public class SimpleDBTest extends AbstractTest {
 	}*/
 
 	@Override
+	public boolean supportsTransaction() {
+		// TODO Auto-generated method stub
+		return false;
+	}
+
+	@Override
 	public void init() {
 		// TODO Auto-generated method stub
 		
@@ -467,6 +473,12 @@ public class SimpleDBTest extends AbstractTest {
 		// DELETES
 		pm.delete(l);
 
+	}
+
+	@Override
+	public boolean supportsListStore() {
+		// TODO Auto-generated method stub
+		return false;
 	}
 
 

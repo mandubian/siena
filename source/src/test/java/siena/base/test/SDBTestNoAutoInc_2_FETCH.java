@@ -62,5 +62,17 @@ public class SDBTestNoAutoInc_2_FETCH extends BaseTestNoAutoInc_2_FETCH {
 		// TODO Auto-generated method stub
 		return true;
 	}
+
+	@Override
+	public boolean supportsTransaction() {
+		// TODO Auto-generated method stub
+		return false;
+	}
+
+	@Override
+	public boolean supportsListStore() {
+		// TODO Auto-generated method stub
+		return false;
+	}
 	
 }

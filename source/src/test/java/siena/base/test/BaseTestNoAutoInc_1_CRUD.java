@@ -10,6 +10,8 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 
+import com.google.appengine.tools.info.SupportInfo;
+
 import siena.Query;
 import siena.SienaRestrictedApiException;
 import siena.base.test.model.Address;
@@ -190,5 +192,164 @@ public abstract class BaseTestNoAutoInc_1_CRUD extends BaseTestNoAutoInc_BASE {
 		assertEquals(UUID_EINSTEIN, people.get(1));
 	}
 
+	
+	public void testSaveLongAutoID() {
+		if(supportsAutoincrement()){
+			PersonLongAutoID maxwell = new PersonLongAutoID();
+			maxwell.firstName = "James Clerk";
+			maxwell.lastName = "Maxwell";
+			maxwell.city = "Edinburgh";
+			maxwell.n = 4;
+	
+			pm.save(maxwell);
+			assertNotNull(maxwell.id);
+	
+			List<PersonLongAutoID> people = queryPersonLongAutoIDOrderBy("n", 0, false).fetch();
+			assertEquals(4, people.size());
+	
+			assertEquals(LongAutoID_TESLA, people.get(0));
+			assertEquals(LongAutoID_CURIE, people.get(1));
+			assertEquals(LongAutoID_EINSTEIN, people.get(2));
+			assertEquals(maxwell, people.get(3));
+			
+			maxwell.firstName = "James Clerk UPD";
+			maxwell.lastName = "Maxwell UPD";
+			maxwell.city = "Edinburgh UPD";
+			maxwell.n = 5;
+			
+			pm.save(maxwell);
+			assertNotNull(maxwell.id);
+			
+			people = queryPersonLongAutoIDOrderBy("n", 0, false).fetch();
+			assertEquals(4, people.size());
+	
+			assertEquals(LongAutoID_TESLA, people.get(0));
+			assertEquals(LongAutoID_CURIE, people.get(1));
+			assertEquals(LongAutoID_EINSTEIN, people.get(2));
+			assertEquals(maxwell, people.get(3));
+		}else {
+			try {
+				PersonLongAutoID maxwell = new PersonLongAutoID();
+				maxwell.firstName = "James Clerk";
+				maxwell.lastName = "Maxwell";
+				maxwell.city = "Edinburgh";
+				maxwell.n = 4;
+		
+				pm.save(maxwell);
+			}catch(SienaRestrictedApiException ex){
+				return;
+			}
+			fail();
+		}
+			
+	}
+	
+	public void testSaveUUID() {
+		PersonUUID maxwell = new PersonUUID();
+		maxwell.firstName = "James Clerk";
+		maxwell.lastName = "Maxwell";
+		maxwell.city = "Edinburgh";
+		maxwell.n = 4;
+
+		pm.save(maxwell);
+		assertNotNull(maxwell.id);
+
+		List<PersonUUID> people = queryPersonUUIDOrderBy("n", 0, false).fetch();
+		assertEquals(4, people.size());
+
+		assertEquals(UUID_TESLA, people.get(0));
+		assertEquals(UUID_CURIE, people.get(1));
+		assertEquals(UUID_EINSTEIN, people.get(2));
+		assertEquals(maxwell, people.get(3));
+		
+		maxwell.firstName = "James Clerk UPD";
+		maxwell.lastName = "Maxwell UPD";
+		maxwell.city = "Edinburgh UPD";
+		maxwell.n = 5;
+		
+		pm.save(maxwell);
+		assertNotNull(maxwell.id);
+		
+		people = queryPersonUUIDOrderBy("n", 0, false).fetch();
+		assertEquals(4, people.size());
+
+		assertEquals(UUID_TESLA, people.get(0));
+		assertEquals(UUID_CURIE, people.get(1));
+		assertEquals(UUID_EINSTEIN, people.get(2));
+		assertEquals(maxwell, people.get(3));
+	}
+
+
+	public void testSaveLongManualID() {
+		PersonLongManualID maxwell = new PersonLongManualID();
+		maxwell.id = 4L;
+		maxwell.firstName = "James Clerk";
+		maxwell.lastName = "Maxwell";
+		maxwell.city = "Edinburgh";
+		maxwell.n = 4;
+
+		pm.save(maxwell);
+		assertEquals((Long)4L, maxwell.id);
+
+		List<PersonLongManualID> people = queryPersonLongManualIDOrderBy("n", 0, false).fetch();
+		assertEquals(4, people.size());
+
+		assertEquals(LongManualID_TESLA, people.get(0));
+		assertEquals(LongManualID_CURIE, people.get(1));
+		assertEquals(LongManualID_EINSTEIN, people.get(2));
+		assertEquals(maxwell, people.get(3));
+		
+		maxwell.firstName = "James Clerk UPD";
+		maxwell.lastName = "Maxwell UPD";
+		maxwell.city = "Edinburgh UPD";
+		maxwell.n = 5;
+		
+		pm.save(maxwell);
+		assertEquals((Long)4L, maxwell.id);
+
+		people = queryPersonLongManualIDOrderBy("n", 0, false).fetch();
+		assertEquals(4, people.size());
+
+		assertEquals(LongManualID_TESLA, people.get(0));
+		assertEquals(LongManualID_CURIE, people.get(1));
+		assertEquals(LongManualID_EINSTEIN, people.get(2));
+		assertEquals(maxwell, people.get(3));
+	}
+	
+	public void testSaveStringID() {
+		PersonStringID maxwell = new PersonStringID();
+		maxwell.id = "MAXWELL";
+		maxwell.firstName = "James Clerk";
+		maxwell.lastName = "Maxwell";
+		maxwell.city = "Edinburgh";
+		maxwell.n = 4;
+
+		pm.save(maxwell);
+		assertEquals(maxwell.id, "MAXWELL");
+
+		List<PersonStringID> people = queryPersonStringIDOrderBy("n", 0, false).fetch();
+		assertEquals(4, people.size());
+
+		assertEquals(StringID_TESLA, people.get(0));
+		assertEquals(StringID_CURIE, people.get(1));
+		assertEquals(StringID_EINSTEIN, people.get(2));
+		assertEquals(maxwell, people.get(3));
+
+		maxwell.firstName = "James Clerk UPD";
+		maxwell.lastName = "Maxwell UPD";
+		maxwell.city = "Edinburgh UPD";
+		maxwell.n = 5;
+		
+		pm.save(maxwell);
+		assertEquals(maxwell.id, "MAXWELL");
+
+		people = queryPersonStringIDOrderBy("n", 0, false).fetch();
+		assertEquals(4, people.size());
+
+		assertEquals(StringID_TESLA, people.get(0));
+		assertEquals(StringID_CURIE, people.get(1));
+		assertEquals(StringID_EINSTEIN, people.get(2));
+		assertEquals(maxwell, people.get(3));
+	}
 	
 }

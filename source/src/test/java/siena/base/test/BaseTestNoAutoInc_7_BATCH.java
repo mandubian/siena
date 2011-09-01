@@ -3,8 +3,13 @@ package siena.base.test;
 import java.util.ArrayList;
 import java.util.List;
 
+import siena.SienaRestrictedApiException;
+import siena.base.test.model.Discovery4Search2StringId;
 import siena.base.test.model.DiscoveryStringId;
+import siena.base.test.model.PersonLongAutoID;
+import siena.base.test.model.PersonLongManualID;
 import siena.base.test.model.PersonStringID;
+import siena.base.test.model.PersonUUID;
 
 public abstract class BaseTestNoAutoInc_7_BATCH extends BaseTestNoAutoInc_BASE {
 
@@ -197,5 +202,171 @@ public abstract class BaseTestNoAutoInc_7_BATCH extends BaseTestNoAutoInc_BASE {
 	}
 	
 	
+	public void testBatchUpdate() {
+		Object[] discs = new DiscoveryStringId[100];
+		for(int i=0; i<100; i++){
+			discs[i] = new DiscoveryStringId("Disc_"+String.format("%03d", i), StringID_CURIE);
+		}
+		pm.insert(discs);
+
+		List<DiscoveryStringId> res = 
+			pm.createQuery(DiscoveryStringId.class).fetch();
+		
+		assertEquals(discs.length, res.size());
+		
+		for(int i=0; i<100; i++){
+			((DiscoveryStringId)discs[i]).discoverer = StringID_EINSTEIN;
+		}
+		
+		int nb = pm.update(discs);
+		assertEquals(discs.length, nb);
+		res = 
+			pm.createQuery(DiscoveryStringId.class).fetch();
+		int i=0;
+		for(DiscoveryStringId disc:res){
+			assertEquals(discs[i++], disc);
+		}
+		
+	}
 	
+	public void testBatchUpdateList() {
+		List<DiscoveryStringId> discs = new ArrayList<DiscoveryStringId>();
+		for(int i=0; i<100; i++){
+			discs.add(new DiscoveryStringId("Disc_"+String.format("%03d", i), StringID_CURIE));
+		}
+		int nb = pm.insert(discs);
+		assertEquals(discs.size(), nb);
+
+		List<DiscoveryStringId> res = 
+			pm.createQuery(DiscoveryStringId.class).fetch();
+		
+		assertEquals(discs.size(), res.size());
+		
+		for(DiscoveryStringId d: discs){
+			d.discoverer = StringID_EINSTEIN;
+		}
+		
+		nb = pm.update(discs);
+		assertEquals(discs.size(), nb);
+		res = 
+			pm.createQuery(DiscoveryStringId.class).fetch();
+		int i=0;
+		for(DiscoveryStringId disc:res){
+			assertEquals(discs.get(i++), disc);
+		}
+		
+	}
+	
+	public void testGetByKeyNonExisting() {
+		if(supportsAutoincrement()){
+			PersonLongAutoID pers = getByKeyPersonLongAutoID(12345678L);
+			assertNull(pers);
+		}else {
+			try {
+				PersonLongAutoID pers = getByKeyPersonLongAutoID(12345678L);
+			}catch(SienaRestrictedApiException ex){
+				return;				
+			}
+			fail();
+		}
+	}
+	
+	public void testGetByKeyUUID() {
+		PersonUUID curie = getByKeyPersonUUID(UUID_CURIE.id);
+		assertEquals(UUID_CURIE, curie);
+	}
+
+	public void testGetByKeyLongAutoID() {
+		if(supportsAutoincrement()){
+			PersonLongAutoID curie = getByKeyPersonLongAutoID(LongAutoID_CURIE.id);
+			assertEquals(LongAutoID_CURIE, curie);
+		}else {
+			try {
+				PersonLongAutoID curie = getByKeyPersonLongAutoID(LongAutoID_CURIE.id);
+			}catch(SienaRestrictedApiException ex){
+				return;
+			}
+			fail();
+		}
+	}
+
+	public void testGetByKeyLongManualID() {
+		PersonLongManualID curie = getByKeyPersonLongManualID(LongManualID_CURIE.id);
+		assertEquals(LongManualID_CURIE, curie);
+	}
+
+	public void testGetByKeyStringID() {
+		PersonStringID curie = getByKeyPersonStringID(StringID_CURIE.id);
+		assertEquals(StringID_CURIE, curie);
+	}
+	
+
+	public void testBatchSave() {
+		Object[] discs = new Discovery4Search2StringId[100];
+		for(int i=0; i<100; i++){
+			discs[i] = new Discovery4Search2StringId(
+					"Disc_"+String.format("%03d", i), 
+					"Body_"+String.format("%03d", i),
+					StringID_CURIE);
+		}
+		pm.save(discs);
+
+		List<Discovery4Search2StringId> res = 
+			pm.createQuery(Discovery4Search2StringId.class).fetch();
+		
+		assertEquals(discs.length, res.size());
+		int i=0;
+		for(Discovery4Search2StringId disc:res){
+			assertEquals(discs[i++], disc);
+		}
+		
+		for(i=0; i<100; i++){
+			((Discovery4Search2StringId)discs[i]).body += "UPD";
+			((Discovery4Search2StringId)discs[i]).discoverer = StringID_EINSTEIN;
+		}
+		
+		int nb = pm.save(discs);
+		assertEquals(discs.length, nb);
+		res = 
+			pm.createQuery(Discovery4Search2StringId.class).fetch();
+		i=0;
+		for(Discovery4Search2StringId disc:res){
+			assertEquals(discs[i++], disc);
+		}
+		
+	}
+	
+	
+	public void testBatchSaveList() {
+		List<Discovery4Search2StringId> discs = new ArrayList<Discovery4Search2StringId>();
+		for(int i=0; i<100; i++){
+			discs.add(new Discovery4Search2StringId(
+					"Disc_"+String.format("%03d", i), "Body_"+String.format("%03d", i), StringID_CURIE));
+		}
+		int nb = pm.insert(discs);
+		assertEquals(discs.size(), nb);
+		
+		List<Discovery4Search2StringId> res = 
+			pm.createQuery(Discovery4Search2StringId.class).fetch();
+		
+		assertEquals(discs.size(), res.size());
+		int i=0;
+		for(Discovery4Search2StringId disc:res){
+			assertEquals(discs.get(i++), disc);
+		}
+		
+		for(i=0; i<100; i++){
+			((Discovery4Search2StringId)discs.get(i)).body += "UPD";
+			((Discovery4Search2StringId)discs.get(i)).discoverer = StringID_EINSTEIN;
+		}
+		
+		nb = pm.save(discs);
+		assertEquals(discs.size(), nb);
+		res = 
+			pm.createQuery(Discovery4Search2StringId.class).fetch();
+		i=0;
+		for(Discovery4Search2StringId disc:res){
+			assertEquals(discs.get(i++), disc);
+		}
+	}
 }

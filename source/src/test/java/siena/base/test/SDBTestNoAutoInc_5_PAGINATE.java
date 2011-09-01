@@ -74,4 +74,17 @@ public class SDBTestNoAutoInc_5_PAGINATE extends BaseTestNoAutoInc_5_PAGINATE {
 		// TODO Auto-generated method stub
 		return true;
 	}
+
+	@Override
+	public boolean supportsTransaction() {
+		// TODO Auto-generated method stub
+		return false;
+	}
+
+	@Override
+	public boolean supportsListStore() {
+		// TODO Auto-generated method stub
+		return false;
+	}
+	
 }

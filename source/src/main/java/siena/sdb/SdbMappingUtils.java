@@ -449,22 +449,18 @@ public class SdbMappingUtils {
 		return nb;
 	}
 	
-	public static <T> List<T> mapSelectResultToList(SelectResult res, Class<T> clazz) {
-		List<T> l = new ArrayList<T>();
+	public static <T> void mapSelectResultToList(SelectResult res, List<T> resList, Class<T> clazz) {
 		List<Item> items = res.getItems();
 		
 		ClassInfo info = ClassInfo.getClassInfo(clazz);
 		for(Item item: items){
 			T obj = Util.createObjectInstance(clazz);
 			fillModel(item, clazz, info, obj);
-			l.add(obj);
-		}
-		
-		return l;
+			resList.add(obj);
+		}		
 	}
 	
-	public static <T> List<T> mapSelectResultToList(SelectResult res, Class<T> clazz, int offset) {
-		List<T> l = new ArrayList<T>();
+	public static <T> void mapSelectResultToList(SelectResult res, List<T> resList, Class<T> clazz, int offset) {
 		List<Item> items = res.getItems();
 		
 		ClassInfo info = ClassInfo.getClassInfo(clazz);
@@ -472,29 +468,23 @@ public class SdbMappingUtils {
 			Item item = items.get(i);
 			T obj = Util.createObjectInstance(clazz);
 			fillModel(item, clazz, info, obj);
-			l.add(obj);
-		}
-		
-		return l;
+			resList.add(obj);
+		}		
 	}
 	
 	
-	public static <T> List<T> mapSelectResultToListKeysOnly(SelectResult res, Class<T> clazz) {
-		List<T> l = new ArrayList<T>();
+	public static <T> void mapSelectResultToListKeysOnly(SelectResult res, List<T> resList, Class<T> clazz) {
 		List<Item> items = res.getItems();
 		
 		ClassInfo info = ClassInfo.getClassInfo(clazz);
 		for(Item item: items){
 			T obj = Util.createObjectInstance(clazz);
 			fillModelKeysOnly(item, clazz, info, obj);
-			l.add(obj);
-		}
-		
-		return l;
+			resList.add(obj);
+		}		
 	}
 	
-	public static <T> List<T> mapSelectResultToListKeysOnly(SelectResult res, Class<T> clazz, int offset) {
-		List<T> l = new ArrayList<T>();
+	public static <T> void mapSelectResultToListKeysOnly(SelectResult res, List<T> resList, Class<T> clazz, int offset) {
 		List<Item> items = res.getItems();
 		
 		ClassInfo info = ClassInfo.getClassInfo(clazz);
@@ -502,14 +492,11 @@ public class SdbMappingUtils {
 			Item item = items.get(i);
 			T obj = Util.createObjectInstance(clazz);
 			fillModelKeysOnly(item, clazz, info, obj);
-			l.add(obj);
+			resList.add(obj);
 		}
-		
-		return l;
 	}
 	
-	public static <T> List<T> mapSelectResultToListOrderedFromKeys(SelectResult res, Class<T> clazz, Iterable<?> keys) {
-		List<T> l = new ArrayList<T>();
+	public static <T> void mapSelectResultToListOrderedFromKeys(SelectResult res, List<T> resList, Class<T> clazz, Iterable<?> keys) {
 		List<Item> items = res.getItems();
 		
 		ClassInfo info = ClassInfo.getClassInfo(clazz);
@@ -520,7 +507,7 @@ public class SdbMappingUtils {
 				if(item.getName().equals(getItemNameFromKey(clazz, key))){
 					T obj = Util.createObjectInstance(clazz);
 					fillModel(item, clazz, info, obj);
-					l.add(obj);
+					resList.add(obj);
 					items.remove(item);
 					found = true;
 					break;
@@ -528,10 +515,9 @@ public class SdbMappingUtils {
 			}
 			if(!found){
 				// if not found, puts NULL in the list
-				l.add(null);
+				resList.add(null);
 			}
 		}
-		return l;
 	}
 	
 	public static int mapSelectResultToCount(SelectResult res) {
@@ -754,11 +740,12 @@ public class SdbMappingUtils {
 						
 						// forces true
 						first = true;
-						
+						q.append(" ( ");
+
 						for(String f: qf.fields){
 							Field field = Util.getField(clazz, f);
 							if(!first) {
-								q.append(AND);
+								q.append(OR);
 							}
 							first = false;
 							
@@ -789,11 +776,11 @@ public class SdbMappingUtils {
 							}
 							q.append(" ) ");
 						}
+						q.append(" ) ");
 						
 					}catch(Exception e){
 						throw new SienaException(e);
 					}
-					break;
 				}
 			}
 		}
@@ -846,6 +833,8 @@ public class SdbMappingUtils {
 	public static <T> void nextPage(QueryData<T> query) {
 		QueryOptionPage pag = (QueryOptionPage)query.option(QueryOptionPage.ID);
 		QueryOptionSdbContext sdbCtx = (QueryOptionSdbContext)query.option(QueryOptionSdbContext.ID);
+		QueryOptionOffset off = (QueryOptionOffset)query.option(QueryOptionOffset.ID);
+
 		if(sdbCtx==null){
 			sdbCtx = new QueryOptionSdbContext();
 			query.options().put(sdbCtx.type, sdbCtx);
@@ -870,15 +859,16 @@ public class SdbMappingUtils {
 					// last page
 					sdbCtx.noMoreDataAfter = true;
 				}else{
-					// follows the real offset
-					sdbCtx.realOffset += pag.pageSize;
+					// follows the real offset and doesn't forget to add the off.offset
+					if(off.isActive()) 
+						sdbCtx.realOffset += pag.pageSize + off.offset;
+					else sdbCtx.realOffset += pag.pageSize;
 					
 					// if currentokenoffset is less than next page realoffset
 					// uses offset
 					if(sdbCtx.currentTokenOffset() <= sdbCtx.realOffset){
-						QueryOptionOffset offset = (QueryOptionOffset)query.option(QueryOptionOffset.ID);
-						offset.activate();
-						offset.offset = sdbCtx.realOffset - sdbCtx.currentTokenOffset();
+						off.activate();
+						off.offset = sdbCtx.realOffset - sdbCtx.currentTokenOffset();
 					}
 					// if currentokenoffset is greater than previous page realoffset
 					// go to previous page again

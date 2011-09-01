@@ -1,29 +1,17 @@
 package siena.base.test;
 
-import static siena.Json.map;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
 
 import siena.Query;
-import siena.SienaRestrictedApiException;
-import siena.base.test.model.Address;
-import siena.base.test.model.AutoInc;
-import siena.base.test.model.Contact;
 import siena.base.test.model.DataTypes;
-import siena.base.test.model.DataTypes.EnumLong;
-import siena.base.test.model.Discovery4JoinStringId;
-import siena.base.test.model.DiscoveryPrivate;
+import siena.base.test.model.Discovery4Search2StringId;
 import siena.base.test.model.DiscoveryStringId;
-import siena.base.test.model.MultipleKeys;
 import siena.base.test.model.PersonLongAutoID;
 import siena.base.test.model.PersonLongManualID;
-import siena.base.test.model.PersonStringAutoIncID;
 import siena.base.test.model.PersonStringID;
 import siena.base.test.model.PersonUUID;
 import siena.sdb.SdbPersistenceManager;
@@ -49,13 +37,13 @@ public abstract class BaseTestNoAutoInc_BASE extends AbstractTest {
 	public static String lifeCyclePhase = "";
 	
 	public void createClasses(List<Class<?>> classes) {
-		classes.add(PersonUUID.class);
-		classes.add(PersonLongAutoID.class);
-		classes.add(PersonLongManualID.class);
+		//classes.add(PersonUUID.class);
+		//classes.add(PersonLongAutoID.class);
+		//classes.add(PersonLongManualID.class);
 		classes.add(PersonStringID.class);
-		classes.add(PersonStringAutoIncID.class);
+		//classes.add(PersonStringAutoIncID.class);
 		classes.add(DiscoveryStringId.class);
-		classes.add(DataTypes.class);
+		//classes.add(DataTypes.class);
 		/*classes.add(Discovery4Join.class);
 		classes.add(Discovery4Join2.class);
 		classes.add(DiscoveryPrivate.class);
@@ -90,6 +78,7 @@ public abstract class BaseTestNoAutoInc_BASE extends AbstractTest {
 		pm.createQuery(PersonStringID.class).delete();
 		pm.createQuery(DataTypes.class).delete();
 		pm.createQuery(DiscoveryStringId.class).delete();
+		pm.createQuery(Discovery4Search2StringId.class).delete();
 
 		pm.insert(UUID_TESLA, UUID_CURIE, UUID_EINSTEIN);
 		pm.insert(LongManualID_TESLA, LongManualID_CURIE, LongManualID_EINSTEIN);
