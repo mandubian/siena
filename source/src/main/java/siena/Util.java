@@ -28,6 +28,7 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.TimeZone;
+import java.util.UUID;
 
 import siena.embed.Embedded;
 import siena.embed.JavaSerializer;
@@ -222,8 +223,13 @@ public class Util {
 			else if(BigDecimal.class==type) return (BigDecimal)value;
 		} 
 		
-		if(String.class.isAssignableFrom(value.getClass()) && Json.class.isAssignableFrom(type)) {
-			return Json.loads((String) value);
+		if(String.class.isAssignableFrom(value.getClass())) {
+			if(Json.class.isAssignableFrom(type)) {
+				return Json.loads((String) value);
+			}
+			if(UUID.class == type) {
+				return UUID.fromString((String)value);
+			}
 		} 
 		
 		Embedded embed = field.getAnnotation(Embedded.class);

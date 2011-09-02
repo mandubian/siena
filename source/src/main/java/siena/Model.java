@@ -254,7 +254,7 @@ public abstract class Model {
 				this.query = obj.getPersistenceManager().createQuery(clazz);				
 			}
 			else if(((QueryOptionState)this.query.option(QueryOptionState.ID)).isStateless())
-				this.query.release();
+				this.query.resetData();
 			return this.query.filter(filter, obj);
 		}
 

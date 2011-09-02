@@ -71,7 +71,7 @@ public abstract class BaseTestNoAutoInc_7_BATCH extends BaseTestNoAutoInc_BASE {
 	
 	public void testBatchDeleteList() {
 		List<DiscoveryStringId> discs = new ArrayList<DiscoveryStringId>();
-		for(int i=0; i<100; i++){
+		for(int i=0; i<59; i++){
 			DiscoveryStringId disc = new DiscoveryStringId("Disc_"+String.format("%03d", i), StringID_CURIE);
 			discs.add(disc);
 		}
@@ -115,6 +115,27 @@ public abstract class BaseTestNoAutoInc_7_BATCH extends BaseTestNoAutoInc_BASE {
 		
 		assertEquals(1, res.size());
 		assertEquals(StringID_EINSTEIN, res.get(0));
+	}
+	
+	public void testBatchDeleteByKeysLots() {
+		List<DiscoveryStringId> discs = new ArrayList<DiscoveryStringId>();
+		List<String> keys = new ArrayList<String>();
+		for(int i=0; i<59; i++){
+			DiscoveryStringId disc = new DiscoveryStringId("Disc_"+String.format("%03d", i), StringID_CURIE);
+			discs.add(disc);
+			keys.add(disc.name);
+		}
+		pm.insert(discs);
+
+		int nb = 
+			pm.deleteByKeys(DiscoveryStringId.class, keys);
+		
+		assertEquals(discs.size(), nb);
+		
+		List<DiscoveryStringId> res = 
+			pm.createQuery(DiscoveryStringId.class).fetch();
+		
+		assertEquals(0, res.size());
 	}
 	
 	public void testBatchGet() {

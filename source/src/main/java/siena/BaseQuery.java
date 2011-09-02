@@ -241,7 +241,7 @@ public class BaseQuery<T> extends BaseQueryData<T> implements Query<T> {
 	}
 
 	public Query<T> release() {
-		super.reset();
+		//super.reset();
 		pm.release(this);
 		return this;
 	}

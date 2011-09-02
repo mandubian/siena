@@ -15,8 +15,9 @@ public class SDBTestNoAutoInc_8_SEARCH extends BaseTestNoAutoInc_8_SEARCH {
 		
 		Properties p = new Properties();
 		// don't want to give my AWS ID/secrets :D
-	    p.load(new FileInputStream("/home/pascal/work/mandubian/aws/siena-aws.properties"));
-		
+	    //p.load(new FileInputStream("/home/pascal/work/mandubian/aws/siena-aws.properties"));
+		p.load(new FileInputStream("/home/mandubian/work/aws/siena-aws.properties"));
+
 		//p.setProperty("implementation", "siena.sdb.SdbPersistenceManager");
 		//p.setProperty("awsAccessKeyId", "");
 		//p.setProperty("awsSecretAccessKey", "");

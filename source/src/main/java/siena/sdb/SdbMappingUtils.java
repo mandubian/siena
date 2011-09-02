@@ -97,11 +97,21 @@ public class SdbMappingUtils {
 			{
 				Object idVal = Util.readField(obj, idField);
 				if(idVal == null){
-					keyVal = UUID.randomUUID().toString();
+					UUID uuid = UUID.randomUUID();
+					keyVal = uuid.toString();
+					
+					if(idField.getType() == UUID.class){
+						Util.setField(obj, idField, uuid);
+					}
+					else if(idField.getType() == String.class){
+						Util.setField(obj, idField, uuid.toString());
+					}
+					else {
+						throw new SienaRestrictedApiException("DB", "getItemName", "@Id UUID must be of type String or UUID");
+					}
 				}else {
 					keyVal = toString(idField, idVal);
 				}
-				Util.setField(obj, idField, keyVal);
 				break;
 			}
 			default:
@@ -945,6 +955,8 @@ public class SdbMappingUtils {
 							offset.activate();
 							offset.offset = sdbCtx.realOffset;
 						}else {
+							// resets realOffset to 0 because it was negative
+							sdbCtx.realOffset = 0;
 							sdbCtx.noMoreDataBefore = true;
 						}
 					}else {
@@ -970,7 +982,16 @@ public class SdbMappingUtils {
 				QueryOptionOffset offset = (QueryOptionOffset)query.option(QueryOptionOffset.ID);
 				// means there has been a nextPage performed first and the offset has been used
 				// to simulate the nextPage as there was no token yet
-				if(offset.offset != 0){
+				if(sdbCtx.realOffset != 0){
+					// follows the real offset
+					sdbCtx.realOffset -= pag.pageSize;					
+
+					offset.activate();					
+					offset.offset = sdbCtx.realOffset;
+				}else {
+					sdbCtx.noMoreDataBefore = true;
+				}
+				/*if(offset.offset != 0){
 					offset.offset -= pag.pageSize;
 					offset.activate();
 
@@ -984,7 +1005,7 @@ public class SdbMappingUtils {
 						offset.offset = sdbCtx.realOffset;
 					}
 					sdbCtx.noMoreDataBefore = true;
-				}
+				}*/
 			}
 		} else {
 			// throws exception because it's impossible to reuse nextPage when paginating has been interrupted, the cases are too many

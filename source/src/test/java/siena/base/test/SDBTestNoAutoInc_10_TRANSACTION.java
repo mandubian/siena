@@ -15,7 +15,9 @@ public class SDBTestNoAutoInc_10_TRANSACTION extends BaseTestNoAutoInc_10_TRANSA
 		
 		Properties p = new Properties();
 		// don't want to give my AWS ID/secrets :D
-	    p.load(new FileInputStream("/home/pascal/work/mandubian/aws/siena-aws.properties"));
+	    //p.load(new FileInputStream("/home/pascal/work/mandubian/aws/siena-aws.properties"));
+		p.load(new FileInputStream("/home/mandubian/work/aws/siena-aws.properties"));
+
 		
 		//p.setProperty("implementation", "siena.sdb.SdbPersistenceManager");
 		//p.setProperty("awsAccessKeyId", "");

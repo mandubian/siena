@@ -87,7 +87,7 @@ public class SienaIterablePerPage<T> implements Iterable<T> {
 
 		@Override
 		protected void finalize() throws Throwable {
-			query.release();
+			query.resetData();
 			super.finalize();
 		}
 
@@ -95,7 +95,7 @@ public class SienaIterablePerPage<T> implements Iterable<T> {
 
 	@Override
 	protected void finalize() throws Throwable {
-		query.release();
+		query.resetData();
 		super.finalize();
 	}
 

@@ -37,6 +37,7 @@ import siena.core.options.QueryOptionPage;
 import siena.core.options.QueryOptionState;
 import siena.gae.GaeMappingUtils;
 import siena.gae.GaeQueryUtils;
+import siena.gae.QueryOptionGaeContext;
 
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.AmazonServiceException;
@@ -139,10 +140,15 @@ public class SdbPersistenceManager extends AbstractPersistenceManager {
 				
 				int len = doList.size()> MAX_ITEMS_PER_CALL ? MAX_ITEMS_PER_CALL: doList.size();
 				for(int i=0; i < doList.size(); i += len){
+					int sz = i+len;
+					if(sz > doList.size()){
+						sz = doList.size();
+					}
+					
 					sdb.batchPutAttributes(
 							new BatchPutAttributesRequest(
 									domain, 
-									doList.subList(i, i+len)));			
+									doList.subList(i, sz)));			
 
 				}
 				
@@ -270,10 +276,14 @@ public class SdbPersistenceManager extends AbstractPersistenceManager {
 				
 				int len = doList.size()> MAX_ITEMS_PER_CALL ? MAX_ITEMS_PER_CALL: doList.size();
 				for(int i=0; i < doList.size(); i += len){
+					int sz = i+len;
+					if(sz > doList.size()){
+						sz = doList.size();
+					}
 					sdb.batchPutAttributes(
 							new BatchPutAttributesRequest(
 									domain, 
-									doList.subList(i, i+len)));			
+									doList.subList(i, sz)));			
 				}
 			}
 		}catch(AmazonClientException ex){
@@ -322,10 +332,14 @@ public class SdbPersistenceManager extends AbstractPersistenceManager {
 				List<DeletableItem> doList = doMap.get(domain);
 				int len = doList.size() > MAX_ITEMS_PER_CALL ? MAX_ITEMS_PER_CALL: doList.size();
 				for(int i=0; i < doList.size(); i += len){
+					int sz = i+len;
+					if(sz > doList.size()){
+						sz = doList.size();
+					}
 					sdb.batchDeleteAttributes(
 							new BatchDeleteAttributesRequest(
 									domain, 
-									doList.subList(i, i + len)));			
+									doList.subList(i, sz)));			
 
 				}
 			}		
@@ -847,8 +861,12 @@ public class SdbPersistenceManager extends AbstractPersistenceManager {
 
 	@Override
 	public <T> void release(Query<T> query) {
-		// TODO Auto-generated method stub
-		
+		super.release(query);
+		QueryOptionSdbContext sdbCtx = (QueryOptionSdbContext)query.option(QueryOptionSdbContext.ID);
+
+		if(sdbCtx != null){
+			sdbCtx.resetAll();
+		}
 	}
 
 	@Override
@@ -925,10 +943,14 @@ public class SdbPersistenceManager extends AbstractPersistenceManager {
 			checkDomain(domain);			
 			int len = doList.size() > MAX_ITEMS_PER_CALL ? MAX_ITEMS_PER_CALL: doList.size();
 			for(int i=0; i < doList.size(); i += len){
+				int sz = i+len;
+				if(sz > doList.size()){
+					sz = doList.size();
+				}
 				sdb.batchDeleteAttributes(
 					new BatchDeleteAttributesRequest(
 						domain, 
-						doList.subList(i, i + len)));			
+						doList.subList(i, sz)));			
 			}
 		}catch(AmazonClientException ex){
 			throw new SienaException(ex);
