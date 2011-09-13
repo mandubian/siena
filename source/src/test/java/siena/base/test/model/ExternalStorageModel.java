@@ -13,21 +13,30 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-package siena;
+package siena.base.test.model;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import java.math.BigDecimal;
 
-@Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.FIELD)
-public @interface ExternalStorage {
+import siena.ExternalStorage;
+import siena.ExternalStorage.ExternalStorageType;
+import siena.Generator;
+import siena.Id;
+import siena.Table;
+import siena.core.DecimalPrecision;
+import siena.core.DecimalPrecision.StorageType;
+
+@Table("external_storage")
+public class ExternalStorageModel {
+
+	@Id(Generator.AUTO_INCREMENT)
+	public Long id;
 	
-	public enum ExternalStorageType {
-		s3, googleStorage
+	@ExternalStorage(ExternalStorageType.s3)
+	public S3Blob blob;
+
+	public ExternalStorageModel() {}
+
+	public ExternalStorageModel(Blob blob) {
+		this.blob = blob;
 	}
-	
-	ExternalStorageType value();
-
 }
