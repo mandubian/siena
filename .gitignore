@@ -1,6 +1,3 @@
-.svn
 source/target
 source/WEB-INF
-source/.project
-source/.classpath
-source/.settings/org.eclipse.m2e.core.prefs
+.svn

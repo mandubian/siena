@@ -24,10 +24,6 @@ import java.lang.annotation.Target;
 @Target(ElementType.FIELD)
 public @interface ExternalStorage {
 	
-	public enum ExternalStorageType {
-		s3, googleStorage
-	}
-	
-	ExternalStorageType value();
+	int value();
 
 }
