@@ -700,6 +700,28 @@ public class ClassInfo {
 		return false;
 	}
 	
+	public static boolean isAutoIncrement(Field field) {
+		Id id = field.getAnnotation(Id.class);
+		if(id != null) {
+			Class<?> type = field.getType();
+			// ONLY long ID can be auto_incremented
+			if(id.value() == Generator.AUTO_INCREMENT 
+					&& ( Long.TYPE == type || Long.class.isAssignableFrom(type))) {
+				return true;
+			}
+		} 
+		return false;
+	}
+	
+	public static boolean isEmbeddedNative(Field field) {
+		Embedded embed = field.getAnnotation(Embedded.class);
+		if(embed != null && embed.mode() == Embedded.Mode.NATIVE){
+			return true;
+		}
+		return false;
+	}
+	
+	
 	/**
 	 * Useful for those PersistenceManagers that only support one @Id
 	 * @param clazz

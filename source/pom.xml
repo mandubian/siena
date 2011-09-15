@@ -5,7 +5,7 @@
 	<groupId>siena</groupId>
 	<artifactId>siena</artifactId>
 	<name>siena</name>
-	<version>1.0.0-b6-SNAPSHOT</version>
+	<version>1.0.0-b6</version>
 	<url>http://www.sienaproject.com</url>
 	<description>
 		Siena is a persistence abstraction layer made in Java with various implementations:
@@ -342,6 +342,17 @@
 		    <version>1.4.1-beta</version>
 		</dependency>
 
+		<!-- SDB dependencies -->
+		<dependency>
+    		<groupId>com.amazonaws</groupId>
+    		<artifactId>aws-java-sdk</artifactId>
+    		<version>1.2.4</version>
+		</dependency>		
+		<dependency>
+			<groupId>org.apache.httpcomponents</groupId>
+			<artifactId>httpcore</artifactId>
+			<version>4.1.1</version>
+		</dependency>
 	</dependencies>
 
 	<profiles>
@@ -527,6 +538,33 @@
 								<exclude>**/BaseAsyncTest.java</exclude>
 								<exclude>**/BaseModelTest.java</exclude>
 								<exclude>**/BaseMassTest.java</exclude>
+								<exclude>**/TestAll.java</exclude>
+								<exclude>**/Person.java</exclude>
+								<exclude>**/Message.java</exclude>
+								<exclude>**/Discovery.java</exclude>
+							</excludes>
+							<includes>
+								<include>**/FusionTest.java</include>
+							</includes>
+						</configuration>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+		<profile>
+			<id>SDB</id>
+			<build>
+				<plugins>
+					<!-- Test cases -->
+					<plugin>
+						<artifactId>maven-surefire-plugin</artifactId>
+						<configuration>
+							<excludes>
+								<exclude>**/AbstractTest.java</exclude>
+								<exclude>**/BaseTest*.java</exclude>
+								<exclude>**/BaseAsyncTest.java</exclude>
+								<exclude>**/BaseModelTest.java</exclude>
+								<exclude>**/BaseMassTest.java</exclude>
 								<exclude>**/BaseEmbeddedTest.java</exclude>
 								<exclude>**/BaseAggregatedTest.java</exclude>
 								<exclude>**/BaseRelatedTest.java</exclude>
@@ -536,7 +574,7 @@
 								<exclude>**/Discovery.java</exclude>
 							</excludes>
 							<includes>
-								<include>**/FusionTest.java</include>
+								<include>**/SDBTest*.java</include>
 							</includes>
 						</configuration>
 					</plugin>

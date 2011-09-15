@@ -85,12 +85,12 @@ public class BaseMany<T> implements Many4PM<T>{
 			this.relation.discriminator = field;
 		}
 
-		this.query.release().aggregated(aggregator, ClassInfo.getSimplestColumnName(field));
+		this.query.resetData().aggregated(aggregator, ClassInfo.getSimplestColumnName(field));
 		return this;
 	}
 
 	public Many4PM<T> relationMode(Object owner, Field field) {
-		this.query.release().filter(ClassInfo.getSimplestColumnName(field), owner);
+		this.query.resetData().filter(ClassInfo.getSimplestColumnName(field), owner);
 		return this;
 	}
 

@@ -23,6 +23,7 @@ import siena.core.Many4PM;
 import siena.core.One4PM;
 import siena.core.async.PersistenceManagerAsync;
 import siena.core.batch.Batch;
+import siena.core.options.PmOption;
 
 /**
  * This is the core interface to implement on <code>Siena</code>.
@@ -51,6 +52,12 @@ public interface PersistenceManager {
 	 *            The content of the <code>siena.properties</code> file.
 	 */
 	void init(Properties p);
+
+	
+	PersistenceManager option(PmOption opt);
+	PmOption option(int type);
+	Map<Integer, PmOption> options();
+	void resetOptions();
 
 	/**
 	 * Method for obtaining <code>Query</code> implementations.
