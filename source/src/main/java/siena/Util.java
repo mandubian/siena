@@ -206,6 +206,7 @@ public class Util {
 	
 	public static Object fromObject(Field field, Object value) {
 		Class<?> type = field.getType();
+		Class<?> valueType = value.getClass();
 		if(value == null) {
 			if(type.isPrimitive()){
 				if(byte.class==type)    return (byte)0;
@@ -220,7 +221,7 @@ public class Util {
 			return null;
 		}
 		
-		if(Number.class.isAssignableFrom(value.getClass())) {
+		if(Number.class.isAssignableFrom(valueType)) {
 			Number number = (Number) value;
 			if(byte.class==type || Byte.class==type)    return number.byteValue();
 			else if(Short.TYPE==type || Short.class==type)   return number.shortValue();
@@ -232,7 +233,7 @@ public class Util {
 			else if(BigDecimal.class==type) return (BigDecimal)value;
 		} 
 		
-		if(String.class.isAssignableFrom(value.getClass())) {
+		if(String.class.isAssignableFrom(valueType)) {
 			if(Json.class.isAssignableFrom(type)) {
 				return Json.loads((String) value);
 			}
@@ -241,11 +242,15 @@ public class Util {
 			}
 		} 
 		
+		if(String.class == type && UUID.class == valueType){
+			return value.toString();
+		}
+		
 		Embedded embed = field.getAnnotation(Embedded.class);
 		if(embed != null) {
 			switch(embed.mode()){
 			case SERIALIZE_JSON:
-				if(String.class.isAssignableFrom(value.getClass())) {
+				if(String.class.isAssignableFrom(valueType)) {
 					Json data = Json.loads((String) value);
 					return JsonSerializer.deserialize(field, data);
 				}
@@ -264,11 +269,11 @@ public class Util {
 			
 		}
 		
-		if(String.class.isAssignableFrom(value.getClass())&& type.isEnum()) {
+		if(String.class.isAssignableFrom(valueType)&& type.isEnum()) {
 			return Enum.valueOf((Class<Enum>) type, (String)value);
 		}
 		
-		if(String.class.isAssignableFrom(value.getClass())&& type != String.class) {
+		if(String.class.isAssignableFrom(valueType)&& type != String.class) {
 			return fromString(field.getType(), (String)value, true);
 		}
 		return value;

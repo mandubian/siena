@@ -10,6 +10,7 @@ import siena.Query;
 import siena.base.test.model.DataTypes;
 import siena.base.test.model.Discovery4Search2StringId;
 import siena.base.test.model.DiscoveryStringId;
+import siena.base.test.model.PersonBsonID;
 import siena.base.test.model.PersonLongAutoID;
 import siena.base.test.model.PersonLongManualID;
 import siena.base.test.model.PersonStringID;
@@ -37,12 +38,12 @@ public abstract class BaseTestNoAutoInc_BASE extends AbstractTest {
 	public static String lifeCyclePhase = "";
 	
 	public void createClasses(List<Class<?>> classes) {
+		classes.add(PersonBsonID.class);
 		//classes.add(PersonUUID.class);
 		//classes.add(PersonLongAutoID.class);
 		//classes.add(PersonLongManualID.class);
-		classes.add(PersonStringID.class);
 		//classes.add(PersonStringAutoIncID.class);
-		classes.add(DiscoveryStringId.class);
+		//classes.add(DiscoveryStringId.class);
 		//classes.add(DataTypes.class);
 		/*classes.add(Discovery4Join.class);
 		classes.add(Discovery4Join2.class);
@@ -73,22 +74,17 @@ public abstract class BaseTestNoAutoInc_BASE extends AbstractTest {
 			}
 		}*/
 
-		pm.createQuery(PersonUUID.class).delete();
-		pm.createQuery(PersonLongManualID.class).delete();
-		pm.createQuery(PersonStringID.class).delete();
-		pm.createQuery(DataTypes.class).delete();
-		pm.createQuery(DiscoveryStringId.class).delete();
-		pm.createQuery(Discovery4Search2StringId.class).delete();
-
-		pm.insert(UUID_TESLA, UUID_CURIE, UUID_EINSTEIN);
-		pm.insert(LongManualID_TESLA, LongManualID_CURIE, LongManualID_EINSTEIN);
-		pm.insert(StringID_TESLA, StringID_CURIE, StringID_EINSTEIN);
+		//pm.createQuery(PersonBson.class).delete();
+		
+		//pm.insert(UUID_TESLA, UUID_CURIE, UUID_EINSTEIN);
+		//pm.insert(LongManualID_TESLA, LongManualID_CURIE, LongManualID_EINSTEIN);
+		//pm.insert(StringID_TESLA, StringID_CURIE, StringID_EINSTEIN);
 		
 		/*pm.insert(UUID_TESLA, UUID_CURIE, UUID_EINSTEIN,
 				LongManualID_TESLA, LongManualID_CURIE, LongManualID_EINSTEIN,
 				StringID_TESLA, StringID_CURIE, StringID_EINSTEIN);*/
 
-		pm.option(SdbPersistenceManager.CONSISTENT_READ);
+		//pm.option(SdbPersistenceManager.CONSISTENT_READ);
 
 	}
 	

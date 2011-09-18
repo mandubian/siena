@@ -29,7 +29,6 @@ package siena;
  *
  */
 public enum Generator {
-
-	NONE, AUTO_INCREMENT, SEQUENCE, UUID
+	NONE, AUTO_INCREMENT, SEQUENCE, UUID, BSON
 
 } // Generator.
