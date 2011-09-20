@@ -1,6 +1,6 @@
 h1. Welcome to Siena project! 
 
-**Latest tagged version is Siena v1.0.0-b4**
+**Latest tagged version is Siena v1.0.0-b5**
 
 bq. You can now find some "manuals":https://github.com/mandubian/siena/wiki/Manuals
 
