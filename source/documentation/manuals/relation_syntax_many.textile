@@ -27,10 +27,10 @@ h2. <a name="relation-syntax-one-owner">@Many<T>@ + owned relation</a>
 
 bc.. public class OwnerModel {
 ...
-  @Owned(mappedBy="owner")
-  // @Owned 
-  // is also valid: the mappingBy is not mandatory and if not precised, siena will find the first field having OwnerModel type
-  public Many<ChildModel> child;	
+	@Owned(mappedBy="owner")
+	// @Owned 
+	// is also valid: the mappingBy is not mandatory and if not precised, siena will find the first field having OwnerModel type
+	public Many<ChildModel> child;	
 ...
 }
 
@@ -50,7 +50,7 @@ p. Using the old notation @Query<T>@, the @Many<T>@ is equivalent to:
 
 bc.. public class OwnerModel {
 ...
-  @Filter("owner")
+	@Filter("owner")
 	public Query<ChildModel> child;	
 ...
 }
@@ -62,7 +62,7 @@ p. Here is the aggregator model:
 
 bc.. public class AggregatorModel {
 ...
-  @Aggregated
+	@Aggregated
 	public Many<ChildModel> child;	
 ...
 }
@@ -93,21 +93,21 @@ p. The 2 important functions of @SyncList<T>@ are:
 
 * @SyncList<E> sync()* : re-synchronizes only if the list was not already fetched from datastore (if the elements have changed since, it can't know it so it won't synchronize)
 * @SyncList<E> forceSync()@ : forces full re-synchronization with the datastore
-*	@boolean addAll(F ...c)@ : a facility function missing in traditional Java List<T>
-*	@boolean addAll(int index, F ...c)@ : a facility function missing in traditional Java List<T>
+* @boolean addAll(F ...c)@ : a facility function missing in traditional Java List<T>
+* @boolean addAll(int index, F ...c)@ : a facility function missing in traditional Java List<T>
 
 
 h3. <a name="relation-syntax-many-code-insert">Associate children with @asList(T obj)@ & insert children+parent in one single call</a>
 
 bc.. // creates dog
-  	Dog pluto = new Dog("Pluto");
-		// infects dog with fleas
-		for(int i=0; i<10; i++){
-			Flea flea = new Flea("pupuce"+i);
-			pluto.fleas.asList().add(flea);
-		}
-		//saves dog + fleas in one single call
-		pluto.save();
+Dog pluto = new Dog("Pluto");
+// infects dog with fleas
+for(int i=0; i<10; i++){
+	Flea flea = new Flea("pupuce"+i);
+	pluto.fleas.asList().add(flea);
+}
+//saves dog + fleas in one single call
+pluto.save();
 
 p(note). *Note* You don't have to insert the children objects as Siena inserts them at the same time as the parent (if the children were not inserted yet).
 
@@ -126,11 +126,6 @@ Dog pluto = Dog.getByName("Pluto");
 List<Flea> fleas = pluto.fleas.asList();
 
 p(note). *Note* pluto.flea is a @Many<Flea>@ so you need to use @asList()@ to fetch all the children
-
-
-
-
-
 
 
 *TO BE CONTINUED...*
