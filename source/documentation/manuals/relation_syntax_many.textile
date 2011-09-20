@@ -9,6 +9,8 @@ h3. Description
 
 p(note). *Note* with @Many<T>@, you don't have to choose in your model how you want to manipulate your child entities: you will be able to do it through a simple list retrieved at once or through a query with limits, offsets, filters, ordering etc... 
 
+bq. Keep in mind that Siena just manages the relation but not the objects themselves
+
 h3. Siena DOES
 
 * _manage the relation_ but not the full life-cycle of related entities (you must manage their updates for ex).
@@ -209,6 +211,15 @@ fleabis = pluto.fleas.asList().get(5);
 // verifies it was updated now
 assertEquals(fleabis.name, flea.name);
 
-p(note). *Note* Siena *JUST MANAGES THE RELATION* and do not update your object, *it's your responsability*
+p(note). *Note Siena JUST MANAGES THE RELATION* and do not update your objects if you modify them, *it's your responsability*
+
+==<br/>==
+
+
+h3. <a name="relation-syntax-many-code-sync">Using @asList().sync()@ and @asList().forceSync()@ to synchronize data</a>
+
+*TO BE CONTINUED...*
+
+h3. <a name="relation-syntax-many-code-query">Using @asQuery()@ to filter elements</a>
 
 *TO BE CONTINUED...*
