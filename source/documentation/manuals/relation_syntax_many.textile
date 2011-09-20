@@ -1,4 +1,4 @@
-h1. <a name="relation-syntax-many">Using the new syntax Many&lt;T&gt;</a>
+h1. <a name="relation-syntax-many">Using the new syntax *Many&lt;T&gt;*</a>
 
 h3. Description
 
@@ -9,7 +9,7 @@ h3. Description
 
 p(note). *Note* with @Many<T>@, you don't have to choose in your model how you want to manipulate your child entities: you will be able to do it through a simple list retrieved at once or through a query with limits, offsets, filters, ordering etc... 
 
-bq. Keep in mind that Siena just manages the relation but not the objects themselves
+bq. *Keep in mind that Siena just manages the relation but not the objects themselves*
 
 h3. Siena DOES
 
