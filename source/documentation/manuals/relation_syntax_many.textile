@@ -113,7 +113,6 @@ p(note). *Note* You don't have to insert the children objects as Siena inserts t
 
 p(note). *Note* using @asQuery()@ has no effect when inserting because it would try to query the datastore. Only @asList()@ when creating the parent + children.
 
-
 ==<br/>==
 
 h3. <a name="relation-syntax-many-code-fetch">Retrieve the parent & get the children from parent with @gasList()@</a>
@@ -125,7 +124,91 @@ Dog pluto = Dog.getByName("Pluto");
 // gets the little bloodsuckers
 List<Flea> fleas = pluto.fleas.asList();
 
-p(note). *Note* pluto.flea is a @Many<Flea>@ so you need to use @asList()@ to fetch all the children
+p(note). *Note* pluto.fleas is a @Many<Flea>@ so you need to use @asList()@ to fetch all the children
 
+
+h3. <a name="relation-syntax-many-code-insert-from-child">Create child associated to the parent one by one and retrieve all children at once</a>
+
+p. You can first insert a parent 
+p. Then, you create children along time and associate those children to the parent and insert them.
+p. Finally, you can retrieve all children at once from the parent using @asList()@
+
+bc.. // inserts dog
+Dog pluto = new Dog("Pluto");
+pluto.insert();
+
+// infects dog with fleas
+for(int i=0; i<10; i++){
+	Flea flea = new Flea("pupuce"+i);
+	// associates the flea to its dog
+	flea.bloodsource = pluto;
+	flea.insert();
+}
+
+// retrieves all the fleas from the dog
+// gets the dog
+Dog plutobis = Dog.getByName("Pluto");
+// here the fleas are not yet fetched from datastore
+// ... later ...
+// gets the little bloodsuckers
+List<Flea> fleas = plutobis.fleas.asList();
+
+p(note). *Note* The children associate themselves to the parent but @Many<T>@ retrieves them all from the parent afterwards.
+
+
+==<br/>==
+
+
+h3. <a name="relation-syntax-many-code-remove-add-child">Remove/add child from @asList()@ and update parent to de-associate child from parent</a>
+
+bc.. // removes a few flea (5 & 8) for the poor dog 
+plutobis.fleas.asList().remove(5);
+plutobis.fleas.asList().remove(7);
+plutobis.fleas.asList().add(new Flea("pupuce10"));
+// updates the dog
+plutobis.update();
+
+// retrieve again the dog and verifies the fleas 5/8 have disappeared
+Dog plutoter = Dog.getByName("Pluto");
+assertEquals(9, plutoter.fleas.asList().size());
+
+// retrieves the removed fleas and verifies there are not associated to the dog anymore
+Flea flea5 = Flea.getByName("pupuce5");
+assertNull(flea5.bloodsource);
+Flea flea8 = Flea.getByName("pupuce8");
+assertNull(flea8.bloodsource);
+Flea flea10 = Flea.getByName("pupuce10");
+assertEquals(pluto.id, flea8.bloodsource.id);
+
+p(note). *Note* that the children are removed from the list but they are also de-associated from the parent BUT they are NOT deleted.
+
+==<br/>==
+
+
+h3. <a name="relation-syntax-many-code-child-update">Child update is not taken in charge by Siena</a>
+
+bc.. // gets a flea from the dog
+Flea flea = pluto.fleas.asList().get(5);
+
+flea.name = "pupuce5_UPD";
+
+// if you update the dog, the flea is not updated
+pluto.update();
+
+// retrieves the same flea
+Flea fleabis = pluto.fleas.asList().get(5);
+assertFalse(flea.name.equals(fleabis.name));
+
+// now updates the flea manually
+flea.update();
+		
+// retrieves again the dog
+pluto = Dog.getByName("Pluto");
+// retrieves the same flea
+fleabis = pluto.fleas.asList().get(5);
+// verifies it was updated now
+assertEquals(fleabis.name, flea.name);
+
+p(note). *Note* Siena *JUST MANAGES THE RELATION" and do not update your object, *it's your responsability*
 
 *TO BE CONTINUED...*
