@@ -1,4 +1,4 @@
-h1. <a name="relation-syntax-many">Using the new syntax @Many<T>@</a>
+h1. <a name="relation-syntax-many">Using the new syntax Many==<T>==</a>
 
 h3. Description
 
@@ -209,6 +209,6 @@ fleabis = pluto.fleas.asList().get(5);
 // verifies it was updated now
 assertEquals(fleabis.name, flea.name);
 
-p(note). *Note* Siena *JUST MANAGES THE RELATION" and do not update your object, *it's your responsability*
+p(note). *Note* Siena *JUST MANAGES THE RELATION* and do not update your object, *it's your responsability*
 
 *TO BE CONTINUED...*
