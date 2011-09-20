@@ -1,4 +1,4 @@
-h1. <a name="relation-syntax-many">Using the new syntax Many==<T>==</a>
+h1. <a name="relation-syntax-many">Using the new syntax Many<T></a>
 
 h3. Description
 
