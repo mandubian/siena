@@ -1,29 +1,136 @@
 h1. <a name="relation-syntax-many">Using the new syntax @Many<T>@</a>
 
-<pre><code>This is a new syntax to represent:
+h3. Description
 
-* the relation from the owner/aggregator entity to the children or aggregated entities in a One2Many/Many2One relation
-* the owner side in a multiple owned relation
-* the aggregator side in a multiple aggregated relation
-* a versatile way to retrieve the children of the relation as a List or as a Query. 
+* @Many<T>@ represents the relation itself from the owner/aggregator entity to the owned or aggregated children entities in a One2Many/Many2One relation.
+* @Many<T>@ is set on the owner side in a multiple owned relation.
+* @Many<T>@ is set on the aggregator side in a multiple aggregated relation.
+* @Many<T>@ provides a lazy way to retrieve the children of the relation/aggregation as a List or as a Query.
 
-p(note). *Note* with @Many<T>@, you don't have to choose in your model how you want to manipulate your child  entities: you will be able to do it through a simple list retrieved at once or through a query with limits, offsets, filters, ordering etc... 
+p(note). *Note* with @Many<T>@, you don't have to choose in your model how you want to manipulate your child entities: you will be able to do it through a simple list retrieved at once or through a query with limits, offsets, filters, ordering etc... 
 
-h3. Siena DO
+h3. Siena DOES
 
-* _manage the relation_ but not the full life-cycle of related entities.
+* _manage the relation_ but not the full life-cycle of related entities (you must manage their updates for ex).
 * _manage relation change_ when you add a child to the One2Many relation. 
-* _auto-insert the related entities_ at the same time as the parent (or when updating it) if not done yet.
+* _auto-insert the related entities_ at the same time as the parent (or when updating the parent) if not inserted yet.
 * _lazy-load the related entities_ only when required.
 * _delete-cascade the aggregated entities_ because an aggregated entity can't exist outside its aggregator. *This is the ONLY accepted delete cascade*. 
 
 h3. Siena DOESN'T
 
 * _manage the updates of data within the related entities_. You must save them yourself.
-* _delete the owned entities when you delete the owner_ since an owned entity can change owner. Nevertheless, the owned entity is no more associated to any owner.
+* _delete the owned entities when you delete the owner_ since an owned entity can change owner. Nevertheless, the owned entity is no more associated to any owner if you delete the owner.
 </code></pre>
 
-h2. <a name="relation-syntax-one-owner">@Many<T>@ in an owned relation</a>
+h2. <a name="relation-syntax-one-owner">@Many<T>@ + owned relation</a>
 
-*UNDER CONSTRUCTION*
+bc.. public class OwnerModel {
+...
+  @Owned(mappedBy="owner")
+  // @Owned 
+  // is also valid: the mappingBy is not mandatory and if not precised, siena will find the first field having OwnerModel type
+  public Many<ChildModel> child;	
+...
+}
+
+p. Here is the child model:
+
+bc.. public class ChildModel {
+...
+	public OwnerModel owner;	
+...
+}
+
+p(note). *Note* On the child side, the _owner_ field is just written as a simple reference to the owner without any @One<T>@. Why? because, on the owned entity side, the owner is just referenced by its id/key.
+
+p(note). *Note* On the owner side, the <code>@Owned.mappedBy</code> is used to specify which field in the child maps the owner. But the _@mappedBy@ is not mandatory_ and Siena can deduce the field by itself.
+
+p. Using the old notation @Query<T>@, the @Many<T>@ is equivalent to:
+
+bc.. public class OwnerModel {
+...
+  @Filter("owner")
+	public Query<ChildModel> child;	
+...
+}
+
+
+h2. <a name="relation-syntax-one-aggregate">Using @Many<T>@ + aggregated relation</a>
+
+p. Here is the aggregator model:
+
+bc.. public class AggregatorModel {
+...
+  @Aggregated
+	public Many<ChildModel> child;	
+...
+}
+
+p. Here is the aggregated model:
+
+bc.. public class AggregatedModel {
+...
+...
+}
+
+p(note). *Note* On the aggregated side, there is no reference to the aggregator because an aggregated entity shall not be aware of its aggregator: it's a part of it but it was not necessarily meant to be. 
+It's very useful because you don't need to foresee your model will be aggregated while designing it and you can aggregate any model.
+ 
+bq. The aggregator reference is managed by Siena itself and you don't have to deal with it neither declare it in your model.
+
+p(note). **Note** Nevertheless, if you absolutely want to access your own aggregator, it's possible. Go to the "aggregated relation page":./relation_aggregated.html.
+
+==<br/>==
+
+h2. <a name="relation-syntax-many-code">Using Many<T> in your code</a>
+
+p. The 2 important functions of @Many<T>@ are: 
+* @SyncList<T> asList()@ : retrieves the elements as a SyncList which is a classic List<T> with some (re)synchronization features
+* @Query<T> asQuery()@ : retrieves the elements as a siena Query<T> allowing to apply filters/orders/etc...
+
+p. The 2 important functions of @SyncList<T>@ are: 
+
+* @SyncList<E> sync()* : re-synchronizes only if the list was not already fetched from datastore (if the elements have changed since, it can't know it so it won't synchronize)
+* @SyncList<E> forceSync()@ : forces full re-synchronization with the datastore
+*	@boolean addAll(F ...c)@ : a facility function missing in traditional Java List<T>
+*	@boolean addAll(int index, F ...c)@ : a facility function missing in traditional Java List<T>
+
+
+h3. <a name="relation-syntax-many-code-insert">Associate children with @asList(T obj)@ & insert children+parent in one single call</a>
+
+bc.. // creates dog
+  	Dog pluto = new Dog("Pluto");
+		// infects dog with fleas
+		for(int i=0; i<10; i++){
+			Flea flea = new Flea("pupuce"+i);
+			pluto.fleas.asList().add(flea);
+		}
+		//saves dog + fleas in one single call
+		pluto.save();
+
+p(note). *Note* You don't have to insert the children objects as Siena inserts them at the same time as the parent (if the children were not inserted yet).
+
+p(note). *Note* using @asQuery()@ has no effect when inserting because it would try to query the datastore. Only @asList()@ when creating the parent + children.
+
+
+==<br/>==
+
+h3. <a name="relation-syntax-many-code-fetch">Retrieve the parent & get the children from parent with @gasList()@</a>
+
+bc.. // gets the dog
+Dog pluto = Dog.getByName("Pluto");
+// here the fleas are not yet fetched from datastore
+// ... later ...
+// gets the little bloodsuckers
+List<Flea> fleas = pluto.fleas.asList();
+
+p(note). *Note* pluto.flea is a @Many<Flea>@ so you need to use @asList()@ to fetch all the children
+
+
+
+
+
+
+
 *TO BE CONTINUED...*
