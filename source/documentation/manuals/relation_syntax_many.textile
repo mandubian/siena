@@ -59,7 +59,7 @@ bc.. public class OwnerModel {
 ...
 }
 
-p.
+p. 
 
 ==<br/>==
 
@@ -133,6 +133,7 @@ List<Flea> fleas = pluto.fleas.asList();
 
 p(note). *Note* pluto.fleas is a @Many<Flea>@ so you need to use @asList()@ to fetch all the children
 
+==<br/>==
 
 h3. <a name="relation-syntax-many-code-insert-from-child">Create child associated to the parent one by one and retrieve all children at once</a>
 
