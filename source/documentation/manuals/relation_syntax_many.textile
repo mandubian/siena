@@ -1,5 +1,7 @@
 h1. <a name="relation-syntax-many">Using the new syntax *Many&lt;T&gt;*</a>
 
+bq. *This syntax is only available for GAE implementation for the time being but will be ported soon to other impl*
+
 h3. Description
 
 * @Many<T>@ represents the relation itself from the owner/aggregator entity to the owned or aggregated children entities in a One2Many/Many2One relation.
@@ -25,7 +27,7 @@ h3. Siena DOESN'T
 * _delete the owned entities when you delete the owner_ since an owned entity can change owner. Nevertheless, the owned entity is no more associated to any owner if you delete the owner.
 </code></pre>
 
-h2. <a name="relation-syntax-one-owner">@Many<T>@ + owned relation</a>
+h2. <a name="relation-syntax-one-owner">Using @Many<T>@ + owned relation</a>
 
 bc.. public class OwnerModel {
 ...
@@ -57,6 +59,9 @@ bc.. public class OwnerModel {
 ...
 }
 
+p.
+
+==<br/>==
 
 h2. <a name="relation-syntax-one-aggregate">Using @Many<T>@ + aggregated relation</a>
 
