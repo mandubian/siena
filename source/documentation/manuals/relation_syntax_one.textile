@@ -2,14 +2,16 @@ h1. <a name="relation-syntax-one">Using the new syntax @One<T>@</a>
 
 bq. *This syntax is only available for GAE implementation for the time being but will be ported soon to other impl*
 
-bq. The following code samples can be found in "samples dir":../../samples/siena/samples/relations/owned/one2one 
+bq. *The following code samples can be found in "samples dir":../../samples/siena/samples/relations/owned/one2one*
 
-<pre><code>This is a new syntax to represent:
+h3. Description
+
+This is a new syntax to represent:
 * the relation from the owner/aggregator entity to the child/owned entity in an One2XXX relation
 * the owner side in an owned relation
 * the aggregator side in an aggregated relation
 
-When using @One<T>@:
+bq. *Keep in mind that Siena just manages the relation but not the objects themselves*
 
 h3. Siena DO
 
@@ -21,9 +23,9 @@ h3. Siena DO
 
 h3. Siena DOESN'T
 
-* *DOESN'T manage the updates of data within the related entity*. You must save it yourself.
-* *DOESN'T delete the owned entities when you delete the owner* since an owned entity can change owner.
-</code></pre>
+* *manage the updates of data within the related entity*. You must save it yourself.
+* *delete the owned entities when you delete the owner* since an owned entity can change owner.
+
 
 
 ==<br/>==
