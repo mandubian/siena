@@ -2,7 +2,7 @@ h1. <a name="relation-syntax-many">Using the new syntax *Many&lt;T&gt;*</a>
 
 bq. *This syntax is only available for GAE implementation for the time being but will be ported soon to other impl*
 
-bq. The following code samples can be found in "samples dir":../../samples/siena/samples/relations/owned/one2many
+bq. *The following code samples can be found in "samples dir":../../samples/siena/samples/relations/owned/one2many*
 
 h3. Description
 
@@ -140,7 +140,9 @@ p(note). *Note* pluto.fleas is a @Many<Flea>@ so you need to use @asList()@ to f
 h3. <a name="relation-syntax-many-code-insert-from-child">Create child associated to the parent one by one and retrieve all children at once</a>
 
 p. You can first insert a parent 
+
 p. Then, you create children along time and associate those children to the parent and insert them.
+
 p. Finally, you can retrieve all children at once from the parent using @asList()@
 
 bc.. // inserts dog
@@ -262,10 +264,11 @@ fleabis = pluto.fleas.asList().get(5);
 // verifies it was updated
 assertEquals(fleabis.name, flea.name);
 
+p. 
 
-p(note). @sync()@ doesn't re-fetch the list as it was already fetched.
+p(note). *Note* @sync()@ doesn't re-fetch the list as it was already fetched.
 
-p(note). @forceSync()@ forces the re-fetch of the list and all elements are synchronized with the datastore. Like that, you control exactly how you want to fetch data from the datastore after the first synchronization.
+p(note). *Note* @forceSync()@ forces the re-fetch of the list and all elements are synchronized with the datastore. Like that, you control exactly how you want to fetch data from the datastore after the first synchronization.
 
 h3. <a name="relation-syntax-many-code-query">Using @asList().addAll(Object...)@ & @asQuery()@ to filter elements</a>
 
@@ -310,7 +313,7 @@ for(Flea beta:betas){
 	i++;
 }
 
-p(note). @addAll(Collection)@ is a convenient function to add several elements to a list without putting them in a Collection.
+p(note). *Note* @addAll(Collection)@ is a convenient function to add several elements to a list without putting them in a Collection.
 
-p(note). once you have a query with @asQuery()@, you can do what you want with it as it is a query ;)
+p(note). *Note* once you have a query with @asQuery()@, you can do what you want with it as it is a query ;)
 
