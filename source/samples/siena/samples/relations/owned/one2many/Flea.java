@@ -14,50 +14,45 @@
  *   limitations under the License.
  */
 
-package siena.samples.relations.owned.one2one;
+package siena.samples.relations.owned.one2many;
 
 import siena.Generator;
 import siena.Id;
 import siena.Model;
 import siena.Query;
 import siena.Table;
-import siena.core.One;
-import siena.core.Owned;
 import siena.core.batch.Batch;
 
-@Table("sample_unowned_onetoone_person")
-public class Person extends Model{
+@Table("sample_unowned_onetoone_flea")
+public class Flea extends Model{
 
 	@Id(Generator.AUTO_INCREMENT)
 	public Long id;
 	
 	public String name;
 	
-	// The owned relation to the dog
-	@Owned
-	public One<Dog> dog;
-	
-	public static Query<Person> all() {
-		return Model.all(Person.class);
+	public Dog bloodsource;
+
+	public static Query<Flea> all() {
+		return Model.all(Flea.class);
 	}
 	
-	public static Batch<Person> batch() {
-		return Model.batch(Person.class);
+	public static Batch<Flea> batch() {
+		return Model.batch(Flea.class);
 	}
 	
-	public static Person getByName(String name){
-		return all().filter("name", name).get();
-	}
-	
-	public Person() {
+	public Flea() {
 	}
 
-	public Person(String name) {
+	public Flea(String name) {
 		this.name = name;
 	}
 
 	public String toString() {
-		return "id: "+id+", name: "+name;
+		return "id: "+id+", name: "+name + " - bloodsource:"+bloodsource;
 	}
-
+	
+	public static Flea getByName(String name){
+		return all().filter("name", name).get();
+	}
 }

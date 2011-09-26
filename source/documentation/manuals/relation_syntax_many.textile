@@ -2,6 +2,8 @@ h1. <a name="relation-syntax-many">Using the new syntax *Many&lt;T&gt;*</a>
 
 bq. *This syntax is only available for GAE implementation for the time being but will be ported soon to other impl*
 
+bq. The following code samples can be found in "samples dir":../../samples/siena/samples/relations/owned/one2many
+
 h3. Description
 
 * @Many<T>@ represents the relation itself from the owner/aggregator entity to the owned or aggregated children entities in a One2Many/Many2One relation.
@@ -99,7 +101,7 @@ p. The 2 important functions of @Many<T>@ are:
 p. The 2 important functions of @SyncList<T>@ are: 
 
 * @SyncList<E> sync()* : re-synchronizes only if the list was not already fetched from datastore (if the elements have changed since, it can't know it so it won't synchronize)
-* @SyncList<E> forceSync()@ : forces full re-synchronization with the datastore
+* @SyncList<E> forceSync()@ : forces full re-synchronization of the list with the datastore
 * @boolean addAll(F ...c)@ : a facility function missing in traditional Java List<T>
 * @boolean addAll(int index, F ...c)@ : a facility function missing in traditional Java List<T>
 
@@ -224,8 +226,91 @@ p(note). *Note Siena JUST MANAGES THE RELATION* and do not update your objects i
 
 h3. <a name="relation-syntax-many-code-sync">Using @asList().sync()@ and @asList().forceSync()@ to synchronize data</a>
 
-*TO BE CONTINUED...*
+bc.. // creates dog
+Dog pluto = new Dog("Pluto");
+// creates fleas
+List<Flea> fleas = new ArrayList<Flea>();		
+for(int i=0; i<10; i++){
+	Flea flea = new Flea("pupuce"+i);
+	fleas.add(flea);
+}
+//infects dog with fleas
+//Just to show addAll(Object...)
+pluto.fleas.asList().addAll(fleas);
+//saves dog + fleas
+pluto.save();
 
-h3. <a name="relation-syntax-many-code-query">Using @asQuery()@ to filter elements</a>
+// fetches the list a first time
+fleas = pluto.fleas.asList();
 
-*TO BE CONTINUED...*
+// gets flea n°5 independently of the dog and updates it 
+Flea flea = Model.getByKey(Flea.class, fleas.get(5).id);		
+flea.name = flea.name + "_UPD";
+flea.update();
+
+// synchronizes dog's fleas list (it doesn't re-fetch the list if already done) 
+pluto.fleas.asList().sync();
+// verifies the updated flea is not synchronized
+Flea fleabis = pluto.fleas.asList().get(5);
+// verifies it was updated
+assertFalse(fleabis.name.equals(flea.name));
+
+// forces synchronizing the list (it re-fetches the fleas) 
+pluto.fleas.asList().forceSync();
+// retrieves the same flea
+fleabis = pluto.fleas.asList().get(5);
+// verifies it was updated
+assertEquals(fleabis.name, flea.name);
+
+
+p(note). @sync()@ doesn't re-fetch the list as it was already fetched.
+
+p(note). @forceSync()@ forces the re-fetch of the list and all elements are synchronized with the datastore. Like that, you control exactly how you want to fetch data from the datastore after the first synchronization.
+
+h3. <a name="relation-syntax-many-code-query">Using @asList().addAll(Object...)@ & @asQuery()@ to filter elements</a>
+
+@asQuery()@ is just an entrypoint to the Query world. Instead of getting all elements as @asList()@ does, you can fetch only the elements you want by using query filtering/ordering/searching.
+
+Here are a few samples:
+
+bc.. // creates dog
+Dog pluto = new Dog("Pluto");
+// infects dog with fleas having several times the same name
+Flea alpha1 = new Flea("alpha");
+Flea alpha2 = new Flea("alpha");
+Flea beta1 = new Flea("beta");
+Flea beta2 = new Flea("beta");
+
+//saves dog + fleas with addAll
+pluto.fleas.asList().addAll(alpha1, alpha2, beta1, beta2);
+pluto.save();
+
+// retrieves again the dog
+pluto = Dog.getByName("Pluto");
+
+// fetches alpha fleas
+List<Flea> alphas = pluto.fleas.asQuery().filter("name", "alpha").order("id").fetch();
+assertEquals(alpha1.name, alphas.get(0).name);
+assertEquals(alpha1.id, alphas.get(0).id);
+assertEquals(alpha2.name, alphas.get(1).name);
+assertEquals(alpha2.id, alphas.get(1).id);
+
+// interates on beta fleas
+Iterable<Flea> betas = pluto.fleas.asQuery().filter("name", "beta").order("id").iter();
+int i=0;
+for(Flea beta:betas){
+	if(i==0) {
+		assertEquals(beta1.name, beta.name);
+		assertEquals(beta1.id, beta.id);
+	}
+	else if(i==1) {
+		assertEquals(beta2.name, beta.name);
+		assertEquals(beta2.id, beta.id);
+	}
+	i++;
+}
+
+p(note). @addAll(Collection)@ is a convenient function to add several elements to a list without putting them in a Collection.
+
+p(note). once you have a query with @asQuery()@, you can do what you want with it as it is a query ;)
+

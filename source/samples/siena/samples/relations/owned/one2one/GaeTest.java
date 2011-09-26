@@ -34,8 +34,8 @@ import com.google.appengine.tools.development.testing.LocalServiceTestHelper;
  */
 public class GaeTest extends GaeSamplesTest{
 	public void createClasses(List<Class<?>> classes){
-		classes.add(Person.class);
 		classes.add(Dog.class);
+		classes.add(Person.class);
 	}
 
 	public void test() {

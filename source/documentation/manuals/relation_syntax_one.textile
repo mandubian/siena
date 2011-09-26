@@ -1,5 +1,9 @@
 h1. <a name="relation-syntax-one">Using the new syntax @One<T>@</a>
 
+bq. *This syntax is only available for GAE implementation for the time being but will be ported soon to other impl*
+
+bq. The following code samples can be found in "samples dir":../../samples/siena/samples/relations/owned/one2one 
+
 <pre><code>This is a new syntax to represent:
 * the relation from the owner/aggregator entity to the child/owned entity in an One2XXX relation
 * the owner side in an owned relation
