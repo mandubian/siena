@@ -1,0 +1,84 @@
+h1. <a name="title">Using __java.math.BigDecimal__ in Siena</a>
+
+h2. <a name="codesample">Code sample</a>
+
+Here is a class with a BigDecimal:
+
+bc.. @Table("big_decimal")
+public class BigDecimalModel {
+
+	@Id(Generator.AUTO_INCREMENT)
+	public Long id;
+	
+	// stores using the db native default type
+	public BigDecimal big1;
+
+	// stores using the db native type with a (size,scale)=(21,10)
+	@DecimalPrecision(storateType=StorageType.NATIVE, size=21, scale=10)
+	public BigDecimal big2;
+	
+	// stores as double
+	@DecimalPrecision(storateType=StorageType.DOUBLE)
+	public BigDecimal big3;
+	
+	// stores as plain string
+	@DecimalPrecision(storateType=StorageType.STRING)
+		
+	...
+}
+
+p. 
+
+==<br/>==
+
+h2. <a name="annotdesc">@DecimalPrecision Annotation</a>
+
+Here is the definition of @DecimalPrecision:
+
+bc.. public @interface DecimalPrecision {
+	public enum StorageType {
+		NATIVE,	// NATIVE means it uses native DB storage for bigdecimal: for SQL: SQL type DECIMAL - for GAE:String 
+		DOUBLE, // stored as a double
+		STRING	// stored as a string (not padded with 0 yet)
+	}
+	
+	StorageType storateType() default StorageType.NATIVE;
+	int size() default 19;
+	int scale() default 2;
+}
+
+p. 
+==<br/>==
+
+h3. <a name="sizescale">Size & Scale<a>
+
+* **size** is the total of digits in the BigDecimal
+
+bc. 123456.789 -> size = 9
+
+* **scale** is the number of digits to the right of the decimal point
+
+bc. 123456.789 -> scale = 3
+
+p(note). **Note** Default (size, scale) is (19, 2) for the reason that this is the default precision used by Oracle and that I found it on several web sites but this is quite arbitrary.
+
+p(note). **Note** Be careful when setting couple (size, scale) because you can't assign bigger numbers than the range authorised by it.
+
+==<br/>==
+
+h3. <a name="storagetype">Storage Type</a>
+
+BigDecimal in Siena can be stored into DB using 3 storage types:
+* **Native** uses the native type proposed by the underlying DB:
+** __RDBMS__ proposes a standard SQL type __DECIMAL(size, scale)__ where __size__ and __scale__ .
+** __GAE__ doesn't provide BigDecimal support so the default chosen storage type is __String__
+
+* **String** stores the BigDecimal into a plain String
+
+bc. -1.2345678E4 -> -12345.678
+
+* **Double** stores the BigDecimal into a double: **Be careful of approximations** linked to rounding mechanism used by __java.math.BigDecimal__ when converting BigDecimal into other types. You can lose some information. For example, you could have:
+
+bc. 123456789.0123456890 -> 123456789.01234569
+
+

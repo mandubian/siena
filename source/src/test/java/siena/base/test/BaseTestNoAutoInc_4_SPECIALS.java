@@ -2,6 +2,7 @@ package siena.base.test;
 
 import static siena.Json.map;
 
+import java.lang.reflect.Modifier;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -9,16 +10,20 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 
+import siena.Model;
 import siena.base.test.model.Address;
 import siena.base.test.model.AutoInc;
 import siena.base.test.model.BigDecimalDoubleModelStringId;
+import siena.base.test.model.BigDecimalModel;
 import siena.base.test.model.BigDecimalModelNoPrecisionStringId;
 import siena.base.test.model.BigDecimalModelStringId;
 import siena.base.test.model.BigDecimalStringModelStringId;
 import siena.base.test.model.Contact;
 import siena.base.test.model.DataTypes;
+import siena.base.test.model.PersonStringID;
 import siena.base.test.model.DataTypes.EnumLong;
 import siena.base.test.model.DiscoveryStringId;
+import siena.base.test.model.EnumTest;
 import siena.base.test.model.MultipleKeys;
 import siena.base.test.model.PersonUUID;
 import siena.base.test.model.PolymorphicModel;
@@ -26,7 +31,28 @@ import siena.base.test.model.PolymorphicModelStringId;
 
 public abstract class BaseTestNoAutoInc_4_SPECIALS extends BaseTestNoAutoInc_BASE {
 	
-
+	public void createClasses(List<Class<?>> classes) {
+		classes.add(PersonStringID.class);
+		classes.add(DiscoveryStringId.class);
+		classes.add(PersonUUID.class);
+		classes.add(DiscoveryStringId.class);
+		classes.add(DataTypes.class);
+		classes.add(BigDecimalModelStringId.class);
+		classes.add(BigDecimalStringModelStringId.class);
+		classes.add(BigDecimalModelNoPrecisionStringId.class);
+		classes.add(BigDecimalDoubleModelStringId.class);
+		classes.add(PolymorphicModel.class);
+		classes.add(PolymorphicModelStringId.class);
+		classes.add(EnumTest.class);
+	}
+	
+	public void postInit() {
+		for (Class<?> clazz : classes) {
+			if(!Modifier.isAbstract(clazz.getModifiers())){
+				pm.createQuery(clazz).delete();			
+			}
+		}
+	}
 	
 	public void testGetObjectNotFound() {
 		try {
@@ -270,5 +296,15 @@ public abstract class BaseTestNoAutoInc_4_SPECIALS extends BaseTestNoAutoInc_BAS
 		
 		PolymorphicModelStringId<List<String>> poly2 = pm.getByKey(PolymorphicModelStringId.class, poly.id);
 		assertEquals(poly, poly2);
+	}
+
+	public void testEnum() {
+		EnumTest e = new EnumTest();
+		e.role = EnumTest.UserRole.ADMIN;
+		e.insert();
+		
+		List<EnumTest> es = Model.all(EnumTest.class).filter("role", EnumTest.UserRole.ADMIN).fetch();
+		assertTrue(!es.isEmpty());
+		assertEquals(e, es.get(0));
 	}
 }

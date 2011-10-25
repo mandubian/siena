@@ -837,4 +837,5 @@ public abstract class BaseAggregatedTest extends TestCase {
 		assertEquals(0, AggregateChildManualModel.all().aggregated(god, "child").count());
 		
 	}
+
 }

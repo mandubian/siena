@@ -1,0 +1,280 @@
+h1. <a name="title">Reference Relations In Siena</a>
+
+h2. <a name="summary">A reference relation is</a>
+
+* a *simple directed relation* from one originating model towards a targeted model. 
+* the *originating model doesn't own the relation*.
+* the *originating model doesn't own the targeted model*.
+* the *targeted model has its own lifecycle* completely independent from the originating model.
+
+bq. A reference to a model is *physically stored* in the originating model *as a field containing the primary key/id* of the targeted object.
+
+
+p. Here is how you write it in a model:
+
+bc.. public class YourModel extends Model {
+...
+	// This annotation is not mandatory at all and is just to precise the relation
+	// by default a relation is referenced in Siena
+	@Referenced
+	public YourReferencedModel ref;	
+...
+}
+
+bq.. *IMPORTANT TO KNOW*
+Siena is aimed at bridging SQL/NoSQL. *Almost all NoSQL DB have a limitation compared to SQL DB which is the absence of JOIN request*. In NoSQL, when you fetch the originating model, you can't fetch the targeted model in the same query (which is possible in a SQL DB with a left join). 
+So, as Siena tries to provide the minimum intersection between SQL/NoSQL, by default, it doesn't manage JOIN requests (there are ways to do it in Siena anyway, please see the join doc for this). *The only field of the targeting object to be retrieved with the originating object is the ID of the targeted object*. 
+Then, if you want to fetch the full targeted object, you must do it yourself with a second request to the datastore.
+
+p. Here is an illustration of this: 
+
+bc.. // First request to get the originating object 
+YourModel obj = Model.getByKey(YourModel.class, id);
+assert(obj.rel != null);
+assert(obj.rel.id != null);
+assert(obj.rel.anyField == null);
+
+// Second request to get the full targeted object
+obj.ref.get();
+assert(obj.rel != null);
+assert(obj.rel.id != null);
+assert(obj.rel.anyField != null);
+
+p. 
+
+==<br/>==
+
+h2. Now let's present the different types of referenced relations with samples
+
+h2. <a name="unowned-one-to-one-1-way">Unowned One-to-One 1-Way</a>
+
+bq.. *Take this Example*
+_A person has a cat but the cat doesn't belong to this person because a cat has no master. So the person knows her cat but the cat doesn't need to know the person.
+So we create 2 models._
+
+p. Here is the simple Cat model:
+
+bc.. @Table("sample_unowned_onetoone_cat") 
+public class Cat extends Model{
+
+	@Id(Generator.AUTO_INCREMENT)
+	public Long id;
+	
+	@Column("name") @Max(100)
+	public String name;
+
+	public static Query<Cat> all() {
+		return Model.all(Cat.class);
+	}
+	
+	public static Batch<Cat> batch() {
+		return Model.batch(Cat.class);
+	}
+	
+	public Cat() {
+	}
+
+	public Cat(String name) {
+		this.name = name;
+	}
+
+	public String toString() {
+		return "id: "+id+", name: "+name;
+	}
+}
+
+p. 
+
+p. Here is the Person with a reference to the cat represented by a Cat object.
+
+bc.. @Table("sample_unowned_onetoone_person")
+public class Person extends Model{
+
+	@Id(Generator.AUTO_INCREMENT)
+	public Long id;
+	
+	public String name;
+	
+	// The relation to the cat
+	// REMIND THAT THIS ANNOTATION CAN BE SKIPPED
+	@Referenced		
+	public Cat cat;
+	
+	public static Query<Person> all() {
+		return Model.all(Person.class);
+	}
+	
+	public static Batch<Person> batch() {
+		return Model.batch(Person.class);
+	}
+	
+	public static Person getByName(String name){
+		return all().filter("name", name).get();
+	}
+	
+	public Person() {
+	}
+
+	public Person(String name) {
+		this.name = name;
+	}
+
+	public String toString() {
+		return "id: "+id+", name: "+name;
+	}
+
+}
+
+p. Now, here is the code to manipulate this model:
+
+bc.. // First create a cat 
+Cat mistigri = new Cat("Mistigri");
+mistigri.save();
+		
+// Now the person who recognizes mistigri as her cat
+Person bob = new Person("Bob");
+bob.cat = mistigri;
+bob.save();
+		
+// Now retrieves the person from the datastore again
+Person bobbis = Person.getByName("Bob");
+
+// The cat object is not null in the person.
+// But Siena doesn't fetch the whole cat object but only the ID of the cat.
+assertEquals(bob.id, bobbis.id);
+assertNull(bobbis.cat.name);
+
+// to get to whole cat object, you must explictly request it
+bobbis.cat.get();
+
+assertEquals(bob.id, bobbis.id);
+assertEquals(bob.name, bobbis.name);
+assertEquals(mistigri.id, bobbis.cat.id);
+assertEquals(mistigri.name, bobbis.cat.name);
+
+p. 
+
+bq. *Note* When you request a Person, its _cat_ field is partially filled: basically, only the __cat.id__ field is contained in the _Person_ table and retrieved at the same time as the person.
+
+==<br/>==
+
+h2(#unowned-one-to-one-1-way). <a name="unowned-one-to-one-2-ways">Unowned One-to-One 2-ways</a>
+
+bq.. *Take this stupid example*
+_Imagine a planetary system where a planet has a single satellite (Earth+Moon for ex) and the satellite turns around its planet but the satellite doesn't completely belong to the planet and could change planet if a stronger gravitational object went around there.
+So we create 2 models._
+
+p. First the Planet class with a reference to a Satellite:
+
+bc.. @Table("sample_unowned_one2one2ways_planet")
+public class Planet extends Model{
+
+	@Id(Generator.AUTO_INCREMENT)
+	public Long id;
+	
+	public String name;
+	
+	// The relation to the cat
+	// REMIND THAT THIS ANNOTATION CAN BE SKIPPED
+	@Referenced
+	public Satellite sat;
+	
+	public static Query<Planet> all() {
+		return Model.all(Planet.class);
+	}
+	
+	public static Batch<Planet> batch() {
+		return Model.batch(Planet.class);
+	}
+	
+	public static Planet getByName(String name){
+		return all().filter("name", name).get();
+	}
+	
+	public Planet() {
+	}
+
+	public Planet(String name) {
+		this.name = name;
+	}
+
+	public String toString() {
+		return "id: "+id+", name: "+name+"satellite:"+sat;
+	}
+
+}
+
+p. Now the Satellite class with a reference to a planet:
+
+bc.. @Table("sample_unowned_one2one2ways_satellite")
+public class Satellite extends Model{
+
+	@Id(Generator.AUTO_INCREMENT)
+	public Long id;
+	
+	public String name;
+	
+	@Referenced
+	public Planet planet;
+
+	public static Query<Satellite> all() {
+		return Model.all(Satellite.class);
+	}
+	
+	public static Batch<Satellite> batch() {
+		return Model.batch(Satellite.class);
+	}
+	
+	public Satellite() {
+	}
+
+	public Satellite(String name) {
+		this.name = name;
+	}
+	
+	public static Satellite getByName(String name){
+		return all().filter("name", name).get();
+	}
+
+	public String toString() {
+		return "id: "+id+" - name: "+name+" - planet:"+planet;
+	}
+}
+
+p. Now the code to manage those models.
+
+bc.. // First create the satellite without referencing the planet
+Satellite moon = new Satellite("Moon");
+moon.save();
+// Second create the planet and link it to the satellite
+Planet earth = new Planet("Earth");
+earth.sat = moon;
+earth.save();
+// Finally link the satellite to the planet
+moon.planet = earth;
+moon.update();
+
+Planet earthbis = Planet.getByName("Earth");
+// To fully fill the sat field, get it explicitly
+earthbis.sat.get();
+assertEquals(earth.id, earthbis.id);
+assertEquals(earth.name, earthbis.name);
+assertEquals(moon.id, earthbis.sat.id);
+assertEquals(moon.name, earthbis.sat.name);
+
+Satellite moonbis = Satellite.getByName("Moon");
+// To fully fill the planet field, get it explicitly
+moonbis.planet.get();
+assertEquals(moon.id, moonbis.id);
+assertEquals(moon.name, moonbis.name);
+assertEquals(earth.id, moonbis.planet.id);
+assertEquals(earth.name, moonbis.planet.name);
+
+bq. *Note:* In a 2-ways relation, you can't save both objects (or entities) at the same time because, to be referenced, an object must be inserted (and assigned an ID).
+
+==<br/>==
+
+h2. <a name="unowned-many-to-one-1-way">Unowned Many-to-One</a>
+
+bq.. This relation is just the same as a One-to-One 1-way relation where you have several objects (the Many side) linked to the same object (the One side). 
+So if you need an example, look at paragraph "Unowned One-to-One 1-way":#unowned-one-to-one-1-way 

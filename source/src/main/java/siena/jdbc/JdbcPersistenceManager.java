@@ -523,6 +523,8 @@ public class JdbcPersistenceManager extends AbstractPersistenceManager {
 						} else {
 							if (value instanceof Date) {
 								value = Util.translateDate(f, (Date) value);
+							} else if(value instanceof Enum) {
+								value = value.toString();
 							}
 							parameters.add(value);
 						}

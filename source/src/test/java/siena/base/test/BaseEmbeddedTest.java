@@ -264,4 +264,5 @@ public abstract class BaseEmbeddedTest extends TestCase {
 		assertEquals("sub", afterContainer.embed.sub.id);
 		assertNull(afterContainer.embed.sub.parent);
 	}
+
 }

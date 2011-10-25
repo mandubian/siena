@@ -1,0 +1,304 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<testsuite failures="0" time="4.664" errors="0" skipped="0" tests="244" name="siena.base.test.GaeAsyncTest">
+  <properties>
+    <property name="java.runtime.name" value="Java(TM) SE Runtime Environment"/>
+    <property name="sun.boot.library.path" value="/usr/lib/jvm/java-6-sun-1.6.0.24/jre/lib/amd64"/>
+    <property name="java.vm.version" value="19.1-b02"/>
+    <property name="java.vm.vendor" value="Sun Microsystems Inc."/>
+    <property name="java.vendor.url" value="http://java.sun.com/"/>
+    <property name="path.separator" value=":"/>
+    <property name="java.vm.name" value="Java HotSpot(TM) 64-Bit Server VM"/>
+    <property name="file.encoding.pkg" value="sun.io"/>
+    <property name="user.country" value="US"/>
+    <property name="sun.java.launcher" value="SUN_STANDARD"/>
+    <property name="sun.os.patch.level" value="unknown"/>
+    <property name="java.vm.specification.name" value="Java Virtual Machine Specification"/>
+    <property name="user.dir" value="/home/mandubian/work/play/workspace/siena/source"/>
+    <property name="java.runtime.version" value="1.6.0_24-b07"/>
+    <property name="java.awt.graphicsenv" value="sun.awt.X11GraphicsEnvironment"/>
+    <property name="basedir" value="/home/mandubian/work/play/workspace/siena/source"/>
+    <property name="java.endorsed.dirs" value="/usr/lib/jvm/java-6-sun-1.6.0.24/jre/lib/endorsed"/>
+    <property name="os.arch" value="amd64"/>
+    <property name="surefire.real.class.path" value="/home/mandubian/work/play/workspace/siena/source/target/surefire/surefirebooter8823506980852822929.jar"/>
+    <property name="java.io.tmpdir" value="/tmp"/>
+    <property name="line.separator" value="
+"/>
+    <property name="java.vm.specification.vendor" value="Sun Microsystems Inc."/>
+    <property name="os.name" value="Linux"/>
+    <property name="sun.jnu.encoding" value="UTF-8"/>
+    <property name="java.library.path" value="/usr/lib/jvm/java-6-sun-1.6.0.24/jre/lib/amd64/server:/usr/lib/jvm/java-6-sun-1.6.0.24/jre/lib/amd64:/usr/lib/jvm/java-6-sun-1.6.0.24/jre/../lib/amd64:/usr/lib64/xulrunner-addons:/usr/java/packages/lib/amd64:/usr/lib64:/lib64:/lib:/usr/lib"/>
+    <property name="surefire.test.class.path" value="/home/mandubian/work/play/workspace/siena/source/target/test-classes:/home/mandubian/work/play/workspace/siena/source/target/classes:/home/mandubian/.m2/repository/dom4j/dom4j/1.6.1/dom4j-1.6.1.jar:/home/mandubian/.m2/repository/xml-apis/xml-apis/1.0.b2/xml-apis-1.0.b2.jar:/home/mandubian/.m2/repository/junit/junit/3.8.2/junit-3.8.2.jar:/home/mandubian/.m2/repository/commons-dbcp/commons-dbcp/1.2.2/commons-dbcp-1.2.2.jar:/home/mandubian/.m2/repository/commons-pool/commons-pool/1.3/commons-pool-1.3.jar:/home/mandubian/.m2/repository/org/apache/ddlutils/ddlutils/1.0/ddlutils-1.0.jar:/home/mandubian/.m2/repository/commons-beanutils/commons-beanutils/1.7.0/commons-beanutils-1.7.0.jar:/home/mandubian/.m2/repository/commons-betwixt/commons-betwixt/0.8/commons-betwixt-0.8.jar:/home/mandubian/.m2/repository/commons-beanutils/commons-beanutils-core/1.7.0/commons-beanutils-core-1.7.0.jar:/home/mandubian/.m2/repository/commons-codec/commons-codec/1.3/commons-codec-1.3.jar:/home/mandubian/.m2/repository/commons-collections/commons-collections/3.1/commons-collections-3.1.jar:/home/mandubian/.m2/repository/commons-digester/commons-digester/1.7/commons-digester-1.7.jar:/home/mandubian/.m2/repository/commons-lang/commons-lang/2.1/commons-lang-2.1.jar:/home/mandubian/.m2/repository/commons-logging/commons-logging-api/1.0.4/commons-logging-api-1.0.4.jar:/home/mandubian/.m2/repository/commons-logging/commons-logging/1.0.4/commons-logging-1.0.4.jar:/home/mandubian/.m2/repository/stax/stax-api/1.0.1/stax-api-1.0.1.jar:/home/mandubian/.m2/repository/oro/oro/2.0.8/oro-2.0.8.jar:/home/mandubian/.m2/repository/org/dbunit/dbunit/2.2/dbunit-2.2.jar:/home/mandubian/.m2/repository/junit-addons/junit-addons/1.4/junit-addons-1.4.jar:/home/mandubian/.m2/repository/xerces/xercesImpl/2.6.2/xercesImpl-2.6.2.jar:/home/mandubian/.m2/repository/xerces/xmlParserAPIs/2.6.2/xmlParserAPIs-2.6.2.jar:/home/mandubian/.m2/repository/poi/poi/2.5.1-final-20040804/poi-2.5.1-final-20040804.jar:/home/mandubian/.m2/repository/mysql/mysql-connector-java/5.1.6/mysql-connector-java-5.1.6.jar:/home/mandubian/.m2/repository/postgresql/postgresql/8.4-702.jdbc4/postgresql-8.4-702.jdbc4.jar:/home/mandubian/.m2/repository/org/drizzle/jdbc/drizzle-jdbc/1.0/drizzle-jdbc-1.0.jar:/home/mandubian/.m2/repository/com/google/appengine/appengine-tools-sdk/1.4.2/appengine-tools-sdk-1.4.2.jar:/home/mandubian/.m2/repository/com/google/appengine/appengine-api-1.0-sdk/1.4.2/appengine-api-1.0-sdk-1.4.2.jar:/home/mandubian/.m2/repository/com/google/appengine/appengine-testing/1.4.2/appengine-testing-1.4.2.jar:/home/mandubian/.m2/repository/com/google/appengine/appengine-api-labs/1.4.2/appengine-api-labs-1.4.2.jar:/home/mandubian/.m2/repository/com/google/appengine/appengine-api-stubs/1.4.2/appengine-api-stubs-1.4.2.jar:/home/mandubian/.m2/repository/org/apache/hbase/hbase/0.21.0-SNAPSHOT/hbase-0.21.0-SNAPSHOT.jar:/home/mandubian/.m2/repository/commons-cli/commons-cli/1.2/commons-cli-1.2.jar:/home/mandubian/.m2/repository/commons-httpclient/commons-httpclient/3.1/commons-httpclient-3.1.jar:/home/mandubian/.m2/repository/log4j/log4j/1.2.15/log4j-1.2.15.jar:/home/mandubian/.m2/repository/org/apache/thrift/thrift/0.2.0/thrift-0.2.0.jar:/home/mandubian/.m2/repository/org/slf4j/slf4j-api/1.4.3/slf4j-api-1.4.3.jar:/home/mandubian/.m2/repository/org/slf4j/slf4j-log4j12/1.4.3/slf4j-log4j12-1.4.3.jar:/home/mandubian/.m2/repository/com/google/guava/guava/r05/guava-r05.jar:/home/mandubian/.m2/repository/org/apache/hadoop/hadoop-core/0.20.2-with-200-826/hadoop-core-0.20.2-with-200-826.jar:/home/mandubian/.m2/repository/commons-net/commons-net/1.4.1/commons-net-1.4.1.jar:/home/mandubian/.m2/repository/javax/servlet/servlet-api/2.5/servlet-api-2.5.jar:/home/mandubian/.m2/repository/commons-el/commons-el/1.0/commons-el-1.0.jar:/home/mandubian/.m2/repository/org/eclipse/jdt/core/3.1.1/core-3.1.1.jar:/home/mandubian/.m2/repository/org/apache/ant/ant/1.7.0/ant-1.7.0.jar:/home/mandubian/.m2/repository/org/apache/ant/ant-launcher/1.7.0/ant-launcher-1.7.0.jar:/home/mandubian/.m2/repository/net/java/dev/jets3t/jets3t/0.6.1/jets3t-0.6.1.jar:/home/mandubian/.m2/repository/xmlenc/xmlenc/0.52/xmlenc-0.52.jar:/home/mandubian/.m2/repository/org/apache/hadoop/zookeeper/3.3.1/zookeeper-3.3.1.jar:/home/mandubian/.m2/repository/jline/jline/0.9.94/jline-0.9.94.jar:/home/mandubian/.m2/repository/org/mortbay/jetty/jetty/6.1.24/jetty-6.1.24.jar:/home/mandubian/.m2/repository/org/mortbay/jetty/servlet-api/2.5-20081211/servlet-api-2.5-20081211.jar:/home/mandubian/.m2/repository/org/mortbay/jetty/jetty-util/6.1.24/jetty-util-6.1.24.jar:/home/mandubian/.m2/repository/org/mortbay/jetty/servlet-api-2.5/6.1.14/servlet-api-2.5-6.1.14.jar:/home/mandubian/.m2/repository/org/mortbay/jetty/jsp-2.1/6.1.14/jsp-2.1-6.1.14.jar:/home/mandubian/.m2/repository/ant/ant/1.6.5/ant-1.6.5.jar:/home/mandubian/.m2/repository/org/mortbay/jetty/jsp-api-2.1/6.1.14/jsp-api-2.1-6.1.14.jar:/home/mandubian/.m2/repository/tomcat/jasper-runtime/5.5.23/jasper-runtime-5.5.23.jar:/home/mandubian/.m2/repository/tomcat/jasper-compiler/5.5.23/jasper-compiler-5.5.23.jar:/home/mandubian/.m2/repository/javax/servlet/jsp-api/2.0/jsp-api-2.0.jar:/home/mandubian/.m2/repository/org/jruby/jruby-complete/1.4.0/jruby-complete-1.4.0.jar:/home/mandubian/.m2/repository/com/google/protobuf/protobuf-java/2.3.0/protobuf-java-2.3.0.jar:/home/mandubian/.m2/repository/com/sun/jersey/jersey-core/1.1.5.1/jersey-core-1.1.5.1.jar:/home/mandubian/.m2/repository/com/sun/jersey/jersey-json/1.1.5.1/jersey-json-1.1.5.1.jar:/home/mandubian/.m2/repository/org/codehaus/jettison/jettison/1.1/jettison-1.1.jar:/home/mandubian/.m2/repository/com/sun/xml/bind/jaxb-impl/2.1.12/jaxb-impl-2.1.12.jar:/home/mandubian/.m2/repository/com/sun/jersey/jersey-server/1.1.5.1/jersey-server-1.1.5.1.jar:/home/mandubian/.m2/repository/asm/asm/3.1/asm-3.1.jar:/home/mandubian/.m2/repository/javax/xml/bind/jaxb-api/2.1/jaxb-api-2.1.jar:/home/mandubian/.m2/repository/javax/xml/stream/stax-api/1.0-2/stax-api-1.0-2.jar:/home/mandubian/.m2/repository/javax/activation/activation/1.1/activation-1.1.jar:/home/mandubian/.m2/repository/javax/ws/rs/jsr311-api/1.1.1/jsr311-api-1.1.1.jar:/home/mandubian/.m2/repository/org/apache/hadoop/avro/1.3.2/avro-1.3.2.jar:/home/mandubian/.m2/repository/com/thoughtworks/paranamer/paranamer/2.2/paranamer-2.2.jar:/home/mandubian/.m2/repository/com/thoughtworks/paranamer/paranamer-ant/2.2/paranamer-ant-2.2.jar:/home/mandubian/.m2/repository/com/thoughtworks/paranamer/paranamer-generator/2.2/paranamer-generator-2.2.jar:/home/mandubian/.m2/repository/com/thoughtworks/qdox/qdox/1.10.1/qdox-1.10.1.jar:/home/mandubian/.m2/repository/org/codehaus/jackson/jackson-core-asl/1.5.2/jackson-core-asl-1.5.2.jar:/home/mandubian/.m2/repository/org/codehaus/jackson/jackson-mapper-asl/1.5.2/jackson-mapper-asl-1.5.2.jar:/home/mandubian/.m2/repository/com/h2database/h2/1.3.154/h2-1.3.154.jar:/home/mandubian/.m2/repository/com/google/api/client/google-api-client/1.4.1-beta/google-api-client-1.4.1-beta.jar:/home/mandubian/.m2/repository/com/google/code/findbugs/jsr305/1.3.9/jsr305-1.3.9.jar:/home/mandubian/.m2/repository/com/google/code/gson/gson/1.6/gson-1.6.jar:/home/mandubian/.m2/repository/org/apache/httpcomponents/httpclient/4.0.3/httpclient-4.0.3.jar:/home/mandubian/.m2/repository/org/apache/httpcomponents/httpcore/4.0.1/httpcore-4.0.1.jar:/home/mandubian/.m2/repository/xpp3/xpp3/1.1.4c/xpp3-1.1.4c.jar:"/>
+    <property name="java.specification.name" value="Java Platform API Specification"/>
+    <property name="java.class.version" value="50.0"/>
+    <property name="sun.management.compiler" value="HotSpot 64-Bit Server Compiler"/>
+    <property name="os.version" value="2.6.32-33-server"/>
+    <property name="user.home" value="/home/mandubian"/>
+    <property name="user.timezone" value="Europe/Paris"/>
+    <property name="java.awt.printerjob" value="sun.print.PSPrinterJob"/>
+    <property name="file.encoding" value="UTF-8"/>
+    <property name="java.specification.version" value="1.6"/>
+    <property name="user.name" value="mandubian"/>
+    <property name="java.class.path" value="/home/mandubian/work/play/workspace/siena/source/target/test-classes:/home/mandubian/work/play/workspace/siena/source/target/classes:/home/mandubian/.m2/repository/dom4j/dom4j/1.6.1/dom4j-1.6.1.jar:/home/mandubian/.m2/repository/xml-apis/xml-apis/1.0.b2/xml-apis-1.0.b2.jar:/home/mandubian/.m2/repository/junit/junit/3.8.2/junit-3.8.2.jar:/home/mandubian/.m2/repository/commons-dbcp/commons-dbcp/1.2.2/commons-dbcp-1.2.2.jar:/home/mandubian/.m2/repository/commons-pool/commons-pool/1.3/commons-pool-1.3.jar:/home/mandubian/.m2/repository/org/apache/ddlutils/ddlutils/1.0/ddlutils-1.0.jar:/home/mandubian/.m2/repository/commons-beanutils/commons-beanutils/1.7.0/commons-beanutils-1.7.0.jar:/home/mandubian/.m2/repository/commons-betwixt/commons-betwixt/0.8/commons-betwixt-0.8.jar:/home/mandubian/.m2/repository/commons-beanutils/commons-beanutils-core/1.7.0/commons-beanutils-core-1.7.0.jar:/home/mandubian/.m2/repository/commons-codec/commons-codec/1.3/commons-codec-1.3.jar:/home/mandubian/.m2/repository/commons-collections/commons-collections/3.1/commons-collections-3.1.jar:/home/mandubian/.m2/repository/commons-digester/commons-digester/1.7/commons-digester-1.7.jar:/home/mandubian/.m2/repository/commons-lang/commons-lang/2.1/commons-lang-2.1.jar:/home/mandubian/.m2/repository/commons-logging/commons-logging-api/1.0.4/commons-logging-api-1.0.4.jar:/home/mandubian/.m2/repository/commons-logging/commons-logging/1.0.4/commons-logging-1.0.4.jar:/home/mandubian/.m2/repository/stax/stax-api/1.0.1/stax-api-1.0.1.jar:/home/mandubian/.m2/repository/oro/oro/2.0.8/oro-2.0.8.jar:/home/mandubian/.m2/repository/org/dbunit/dbunit/2.2/dbunit-2.2.jar:/home/mandubian/.m2/repository/junit-addons/junit-addons/1.4/junit-addons-1.4.jar:/home/mandubian/.m2/repository/xerces/xercesImpl/2.6.2/xercesImpl-2.6.2.jar:/home/mandubian/.m2/repository/xerces/xmlParserAPIs/2.6.2/xmlParserAPIs-2.6.2.jar:/home/mandubian/.m2/repository/poi/poi/2.5.1-final-20040804/poi-2.5.1-final-20040804.jar:/home/mandubian/.m2/repository/mysql/mysql-connector-java/5.1.6/mysql-connector-java-5.1.6.jar:/home/mandubian/.m2/repository/postgresql/postgresql/8.4-702.jdbc4/postgresql-8.4-702.jdbc4.jar:/home/mandubian/.m2/repository/org/drizzle/jdbc/drizzle-jdbc/1.0/drizzle-jdbc-1.0.jar:/home/mandubian/.m2/repository/com/google/appengine/appengine-tools-sdk/1.4.2/appengine-tools-sdk-1.4.2.jar:/home/mandubian/.m2/repository/com/google/appengine/appengine-api-1.0-sdk/1.4.2/appengine-api-1.0-sdk-1.4.2.jar:/home/mandubian/.m2/repository/com/google/appengine/appengine-testing/1.4.2/appengine-testing-1.4.2.jar:/home/mandubian/.m2/repository/com/google/appengine/appengine-api-labs/1.4.2/appengine-api-labs-1.4.2.jar:/home/mandubian/.m2/repository/com/google/appengine/appengine-api-stubs/1.4.2/appengine-api-stubs-1.4.2.jar:/home/mandubian/.m2/repository/org/apache/hbase/hbase/0.21.0-SNAPSHOT/hbase-0.21.0-SNAPSHOT.jar:/home/mandubian/.m2/repository/commons-cli/commons-cli/1.2/commons-cli-1.2.jar:/home/mandubian/.m2/repository/commons-httpclient/commons-httpclient/3.1/commons-httpclient-3.1.jar:/home/mandubian/.m2/repository/log4j/log4j/1.2.15/log4j-1.2.15.jar:/home/mandubian/.m2/repository/org/apache/thrift/thrift/0.2.0/thrift-0.2.0.jar:/home/mandubian/.m2/repository/org/slf4j/slf4j-api/1.4.3/slf4j-api-1.4.3.jar:/home/mandubian/.m2/repository/org/slf4j/slf4j-log4j12/1.4.3/slf4j-log4j12-1.4.3.jar:/home/mandubian/.m2/repository/com/google/guava/guava/r05/guava-r05.jar:/home/mandubian/.m2/repository/org/apache/hadoop/hadoop-core/0.20.2-with-200-826/hadoop-core-0.20.2-with-200-826.jar:/home/mandubian/.m2/repository/commons-net/commons-net/1.4.1/commons-net-1.4.1.jar:/home/mandubian/.m2/repository/javax/servlet/servlet-api/2.5/servlet-api-2.5.jar:/home/mandubian/.m2/repository/commons-el/commons-el/1.0/commons-el-1.0.jar:/home/mandubian/.m2/repository/org/eclipse/jdt/core/3.1.1/core-3.1.1.jar:/home/mandubian/.m2/repository/org/apache/ant/ant/1.7.0/ant-1.7.0.jar:/home/mandubian/.m2/repository/org/apache/ant/ant-launcher/1.7.0/ant-launcher-1.7.0.jar:/home/mandubian/.m2/repository/net/java/dev/jets3t/jets3t/0.6.1/jets3t-0.6.1.jar:/home/mandubian/.m2/repository/xmlenc/xmlenc/0.52/xmlenc-0.52.jar:/home/mandubian/.m2/repository/org/apache/hadoop/zookeeper/3.3.1/zookeeper-3.3.1.jar:/home/mandubian/.m2/repository/jline/jline/0.9.94/jline-0.9.94.jar:/home/mandubian/.m2/repository/org/mortbay/jetty/jetty/6.1.24/jetty-6.1.24.jar:/home/mandubian/.m2/repository/org/mortbay/jetty/servlet-api/2.5-20081211/servlet-api-2.5-20081211.jar:/home/mandubian/.m2/repository/org/mortbay/jetty/jetty-util/6.1.24/jetty-util-6.1.24.jar:/home/mandubian/.m2/repository/org/mortbay/jetty/servlet-api-2.5/6.1.14/servlet-api-2.5-6.1.14.jar:/home/mandubian/.m2/repository/org/mortbay/jetty/jsp-2.1/6.1.14/jsp-2.1-6.1.14.jar:/home/mandubian/.m2/repository/ant/ant/1.6.5/ant-1.6.5.jar:/home/mandubian/.m2/repository/org/mortbay/jetty/jsp-api-2.1/6.1.14/jsp-api-2.1-6.1.14.jar:/home/mandubian/.m2/repository/tomcat/jasper-runtime/5.5.23/jasper-runtime-5.5.23.jar:/home/mandubian/.m2/repository/tomcat/jasper-compiler/5.5.23/jasper-compiler-5.5.23.jar:/home/mandubian/.m2/repository/javax/servlet/jsp-api/2.0/jsp-api-2.0.jar:/home/mandubian/.m2/repository/org/jruby/jruby-complete/1.4.0/jruby-complete-1.4.0.jar:/home/mandubian/.m2/repository/com/google/protobuf/protobuf-java/2.3.0/protobuf-java-2.3.0.jar:/home/mandubian/.m2/repository/com/sun/jersey/jersey-core/1.1.5.1/jersey-core-1.1.5.1.jar:/home/mandubian/.m2/repository/com/sun/jersey/jersey-json/1.1.5.1/jersey-json-1.1.5.1.jar:/home/mandubian/.m2/repository/org/codehaus/jettison/jettison/1.1/jettison-1.1.jar:/home/mandubian/.m2/repository/com/sun/xml/bind/jaxb-impl/2.1.12/jaxb-impl-2.1.12.jar:/home/mandubian/.m2/repository/com/sun/jersey/jersey-server/1.1.5.1/jersey-server-1.1.5.1.jar:/home/mandubian/.m2/repository/asm/asm/3.1/asm-3.1.jar:/home/mandubian/.m2/repository/javax/xml/bind/jaxb-api/2.1/jaxb-api-2.1.jar:/home/mandubian/.m2/repository/javax/xml/stream/stax-api/1.0-2/stax-api-1.0-2.jar:/home/mandubian/.m2/repository/javax/activation/activation/1.1/activation-1.1.jar:/home/mandubian/.m2/repository/javax/ws/rs/jsr311-api/1.1.1/jsr311-api-1.1.1.jar:/home/mandubian/.m2/repository/org/apache/hadoop/avro/1.3.2/avro-1.3.2.jar:/home/mandubian/.m2/repository/com/thoughtworks/paranamer/paranamer/2.2/paranamer-2.2.jar:/home/mandubian/.m2/repository/com/thoughtworks/paranamer/paranamer-ant/2.2/paranamer-ant-2.2.jar:/home/mandubian/.m2/repository/com/thoughtworks/paranamer/paranamer-generator/2.2/paranamer-generator-2.2.jar:/home/mandubian/.m2/repository/com/thoughtworks/qdox/qdox/1.10.1/qdox-1.10.1.jar:/home/mandubian/.m2/repository/org/codehaus/jackson/jackson-core-asl/1.5.2/jackson-core-asl-1.5.2.jar:/home/mandubian/.m2/repository/org/codehaus/jackson/jackson-mapper-asl/1.5.2/jackson-mapper-asl-1.5.2.jar:/home/mandubian/.m2/repository/com/h2database/h2/1.3.154/h2-1.3.154.jar:/home/mandubian/.m2/repository/com/google/api/client/google-api-client/1.4.1-beta/google-api-client-1.4.1-beta.jar:/home/mandubian/.m2/repository/com/google/code/findbugs/jsr305/1.3.9/jsr305-1.3.9.jar:/home/mandubian/.m2/repository/com/google/code/gson/gson/1.6/gson-1.6.jar:/home/mandubian/.m2/repository/org/apache/httpcomponents/httpclient/4.0.3/httpclient-4.0.3.jar:/home/mandubian/.m2/repository/org/apache/httpcomponents/httpcore/4.0.1/httpcore-4.0.1.jar:/home/mandubian/.m2/repository/xpp3/xpp3/1.1.4c/xpp3-1.1.4c.jar:"/>
+    <property name="java.vm.specification.version" value="1.0"/>
+    <property name="sun.arch.data.model" value="64"/>
+    <property name="java.home" value="/usr/lib/jvm/java-6-sun-1.6.0.24/jre"/>
+    <property name="java.specification.vendor" value="Sun Microsystems Inc."/>
+    <property name="user.language" value="en"/>
+    <property name="java.vm.info" value="mixed mode"/>
+    <property name="java.version" value="1.6.0_24"/>
+    <property name="java.ext.dirs" value="/usr/lib/jvm/java-6-sun-1.6.0.24/jre/lib/ext:/usr/java/packages/lib/ext"/>
+    <property name="sun.boot.class.path" value="/usr/lib/jvm/java-6-sun-1.6.0.24/jre/lib/resources.jar:/usr/lib/jvm/java-6-sun-1.6.0.24/jre/lib/rt.jar:/usr/lib/jvm/java-6-sun-1.6.0.24/jre/lib/sunrsasign.jar:/usr/lib/jvm/java-6-sun-1.6.0.24/jre/lib/jsse.jar:/usr/lib/jvm/java-6-sun-1.6.0.24/jre/lib/jce.jar:/usr/lib/jvm/java-6-sun-1.6.0.24/jre/lib/charsets.jar:/usr/lib/jvm/java-6-sun-1.6.0.24/jre/lib/modules/jdk.boot.jar:/usr/lib/jvm/java-6-sun-1.6.0.24/jre/classes"/>
+    <property name="java.vendor" value="Sun Microsystems Inc."/>
+    <property name="localRepository" value="/home/mandubian/.m2/repository"/>
+    <property name="file.separator" value="/"/>
+    <property name="java.vendor.url.bug" value="http://java.sun.com/cgi-bin/bugreport.cgi"/>
+    <property name="sun.cpu.endian" value="little"/>
+    <property name="sun.io.unicode.encoding" value="UnicodeLittle"/>
+    <property name="sun.desktop" value="gnome"/>
+    <property name="sun.cpu.isalist" value=""/>
+  </properties>
+  <testcase time="0.037" classname="siena.base.test.GaeAsyncTest" name="testJoinSortFields"/>
+  <testcase time="0.007" classname="siena.base.test.GaeAsyncTest" name="testFilterWithOperatorINStateful"/>
+  <testcase time="0.023" classname="siena.base.test.GaeAsyncTest" name="testFilterWithOperatorINLotsOfEntitiesStateful"/>
+  <testcase time="0.05" classname="siena.base.test.GaeAsyncTest" name="testFilterWithOperatorINLotsOfEntitiesPaginateStateless"/>
+  <testcase time="0.03" classname="siena.base.test.GaeAsyncTest" name="testFilterWithOperatorINLotsOfEntitiesPaginateStateful"/>
+  <testcase time="0.007" classname="siena.base.test.GaeAsyncTest" name="testFilterWithOperatorNotEqualStateful"/>
+  <testcase time="0.022" classname="siena.base.test.GaeAsyncTest" name="testFilterWithOperatorNotEqualLotsOfEntitiesStateful"/>
+  <testcase time="0.021" classname="siena.base.test.GaeAsyncTest" name="testFilterWithOperatorNotEqualLotsOfEntitiesStateless"/>
+  <testcase time="0.006" classname="siena.base.test.GaeAsyncTest" name="testSearchSingleFieldEqualsSingleResult"/>
+  <testcase time="0.006" classname="siena.base.test.GaeAsyncTest" name="testSearchSingleFieldEqualsSeveralResults"/>
+  <testcase time="0.006" classname="siena.base.test.GaeAsyncTest" name="testSearchSingleFieldBeginSingleResults"/>
+  <testcase time="0.013" classname="siena.base.test.GaeAsyncTest" name="testSearchSingleFieldBeginSeveralResults"/>
+  <testcase time="0.006" classname="siena.base.test.GaeAsyncTest" name="testSearchSingleFieldBeginSeveralResultsKeysOnly"/>
+  <testcase time="0.006" classname="siena.base.test.GaeAsyncTest" name="testSearchSingleFieldBeginSeveralResultsCount"/>
+  <testcase time="0.031" classname="siena.base.test.GaeAsyncTest" name="testSearchSingleFieldEndException"/>
+  <testcase time="0.003" classname="siena.base.test.GaeAsyncTest" name="testCount"/>
+  <testcase time="0.004" classname="siena.base.test.GaeAsyncTest" name="testFetch"/>
+  <testcase time="0.009" classname="siena.base.test.GaeAsyncTest" name="testFetchKeys"/>
+  <testcase time="0.004" classname="siena.base.test.GaeAsyncTest" name="testFetchOrder"/>
+  <testcase time="0.003" classname="siena.base.test.GaeAsyncTest" name="testFetchOrderKeys"/>
+  <testcase time="0.003" classname="siena.base.test.GaeAsyncTest" name="testFetchOrderDesc"/>
+  <testcase time="0.003" classname="siena.base.test.GaeAsyncTest" name="testFetchOrderDescKeys"/>
+  <testcase time="0.003" classname="siena.base.test.GaeAsyncTest" name="testFetchOrderOnLongAutoId"/>
+  <testcase time="0.003" classname="siena.base.test.GaeAsyncTest" name="testFetchOrderOnLongManualId"/>
+  <testcase time="0.003" classname="siena.base.test.GaeAsyncTest" name="testFetchOrderOnStringId"/>
+  <testcase time="0.003" classname="siena.base.test.GaeAsyncTest" name="testFetchOrderOnUUID"/>
+  <testcase time="0.002" classname="siena.base.test.GaeAsyncTest" name="testFetchOrderOnLongAutoIdDesc"/>
+  <testcase time="0.006" classname="siena.base.test.GaeAsyncTest" name="testFetchOrderOnLongManualIdDesc"/>
+  <testcase time="0.004" classname="siena.base.test.GaeAsyncTest" name="testFetchOrderOnStringIdDesc"/>
+  <testcase time="0.005" classname="siena.base.test.GaeAsyncTest" name="testFetchOrderOnUUIDDesc"/>
+  <testcase time="0.003" classname="siena.base.test.GaeAsyncTest" name="testFilterOperatorEqualString"/>
+  <testcase time="0.004" classname="siena.base.test.GaeAsyncTest" name="testFilterOperatorEqualInt"/>
+  <testcase time="0.008" classname="siena.base.test.GaeAsyncTest" name="testFilterOperatorEqualUUID"/>
+  <testcase time="0.004" classname="siena.base.test.GaeAsyncTest" name="testFilterOperatorEqualLongAutoID"/>
+  <testcase time="0.004" classname="siena.base.test.GaeAsyncTest" name="testFilterOperatorEqualLongManualID"/>
+  <testcase time="0.006" classname="siena.base.test.GaeAsyncTest" name="testFilterOperatorEqualStringID"/>
+  <testcase time="0.004" classname="siena.base.test.GaeAsyncTest" name="testFilterOperatorNotEqualString"/>
+  <testcase time="0.003" classname="siena.base.test.GaeAsyncTest" name="testFilterOperatorNotEqualInt"/>
+  <testcase time="0.004" classname="siena.base.test.GaeAsyncTest" name="testFilterOperatorNotEqualUUID"/>
+  <testcase time="0.003" classname="siena.base.test.GaeAsyncTest" name="testFilterOperatorNotEqualLongAutoID"/>
+  <testcase time="0.004" classname="siena.base.test.GaeAsyncTest" name="testFilterOperatorNotEqualLongManualID"/>
+  <testcase time="0.007" classname="siena.base.test.GaeAsyncTest" name="testFilterOperatorNotEqualStringID"/>
+  <testcase time="0.006" classname="siena.base.test.GaeAsyncTest" name="testFilterOperatorIn"/>
+  <testcase time="0.028" classname="siena.base.test.GaeAsyncTest" name="testFilterOperatorInOrder"/>
+  <testcase time="0.004" classname="siena.base.test.GaeAsyncTest" name="testFilterOperatorInForUUID"/>
+  <testcase time="0.043" classname="siena.base.test.GaeAsyncTest" name="testFilterOperatorInForLongAutoID"/>
+  <testcase time="0.058" classname="siena.base.test.GaeAsyncTest" name="testFilterOperatorInForLongManualID"/>
+  <testcase time="0.048" classname="siena.base.test.GaeAsyncTest" name="testFilterOperatorInForStringID"/>
+  <testcase time="0.004" classname="siena.base.test.GaeAsyncTest" name="testFilterOperatorLessThan"/>
+  <testcase time="0.004" classname="siena.base.test.GaeAsyncTest" name="testFilterOperatorLessThanForUUID"/>
+  <testcase time="0.003" classname="siena.base.test.GaeAsyncTest" name="testFilterOperatorLessThanForLongAutoID"/>
+  <testcase time="0.004" classname="siena.base.test.GaeAsyncTest" name="testFilterOperatorLessThanForLongManualID"/>
+  <testcase time="0.003" classname="siena.base.test.GaeAsyncTest" name="testFilterOperatorLessThanForStringID"/>
+  <testcase time="0.003" classname="siena.base.test.GaeAsyncTest" name="testFilterOperatorLessThanOrEqual"/>
+  <testcase time="0.003" classname="siena.base.test.GaeAsyncTest" name="testFilterOperatorLessThanOrEqualForUUID"/>
+  <testcase time="0.004" classname="siena.base.test.GaeAsyncTest" name="testFilterOperatorLessThanOrEqualForLongAutoID"/>
+  <testcase time="0.005" classname="siena.base.test.GaeAsyncTest" name="testFilterOperatorLessThanOrEqualForLongManualID"/>
+  <testcase time="0.002" classname="siena.base.test.GaeAsyncTest" name="testFilterOperatorLessThanOrEqualForStringID"/>
+  <testcase time="0.004" classname="siena.base.test.GaeAsyncTest" name="testFilterOperatorMoreThan"/>
+  <testcase time="0.003" classname="siena.base.test.GaeAsyncTest" name="testFilterOperatorMoreThanForUUID"/>
+  <testcase time="0.003" classname="siena.base.test.GaeAsyncTest" name="testFilterOperatorMoreThanForLongAutoID"/>
+  <testcase time="0.003" classname="siena.base.test.GaeAsyncTest" name="testFilterOperatorMoreThanForLongManualID"/>
+  <testcase time="0.003" classname="siena.base.test.GaeAsyncTest" name="testFilterOperatorMoreThanForStringID"/>
+  <testcase time="0.003" classname="siena.base.test.GaeAsyncTest" name="testFilterOperatorMoreThanOrEqual"/>
+  <testcase time="0.003" classname="siena.base.test.GaeAsyncTest" name="testFilterOperatorMoreThanOrEqualForUUID"/>
+  <testcase time="0.003" classname="siena.base.test.GaeAsyncTest" name="testFilterOperatorMoreThanOrEqualForLongAutoID"/>
+  <testcase time="0.003" classname="siena.base.test.GaeAsyncTest" name="testFilterOperatorMoreThanOrEqualForLongManualID"/>
+  <testcase time="0.004" classname="siena.base.test.GaeAsyncTest" name="testFilterOperatorMoreThanOrEqualForStringID"/>
+  <testcase time="0.003" classname="siena.base.test.GaeAsyncTest" name="testCountFilter"/>
+  <testcase time="0.02" classname="siena.base.test.GaeAsyncTest" name="testCountFilterUUID"/>
+  <testcase time="0.027" classname="siena.base.test.GaeAsyncTest" name="testCountFilterLongAutoID"/>
+  <testcase time="0.021" classname="siena.base.test.GaeAsyncTest" name="testCountFilterLongManualID"/>
+  <testcase time="0.011" classname="siena.base.test.GaeAsyncTest" name="testCountFilterStringID"/>
+  <testcase time="0.003" classname="siena.base.test.GaeAsyncTest" name="testFetchLimit"/>
+  <testcase time="0.004" classname="siena.base.test.GaeAsyncTest" name="testFetchLimitUUID"/>
+  <testcase time="0.011" classname="siena.base.test.GaeAsyncTest" name="testFetchLimitLongAutoID"/>
+  <testcase time="0.004" classname="siena.base.test.GaeAsyncTest" name="testFetchLimitLongManualID"/>
+  <testcase time="0.002" classname="siena.base.test.GaeAsyncTest" name="testFetchLimitStringID"/>
+  <testcase time="0.003" classname="siena.base.test.GaeAsyncTest" name="testFetchLimitReal"/>
+  <testcase time="0.003" classname="siena.base.test.GaeAsyncTest" name="testFetchLimitOffsetReal"/>
+  <testcase time="0.005" classname="siena.base.test.GaeAsyncTest" name="testSearchSingle"/>
+  <testcase time="0.004" classname="siena.base.test.GaeAsyncTest" name="testSearchSingleKeysOnly"/>
+  <testcase time="0.006" classname="siena.base.test.GaeAsyncTest" name="testSearchSingleTwice"/>
+  <testcase time="0.014" classname="siena.base.test.GaeAsyncTest" name="testSearchSingleCount"/>
+  <testcase time="0.003" classname="siena.base.test.GaeAsyncTest" name="testFetchLimitOffset"/>
+  <testcase time="0.002" classname="siena.base.test.GaeAsyncTest" name="testInsertUUID"/>
+  <testcase time="0.003" classname="siena.base.test.GaeAsyncTest" name="testInsertLongAutoID"/>
+  <testcase time="0.003" classname="siena.base.test.GaeAsyncTest" name="testInsertLongManualID"/>
+  <testcase time="0.002" classname="siena.base.test.GaeAsyncTest" name="testInsertStringID"/>
+  <testcase time="0.015" classname="siena.base.test.GaeAsyncTest" name="testGetUUID"/>
+  <testcase time="0.003" classname="siena.base.test.GaeAsyncTest" name="testGetLongAutoID"/>
+  <testcase time="0.003" classname="siena.base.test.GaeAsyncTest" name="testGetLongManualID"/>
+  <testcase time="0.003" classname="siena.base.test.GaeAsyncTest" name="testGetStringID"/>
+  <testcase time="0.034" classname="siena.base.test.GaeAsyncTest" name="testUpdateUUID"/>
+  <testcase time="0.002" classname="siena.base.test.GaeAsyncTest" name="testUpdateLongAutoID"/>
+  <testcase time="0.007" classname="siena.base.test.GaeAsyncTest" name="testDeleteUUID"/>
+  <testcase time="0.054" classname="siena.base.test.GaeAsyncTest" name="testIterFullUUID"/>
+  <testcase time="0.003" classname="siena.base.test.GaeAsyncTest" name="testIterFullLongAutoID"/>
+  <testcase time="0.002" classname="siena.base.test.GaeAsyncTest" name="testIterFullLongManualID"/>
+  <testcase time="0.003" classname="siena.base.test.GaeAsyncTest" name="testIterFullLongStringID"/>
+  <testcase time="0.005" classname="siena.base.test.GaeAsyncTest" name="testIterLimitUUID"/>
+  <testcase time="0.005" classname="siena.base.test.GaeAsyncTest" name="testIterLimitLongAutoID"/>
+  <testcase time="0.003" classname="siena.base.test.GaeAsyncTest" name="testIterLimitLongManualID"/>
+  <testcase time="0.005" classname="siena.base.test.GaeAsyncTest" name="testIterLimitLongStringID"/>
+  <testcase time="0.002" classname="siena.base.test.GaeAsyncTest" name="testIterLimitOffsetUUID"/>
+  <testcase time="0.004" classname="siena.base.test.GaeAsyncTest" name="testIterLimitOffsetLongAutoID"/>
+  <testcase time="0.003" classname="siena.base.test.GaeAsyncTest" name="testIterLimitOffsetLongManualID"/>
+  <testcase time="0.002" classname="siena.base.test.GaeAsyncTest" name="testIterLimitOffsetLongStringID"/>
+  <testcase time="0.003" classname="siena.base.test.GaeAsyncTest" name="testIterFilter"/>
+  <testcase time="0.002" classname="siena.base.test.GaeAsyncTest" name="testIterFilterLimit"/>
+  <testcase time="0.002" classname="siena.base.test.GaeAsyncTest" name="testIterFilterLimitOffset"/>
+  <testcase time="0.003" classname="siena.base.test.GaeAsyncTest" name="testOrderLongAutoId"/>
+  <testcase time="0.002" classname="siena.base.test.GaeAsyncTest" name="testOrderLongManualId"/>
+  <testcase time="0.004" classname="siena.base.test.GaeAsyncTest" name="testOrderStringId"/>
+  <testcase time="0.004" classname="siena.base.test.GaeAsyncTest" name="testGetObjectNotFound"/>
+  <testcase time="0.003" classname="siena.base.test.GaeAsyncTest" name="testDeleteObjectNotFound"/>
+  <testcase time="0.002" classname="siena.base.test.GaeAsyncTest" name="testAutoincrement"/>
+  <testcase time="0.005" classname="siena.base.test.GaeAsyncTest" name="testRelationship"/>
+  <testcase time="0.003" classname="siena.base.test.GaeAsyncTest" name="testMultipleKeys"/>
+  <testcase time="0.003" classname="siena.base.test.GaeAsyncTest" name="testDataTypesNull"/>
+  <testcase time="0.008" classname="siena.base.test.GaeAsyncTest" name="testDataTypesNotNull"/>
+  <testcase time="0.003" classname="siena.base.test.GaeAsyncTest" name="testQueryDelete"/>
+  <testcase time="0.007" classname="siena.base.test.GaeAsyncTest" name="testQueryDeleteFiltered"/>
+  <testcase time="0.008" classname="siena.base.test.GaeAsyncTest" name="testJoin"/>
+  <testcase time="0.003" classname="siena.base.test.GaeAsyncTest" name="testJoinAnnotation"/>
+  <testcase time="0.002" classname="siena.base.test.GaeAsyncTest" name="testFetchPrivateFields"/>
+  <testcase time="0.006" classname="siena.base.test.GaeAsyncTest" name="testFetchPaginateStatelessNextPage"/>
+  <testcase time="0.008" classname="siena.base.test.GaeAsyncTest" name="testFetchPaginateStatelessNextPageToEnd"/>
+  <testcase time="0.004" classname="siena.base.test.GaeAsyncTest" name="testFetchPaginateStatelessPreviousPageFromScratch"/>
+  <testcase time="0.003" classname="siena.base.test.GaeAsyncTest" name="testFetchPaginateStatelessPreviousPage"/>
+  <testcase time="0.004" classname="siena.base.test.GaeAsyncTest" name="testFetchPaginateStatefulNextPage"/>
+  <testcase time="0.004" classname="siena.base.test.GaeAsyncTest" name="testFetchPaginateStatefulNextPageToEnd"/>
+  <testcase time="0.004" classname="siena.base.test.GaeAsyncTest" name="testFetchPaginateStatefulPreviousPageFromScratch"/>
+  <testcase time="0.003" classname="siena.base.test.GaeAsyncTest" name="testFetchPaginateStatefulPreviousPage"/>
+  <testcase time="0.007" classname="siena.base.test.GaeAsyncTest" name="testFetchPaginateStatefulPreviouPageSeveralTimes"/>
+  <testcase time="0.006" classname="siena.base.test.GaeAsyncTest" name="testFetchKeysPaginateStatelessNextPage"/>
+  <testcase time="0.006" classname="siena.base.test.GaeAsyncTest" name="testFetchKeysPaginateStatelessPreviousPageFromScratch"/>
+  <testcase time="0.004" classname="siena.base.test.GaeAsyncTest" name="testFetchKeysPaginateStatelessPreviousPage"/>
+  <testcase time="0.004" classname="siena.base.test.GaeAsyncTest" name="testFetchKeysPaginateStatelessPreviouPageSeveralTimes"/>
+  <testcase time="0.012" classname="siena.base.test.GaeAsyncTest" name="testFetchKeysPaginateStatefulNextPage"/>
+  <testcase time="0.003" classname="siena.base.test.GaeAsyncTest" name="testFetchKeysPaginateStatefulPreviousPageFromScratch"/>
+  <testcase time="0.003" classname="siena.base.test.GaeAsyncTest" name="testFetchKeysPaginateStatefulPreviousPage"/>
+  <testcase time="0.004" classname="siena.base.test.GaeAsyncTest" name="testIterPaginateStatelessNextPage"/>
+  <testcase time="0.002" classname="siena.base.test.GaeAsyncTest" name="testIterPaginateStatelessPreviousPageFromScratch"/>
+  <testcase time="0.003" classname="siena.base.test.GaeAsyncTest" name="testIterPaginateStatelessPreviousPage"/>
+  <testcase time="0.004" classname="siena.base.test.GaeAsyncTest" name="testIterPaginateStatelessPreviouPageSeveralTimes"/>
+  <testcase time="0.003" classname="siena.base.test.GaeAsyncTest" name="testIterPaginateStatefulNextPage"/>
+  <testcase time="0.003" classname="siena.base.test.GaeAsyncTest" name="testIterPaginateStatefulPreviousPageFromScratch"/>
+  <testcase time="0.004" classname="siena.base.test.GaeAsyncTest" name="testIterPaginateStatefulPreviousPage"/>
+  <testcase time="0.004" classname="siena.base.test.GaeAsyncTest" name="testIterPaginateStatefulPreviouPageSeveralTimes"/>
+  <testcase time="0.01" classname="siena.base.test.GaeAsyncTest" name="testIterLotsOfEntitiesStateless"/>
+  <testcase time="0.242" classname="siena.base.test.GaeAsyncTest" name="testIterLotsOfEntitiesStateful"/>
+  <testcase time="0.158" classname="siena.base.test.GaeAsyncTest" name="testIterLotsOfEntitiesStatefulMixed"/>
+  <testcase time="0.01" classname="siena.base.test.GaeAsyncTest" name="testIterLotsOfEntitiesStatefulMixed2"/>
+  <testcase time="0.091" classname="siena.base.test.GaeAsyncTest" name="testIterLotsOfEntitiesStatefulMixed3"/>
+  <testcase time="0.024" classname="siena.base.test.GaeAsyncTest" name="testFetchLotsOfEntitiesStatefulMixed"/>
+  <testcase time="0.014" classname="siena.base.test.GaeAsyncTest" name="testFetchLotsOfEntitiesStatefulMixed2"/>
+  <testcase time="0.107" classname="siena.base.test.GaeAsyncTest" name="testFetchIterLotsOfEntitiesStatefulMixed"/>
+  <testcase time="0.196" classname="siena.base.test.GaeAsyncTest" name="testFetchIterLotsOfEntitiesStatefulMixed2"/>
+  <testcase time="0.007" classname="siena.base.test.GaeAsyncTest" name="testBatchInsert"/>
+  <testcase time="0.032" classname="siena.base.test.GaeAsyncTest" name="testBatchInsertList"/>
+  <testcase time="0.009" classname="siena.base.test.GaeAsyncTest" name="testBatchDelete"/>
+  <testcase time="0.009" classname="siena.base.test.GaeAsyncTest" name="testBatchDeleteList"/>
+  <testcase time="0.021" classname="siena.base.test.GaeAsyncTest" name="testBatchDeleteByKeys"/>
+  <testcase time="0.027" classname="siena.base.test.GaeAsyncTest" name="testBatchDeleteByKeysList"/>
+  <testcase time="0.025" classname="siena.base.test.GaeAsyncTest" name="testBatchGet"/>
+  <testcase time="0.1" classname="siena.base.test.GaeAsyncTest" name="testBatchGetList"/>
+  <testcase time="0.005" classname="siena.base.test.GaeAsyncTest" name="testBatchGetByKeys"/>
+  <testcase time="0.008" classname="siena.base.test.GaeAsyncTest" name="testBatchGetByKeysList"/>
+  <testcase time="0.019" classname="siena.base.test.GaeAsyncTest" name="testLimitStateless"/>
+  <testcase time="0.011" classname="siena.base.test.GaeAsyncTest" name="testLimitStateful"/>
+  <testcase time="0.009" classname="siena.base.test.GaeAsyncTest" name="testOffsetStateless"/>
+  <testcase time="0.007" classname="siena.base.test.GaeAsyncTest" name="testOffsetStateful"/>
+  <testcase time="0.007" classname="siena.base.test.GaeAsyncTest" name="testOffsetLimitStateless"/>
+  <testcase time="0.008" classname="siena.base.test.GaeAsyncTest" name="testOffsetLimitStateful"/>
+  <testcase time="0.014" classname="siena.base.test.GaeAsyncTest" name="testOffsetLimitStatelessPaginate"/>
+  <testcase time="0.027" classname="siena.base.test.GaeAsyncTest" name="testOffsetLimitStatefulPaginate"/>
+  <testcase time="0.048" classname="siena.base.test.GaeAsyncTest" name="testOffsetLimitStatelessPaginate2"/>
+  <testcase time="0.037" classname="siena.base.test.GaeAsyncTest" name="testOffsetLimitStatefulPaginate2"/>
+  <testcase time="0.005" classname="siena.base.test.GaeAsyncTest" name="testFetchPaginateStatelessTwice"/>
+  <testcase time="0.005" classname="siena.base.test.GaeAsyncTest" name="testFetchPaginateStatefulTwice"/>
+  <testcase time="0.015" classname="siena.base.test.GaeAsyncTest" name="testLimitStatelessKeys"/>
+  <testcase time="0.012" classname="siena.base.test.GaeAsyncTest" name="testLimitStatefulKeys"/>
+  <testcase time="0.008" classname="siena.base.test.GaeAsyncTest" name="testOffsetStatelessKeys"/>
+  <testcase time="0.007" classname="siena.base.test.GaeAsyncTest" name="testOffsetStatefulKeys"/>
+  <testcase time="0.008" classname="siena.base.test.GaeAsyncTest" name="testOffsetLimitStatelessKeys"/>
+  <testcase time="0.007" classname="siena.base.test.GaeAsyncTest" name="testOffsetLimitStatefulKeys"/>
+  <testcase time="0.024" classname="siena.base.test.GaeAsyncTest" name="testOffsetLimitStatelessPaginateKeys"/>
+  <testcase time="0.034" classname="siena.base.test.GaeAsyncTest" name="testOffsetLimitStatefulPaginateKeys"/>
+  <testcase time="0.04" classname="siena.base.test.GaeAsyncTest" name="testOffsetLimitStatelessPaginate2Keys"/>
+  <testcase time="0.039" classname="siena.base.test.GaeAsyncTest" name="testOffsetLimitStatefulPaginate2Keys"/>
+  <testcase time="0.005" classname="siena.base.test.GaeAsyncTest" name="testFetchPaginateStatelessTwiceKeys"/>
+  <testcase time="0.004" classname="siena.base.test.GaeAsyncTest" name="testFetchPaginateStatefulTwiceKeys"/>
+  <testcase time="0.014" classname="siena.base.test.GaeAsyncTest" name="testLimitStatelessIter"/>
+  <testcase time="0.176" classname="siena.base.test.GaeAsyncTest" name="testLimitStatefulIter"/>
+  <testcase time="0.009" classname="siena.base.test.GaeAsyncTest" name="testOffsetStatelessIter"/>
+  <testcase time="0.136" classname="siena.base.test.GaeAsyncTest" name="testOffsetStatefulIter"/>
+  <testcase time="0.008" classname="siena.base.test.GaeAsyncTest" name="testOffsetLimitStatelessIter"/>
+  <testcase time="0.08" classname="siena.base.test.GaeAsyncTest" name="testOffsetLimitStatefulIter"/>
+  <testcase time="0.017" classname="siena.base.test.GaeAsyncTest" name="testOffsetLimitStatelessPaginateIter"/>
+  <testcase time="0.364" classname="siena.base.test.GaeAsyncTest" name="testOffsetLimitStatefulPaginateIter"/>
+  <testcase time="0.038" classname="siena.base.test.GaeAsyncTest" name="testOffsetLimitStatelessPaginate2Iter"/>
+  <testcase time="0.294" classname="siena.base.test.GaeAsyncTest" name="testOffsetLimitStatefulPaginate2Iter"/>
+  <testcase time="0.005" classname="siena.base.test.GaeAsyncTest" name="testFetchPaginateStatelessTwiceIter"/>
+  <testcase time="0.005" classname="siena.base.test.GaeAsyncTest" name="testFetchPaginateStatefulTwiceIter"/>
+  <testcase time="0.003" classname="siena.base.test.GaeAsyncTest" name="testFetchStringAutoInc"/>
+  <testcase time="0.106" classname="siena.base.test.GaeAsyncTest" name="testIterPerPageStateless"/>
+  <testcase time="0.068" classname="siena.base.test.GaeAsyncTest" name="testIterPerPageStateless2"/>
+  <testcase time="0.067" classname="siena.base.test.GaeAsyncTest" name="testIterPerPageStateless3"/>
+  <testcase time="0.075" classname="siena.base.test.GaeAsyncTest" name="testIterPerPageStateful"/>
+  <testcase time="0.078" classname="siena.base.test.GaeAsyncTest" name="testIterPerPageStateful2"/>
+  <testcase time="0.081" classname="siena.base.test.GaeAsyncTest" name="testIterPerPageStatefull3"/>
+  <testcase time="0.004" classname="siena.base.test.GaeAsyncTest" name="testInsertObjectWithNullJoinObject"/>
+  <testcase time="0.004" classname="siena.base.test.GaeAsyncTest" name="testInsertObjectWithDoubleNullJoinObject"/>
+  <testcase time="0.006" classname="siena.base.test.GaeAsyncTest" name="testJoinAnnotationDouble"/>
+  <testcase time="0.031" classname="siena.base.test.GaeAsyncTest" name="testBatchUpdate"/>
+  <testcase time="0.026" classname="siena.base.test.GaeAsyncTest" name="testBatchUpdateList"/>
+  <testcase time="0.004" classname="siena.base.test.GaeAsyncTest" name="testGetByKeyUUID"/>
+  <testcase time="0.003" classname="siena.base.test.GaeAsyncTest" name="testGetByKeyLongAutoID"/>
+  <testcase time="0.003" classname="siena.base.test.GaeAsyncTest" name="testGetByKeyLongManualID"/>
+  <testcase time="0.009" classname="siena.base.test.GaeAsyncTest" name="testGetByKeyStringID"/>
+  <testcase time="0.027" classname="siena.base.test.GaeAsyncTest" name="testSaveLongAutoID"/>
+  <testcase time="0.004" classname="siena.base.test.GaeAsyncTest" name="testSaveUUID"/>
+  <testcase time="0.003" classname="siena.base.test.GaeAsyncTest" name="testSaveLongManualID"/>
+  <testcase time="0.004" classname="siena.base.test.GaeAsyncTest" name="testSaveStringID"/>
+  <testcase time="0.021" classname="siena.base.test.GaeAsyncTest" name="testBatchSave"/>
+  <testcase time="0.028" classname="siena.base.test.GaeAsyncTest" name="testBatchSaveList"/>
+  <testcase time="0.004" classname="siena.base.test.GaeAsyncTest" name="testPolymorphic"/>
+  <testcase time="0.003" classname="siena.base.test.GaeAsyncTest" name="testPolymorphic2"/>
+  <testcase time="0.004" classname="siena.base.test.GaeAsyncTest" name="testEmbeddedModel"/>
+  <testcase time="0.008" classname="siena.base.test.GaeAsyncTest" name="testNoColumn"/>
+  <testcase time="0.004" classname="siena.base.test.GaeAsyncTest" name="testNoColumnMultipleKeys"/>
+  <testcase time="0.003" classname="siena.base.test.GaeAsyncTest" name="testFetchPaginateStatelessNextPageRealAsync"/>
+  <testcase time="0.005" classname="siena.base.test.GaeAsyncTest" name="testFetchPaginateStatelessPreviouPageSeveralTimes"/>
+  <testcase time="0.003" classname="siena.base.test.GaeAsyncTest" name="testFetchPaginateStatefulNextPageRealAsync"/>
+  <testcase time="0.003" classname="siena.base.test.GaeAsyncTest" name="testFetchKeysPaginateStatelessNextPageRealAsync"/>
+  <testcase time="0.003" classname="siena.base.test.GaeAsyncTest" name="testFetchKeysPaginateStatefulNextPageRealAsync"/>
+  <testcase time="0.005" classname="siena.base.test.GaeAsyncTest" name="testFetchKeysPaginateStatefulPreviouPageSeveralTimes"/>
+  <testcase time="0.004" classname="siena.base.test.GaeAsyncTest" name="testIterPaginateStatelessNextPageRealAsync"/>
+  <testcase time="0.003" classname="siena.base.test.GaeAsyncTest" name="testIterPaginateStatefulNextPageRealAsync"/>
+  <testcase time="0.004" classname="siena.base.test.GaeAsyncTest" name="testIterPaginateStatefulPreviousPageAsync"/>
+  <testcase time="0.005" classname="siena.base.test.GaeAsyncTest" name="testIterPaginateStatefulSeveralTimesRealAsync"/>
+  <testcase time="0.024" classname="siena.base.test.GaeAsyncTest" name="testLimitStatelessRealAsync"/>
+  <testcase time="0.041" classname="siena.base.test.GaeAsyncTest" name="testLimitStatefulRealAsync"/>
+</testsuite>

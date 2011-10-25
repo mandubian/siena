@@ -1,0 +1,209 @@
+h1. <a name="title">Using Transactions in Siena</a>
+
+h2. <a name="codesample">Code sample</a>
+
+Here is the account from which to debit the money:
+
+bc.. @Table("account_from")
+public class TransactionAccountFromModel extends Model{
+	@Id(Generator.AUTO_INCREMENT)
+	public Long id;
+	public Long amount;
+	...
+}
+
+p. Here is the account to credit the money:
+
+bc.. @Table("account_to")
+public class TransactionAccountToModel extends Model{
+	@Id(Generator.AUTO_INCREMENT)
+	public Long id;
+	public Long amount;
+	...
+}
+
+p. Here is the transactional code:
+
+bc.. // creates accounts
+	TransactionAccountFromModel accFrom = new TransactionAccountFromModel(1000L);
+	TransactionAccountToModel accTo = new TransactionAccountToModel(1000L);
+	
+	accFrom.insert();
+	accTo.insert();
+	try {
+		// begins transaction (the persistence manager is the same for accFrom and accTo
+		accFrom.getPersistenceManager().beginTransaction();
+		
+		// debits account
+		accFrom.amount-=100L;
+		accFrom.save();
+		
+		// credits account
+		accTo.amount+=100L;
+		accTo.save();
+		
+		// commits transaction
+		accFrom.getPersistenceManager().commitTransaction();
+	}
+	catch(SienaException e){
+		// rollbacks in case of error		
+		accFrom.getPersistenceManager().rollbackTransaction();
+	}finally{
+		// do not forget to release connection at the end
+		accFrom.getPersistenceManager().closeConnection();
+	}
+	
+p. 
+	
+==<br/>==
+
+h2. <a name="desc">Functions Description</a>
+
+Here are the interesting functions concerning transaction management:
+
+bc.. public interface PersistenceManager {
+	...	
+	void beginTransaction(int isolationLevel);
+	void beginTransaction();
+
+	void commitTransaction();
+
+	void rollbackTransaction();
+
+	void closeConnection();
+	...
+}
+
+p. 
+
+==<br/>==
+
+h3. <a name="begin">Function beginTransaction</a>
+
+As indicated by its name, this function allows to begin a transaction.
+It also triggers OFF the auto-commit mechanism.
+Thus, after calling this function, you SHALL call __commitTransaction__ or your data will never be committed!
+There are 2 versions of this function
+
+bc. void beginTransaction();
+void beginTransaction(int isolationLevel);
+ 
+**isolationLevel** determines the level of locking of the entities being modified while in a transaction and with respect to reads from other concurrent transactions (when will the updated data be available to others for ex). If you want more info, read the classical "official Java JDBC documentation":http://download.oracle.com/javase/tutorial/jdbc/basics/transactions.html: 
+
+* **In SQL**, you can use __javax.sql.Connection__ that contains the isolation levels:
+
+|_. Isolation Level|
+|TRANSACTION_NONE|
+|TRANSACTION_READ_COMMITTED (default)|
+|TRANSACTION_READ_UNCOMMITTED|
+|TRANSACTION_REPEATABLE_READ|
+|TRANSACTION_SERIALIZABLE|
+
+* **In GAE**, there is no isolation level to customize (so any int will be skipped) but in GAE doc, they say the closest level would be ==<i>TRANSACTION_READ_COMMITTED</i>==. More info "here":http://code.google.com/appengine/docs/java/datastore/transactions.html#Isolation_and_Consistency.
+
+==<br/>==
+
+h3. <a name="commit">Function commitTransaction</a>
+
+Simple and direct, it commits the transaction you initiated with <a href="#begin">beginTransaction</a>.
+
+p(note). **Be aware**, if you don't call commitTransaction, nothing will be committed without your consent. If the connection is closed before commit, in SQL, it will even generate an ILLEGAL_STATE exception.
+
+==<br/>==
+
+h3. <a name="rollback">Function rollbackTransaction</a>
+
+Simply rollbacks the transaction you initiated manually. Nothing to add.
+
+==<br/>==
+
+h3. <a name="close">Function closeConnection</a>
+
+It's a good manner to release your DB resources after finishing using it (when you are sure you don't it anymore). 
+
+p(note). **Note** If you're in a stateful mode, you can keep the connection alive but get used to close it yourself, it's more disciplined anyway ;)
+
+==<br/>==
+==<br/>==
+
+h2. <a name="desc">GAE limitations </a>
+
+bq. Keep in mind just one thing: **One transaction can ONLY manage entities from the same entity group. So 2 different root entities are not manageable in the same transaction**. 
+
+As you can imagine, transaction is not exactly the same in SQL and NoSQL world. The principles are quite the same yet there are some things you can do and others you can't due to the structure of the DB itself.
+GAE is not an "ACID":http://en.wikipedia.org/wiki/ACID database which is one of the reason of existing of GAE since it allows using GAE in highly distributed infrastructure where SQL databases do not fit very well.
+Yet, as GAE doesn't ensure your data are consistent at 100%, you can imagine that transactions can't be exactly the same.
+So, the sample code above will simply not work with GAE and you will get an exception telling that you're trying to manage 2 entities in different groups in the same transaction. It's true as accFrom and accTo are 2 root entities representing each one entity group. So you can't manage them in the same transaction.
+
+bq. In GAE, to update 2 root entities, you have to create 2 transactions and manage manual rollback. 
+
+This problem is not easy but you know, in SQL, it's exactly the same if you look carefully. Transactions are often like magic to people and they think they can use it anywhere and simply rollback when there is an error. 
+
+But while in a transaction with strong isolation level, you lock resources: other people can't access the data and resources are kept alive meanwhile. It may end into other kind of critical problems I let you imagine when dealing with a service requiring heavy concurrent accesses.
+
+Thus, it's often better to consider your system as a fault-tolerant system and be able to correct potential faults without relying only on a hypothetical transaction rollback that would do all the work for you.  
+
+For more info about transaction usage in GAE, go "there":http://code.google.com/appengine/docs/java/datastore/transactions.html#Uses_for_Transactions.
+ 
+So, a kind of possible code would be:
+  
+bc.. // creates accounts
+	TransactionAccountFromModel accFrom = new TransactionAccountFromModel(1000L);
+	TransactionAccountToModel accTo = new TransactionAccountToModel(1000L);
+	
+	accFrom.insert();
+	accTo.insert();
+	
+	// DEBITS ACCOUNT 1
+	try {
+		// begins transaction
+		accFrom.getPersistenceManager().beginTransaction();
+		
+		// debits account
+		accFrom.amount-=100L;
+		accFrom.save();
+		// commits transaction
+		accFrom.getPersistenceManager().commitTransaction();
+	}
+	catch(SienaException e){
+		// rollbacks in case of error		
+		accFrom.getPersistenceManager().rollbackTransaction();
+	}
+	finally{
+		// do not forget to release connection at the end
+		accFrom.getPersistenceManager().closeConnection();
+	}
+		
+	// CREDITS ACCOUNT 2
+	try {	
+		// begins transaction
+		accTo.getPersistenceManager().beginTransaction();
+
+		// credits account
+		accTo.amount+=100L;
+		accTo.save();
+		
+		// commits transaction
+		accTo.getPersistenceManager().commitTransaction();
+	}
+	catch(SienaException e){
+		// rollbacks in case of error and tries to be careful about errors
+		try {		
+			accTo.getPersistenceManager().rollbackTransaction();
+		
+			// debits the initial account
+			accFrom.getPersistenceManager().beginTransaction();
+			accFrom.amount+=100L;
+			accFrom.save();
+			accFrom.getPersistenceManager().commitTransaction();			
+		}catch(SienaException e){
+			// THE HORRIBLE CASE: SOMEONE LOST MONEY :)
+			// NEED TO TRIGGER AN ALARM OR CALL SOMEONE THERE
+		}
+	}
+	finally{
+		// do not forget to release connection at the end
+		accFrom.getPersistenceManager().closeConnection();
+	}
+	
+	

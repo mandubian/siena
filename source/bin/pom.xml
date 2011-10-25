@@ -384,9 +384,9 @@
 								<include>**/GaeAsyncTest.java</include>
 								<include>**/GaeModelTest.java</include>
 								<include>**/JdbcModelTest.java</include>
-								<include>**/JdbcTest*.java</include>
+								<include>**/JdbcTest.java</include>
 								<include>**/H2Test.java</include>
-								<include>**/PostgresTest*.java</include>
+								<include>**/PostgresTest.java</include>
 								<include>**/ClassInfoTest.java</include>
 								<include>**/ModelTest.java</include>
 								<include>**/JsonSerializerTest.java</include>
@@ -457,7 +457,7 @@
 							</excludes>
 							<includes>
 								<include>**/JdbcTest.java</include>
-								<include>**/JdbcModelTest*.java</include>
+								<include>**/JdbcModelTest.java</include>
 								<include>**/JdbcMultiThreadTest.java</include>
 							</includes>
 						</configuration>
@@ -487,7 +487,7 @@
 								<exclude>**/Discovery.java</exclude>
 							</excludes>
 							<includes>
-								<include>**/PostgresTest*.java</include>
+								<include>**/PostgresTest.java</include>
 								<include>**/PostgresMultiThreadTest.java</include>
 							</includes>
 						</configuration>
@@ -517,7 +517,7 @@
 								<exclude>**/Discovery.java</exclude>
 							</excludes>
 							<includes>
-								<include>**/H2Test*.java</include>
+								<include>**/H2Test.java</include>
 								<include>**/H2MultiThreadTest.java</include>
 							</includes>
 						</configuration>
