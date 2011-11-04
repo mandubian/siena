@@ -1,20 +1,35 @@
 package siena.jdbc;
 
 import java.lang.reflect.Field;
+import java.math.BigDecimal;
+import java.sql.Blob;
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.sql.Types;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 import siena.ClassInfo;
+import siena.DateTime;
+import siena.Json;
+import siena.Max;
 import siena.PersistenceManager;
 import siena.Query;
 import siena.QueryJoin;
 import siena.QueryOrder;
 import siena.SienaException;
+import siena.SienaRestrictedApiException;
+import siena.SimpleDate;
+import siena.Text;
+import siena.Time;
 import siena.Util;
+import siena.core.DecimalPrecision;
+import siena.core.Polymorphic;
+import siena.embed.Embedded;
 import siena.jdbc.JdbcPersistenceManager.JdbcClassInfo;
 
 public class JdbcDBUtils {
@@ -177,5 +192,69 @@ public class JdbcDBUtils {
 			sql.append(" OFFSET ?");
 			parameters.add(jdbcCtx.realOffset);
 		}*/
+	}
+	
+	public static int toSqlType(Object obj) {
+		if(obj == null) return -1;
+		Class<?> type = obj.getClass();
+		
+		if(type == Byte.class         || type == Byte.TYPE)    return Types.TINYINT;
+		else if(type == Short.class   || type == Short.TYPE)   return Types.SMALLINT;
+		else if(type == Integer.class || type == Integer.TYPE) return Types.INTEGER;
+		else if(type == Long.class    || type == Long.TYPE)    return Types.BIGINT;
+		else if(type == Float.class   || type == Float.TYPE)   return Types.FLOAT; // TODO verify
+		else if(type == Double.class  || type == Double.TYPE)  return Types.DOUBLE; // TODO verify
+		else if(type == String.class) {
+			String str = (String)obj;
+			if(str.length() > 500) return Types.LONGVARCHAR;
+			return Types.VARCHAR;
+		}
+		else if(type == Boolean.class || type == Boolean.TYPE) return Types.BOOLEAN;
+		else if(type == Date.class) {
+			return Types.TIMESTAMP;
+		} else if(type == Json.class) {
+			return Types.LONGVARCHAR;
+		} else if(type == byte[].class){
+			return Types.BLOB;
+		} else if(Enum.class.isAssignableFrom(type)){
+			return Types.VARCHAR;
+		} else if(type == BigDecimal.class){						
+			return Types.DECIMAL;
+		}
+		else {
+			return Types.BLOB;
+		}
+	}
+	
+	public static void setObject(PreparedStatement ps, int index, Object obj) throws SQLException {
+		if(obj == null) ps.setNull(index, JdbcDBUtils.toSqlType(obj));
+		
+		Class<?> type = obj.getClass();
+		
+		if(type == Byte.class         || type == Byte.TYPE)    ps.setByte(index, (Byte)obj);
+		else if(type == Short.class   || type == Short.TYPE)   ps.setShort(index, (Short)obj);
+		else if(type == Integer.class || type == Integer.TYPE) ps.setInt(index, (Integer)obj);
+		else if(type == Long.class    || type == Long.TYPE)    ps.setLong(index, (Long)obj);
+		else if(type == Float.class   || type == Float.TYPE)   ps.setFloat(index, (Float)obj);
+		else if(type == Double.class  || type == Double.TYPE)  ps.setDouble(index, (Double)obj);
+		else if(type == String.class) {
+			ps.setString(index, (String)obj);
+		}
+		else if(type == Boolean.class || type == Boolean.TYPE) ps.setBoolean(index, (Boolean)obj);
+		else if(type == Date.class) {
+			java.sql.Date d = new java.sql.Date(((Date)obj).getTime());			
+			ps.setDate(index, d);
+		} else if(type == Json.class) {
+			ps.setString(index, (String)obj);
+		} else if(type == byte[].class){
+			// TODO
+		} else if(Enum.class.isAssignableFrom(type)){
+			ps.setString(index, (String)obj);
+		} else if(type == BigDecimal.class){						
+			// TODO
+		}
+		else {
+			// TODO
+		}
 	}
 }
