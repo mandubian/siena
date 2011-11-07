@@ -15,8 +15,24 @@
  */
 package siena.jdbc;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.ObjectOutput;
+import java.io.ObjectOutputStream;
+import java.lang.reflect.Field;
+import java.math.BigDecimal;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.util.List;
+
+import siena.ClassInfo;
+import siena.Json;
+import siena.SienaException;
+import siena.Util;
+import siena.core.DecimalPrecision;
+import siena.core.Polymorphic;
+import siena.embed.Embedded;
+import siena.embed.JsonSerializer;
 
 public class GoogleSqlPersistenceManager extends JdbcPersistenceManager {
 	private static final String DB = "GOOGLESQL";
@@ -31,13 +47,76 @@ public class GoogleSqlPersistenceManager extends JdbcPersistenceManager {
 		super(connectionManager, listener);
 		// TODO Auto-generated constructor stub
 	}
-
+	
 	@Override
-	protected void setParameter(PreparedStatement ps, int index, Object value) throws SQLException {
-		if(value == null){			
-			ps.setNull(index, JdbcDBUtils.toSqlType(value));			
+	protected int addParameters(Object obj, List<Field> fields, PreparedStatement ps, int i) throws SQLException {
+		for (Field field : fields) {
+			Class<?> type = field.getType();
+			if(ClassInfo.isModel(type) && ! ClassInfo.isEmbedded(field)) {
+				JdbcClassInfo ci = JdbcClassInfo.getClassInfo(type);
+				Object rel = Util.readField(obj, field);
+				for(Field f : ci.keys) {
+					if(rel != null) {
+						Object value = Util.readField(rel, f);
+						if(value instanceof Json)
+							value = ((Json)value).toString();
+						setParameter(ps, i++, value, f);
+					} else {
+						setParameter(ps, i++, null, f);
+					}
+				}
+			} else {
+				Object value = Util.readField(obj, field);
+				if(value != null){
+					if(Json.class.isAssignableFrom(type)){
+						value = ((Json)value).toString();
+					}
+					else if(field.getAnnotation(Embedded.class) != null){
+						value = JsonSerializer.serialize(value).toString();
+					}
+					else if(field.getAnnotation(Polymorphic.class) != null){
+						ByteArrayOutputStream bos = new ByteArrayOutputStream();
+						ObjectOutput out;
+						try {
+							out = new ObjectOutputStream(bos);
+							out.writeObject(value);
+							out.close();
+						} catch (IOException e) {
+							throw new SienaException(e);
+						}   
+						
+						value = bos.toByteArray(); 
+					}
+					else if(Enum.class.isAssignableFrom(type)){
+						value = value.toString();
+					}
+					else if(BigDecimal.class == type){
+						DecimalPrecision ann = field.getAnnotation(DecimalPrecision.class);
+						if(ann == null) {
+							value = (BigDecimal)value;
+						}else {
+							switch(ann.storageType()){
+							case DOUBLE:
+								value = ((BigDecimal)value).doubleValue();
+								break;
+							case STRING:
+								value = ((BigDecimal)value).toPlainString();
+								break;
+							case NATIVE:
+								value = (BigDecimal)value;
+								break;
+							}
+						}
+					}
+				}
+				setParameter(ps, i++, value, field);
+			}
 		}
-		else ps.setObject(index, value);
+		return i;
+	}
+
+	protected void setParameter(PreparedStatement ps, int index, Object value, Field field) throws SQLException {
+		JdbcDBUtils.setObject(ps, index, value, field, DB);
 	}
 	
 }

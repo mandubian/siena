@@ -1,9 +1,9 @@
 package siena.jdbc;
 
+import java.io.ByteArrayInputStream;
+import java.io.StringReader;
 import java.lang.reflect.Field;
 import java.math.BigDecimal;
-import java.sql.Blob;
-import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -16,8 +16,6 @@ import java.util.List;
 import siena.ClassInfo;
 import siena.DateTime;
 import siena.Json;
-import siena.Max;
-import siena.PersistenceManager;
 import siena.Query;
 import siena.QueryJoin;
 import siena.QueryOrder;
@@ -194,9 +192,9 @@ public class JdbcDBUtils {
 		}*/
 	}
 	
-	public static int toSqlType(Object obj) {
+	public static int toSqlType(Object obj, Field field, String DB) {
 		if(obj == null) return -1;
-		Class<?> type = obj.getClass();
+		Class<?> type = field.getType();
 		
 		if(type == Byte.class         || type == Byte.TYPE)    return Types.TINYINT;
 		else if(type == Short.class   || type == Short.TYPE)   return Types.SMALLINT;
@@ -205,13 +203,22 @@ public class JdbcDBUtils {
 		else if(type == Float.class   || type == Float.TYPE)   return Types.FLOAT; // TODO verify
 		else if(type == Double.class  || type == Double.TYPE)  return Types.DOUBLE; // TODO verify
 		else if(type == String.class) {
-			String str = (String)obj;
-			if(str.length() > 500) return Types.LONGVARCHAR;
-			return Types.VARCHAR;
+			if(field.getAnnotation(Text.class) != null) {
+				return Types.LONGVARCHAR;
+			} else {
+				return Types.VARCHAR;
+			}
 		}
 		else if(type == Boolean.class || type == Boolean.TYPE) return Types.BOOLEAN;
 		else if(type == Date.class) {
-			return Types.TIMESTAMP;
+			if(field.getAnnotation(DateTime.class) != null)
+				return Types.TIMESTAMP;
+			else if(field.getAnnotation(Time.class) != null)
+				return Types.TIME;
+			else if(field.getAnnotation(SimpleDate.class) != null)
+				return Types.DATE;
+			else
+				return Types.TIMESTAMP;
 		} else if(type == Json.class) {
 			return Types.LONGVARCHAR;
 		} else if(type == byte[].class){
@@ -219,42 +226,116 @@ public class JdbcDBUtils {
 		} else if(Enum.class.isAssignableFrom(type)){
 			return Types.VARCHAR;
 		} else if(type == BigDecimal.class){						
-			return Types.DECIMAL;
+			DecimalPrecision an = field.getAnnotation(DecimalPrecision.class);
+			if(an == null) {
+				return Types.DECIMAL;
+			}
+			else {
+				if(an.storageType() == DecimalPrecision.StorageType.NATIVE){
+					return Types.DECIMAL;
+				}else if(an.storageType() == DecimalPrecision.StorageType.STRING) {
+					return Types.VARCHAR;
+				}else if(an.storageType() == DecimalPrecision.StorageType.DOUBLE) {
+					return Types.DOUBLE;					
+				}else {
+					return Types.DECIMAL;
+				}
+			}
 		}
 		else {
-			return Types.BLOB;
+			Embedded embedded = field.getAnnotation(Embedded.class);
+			if(embedded != null) {
+				if("h2".equals(DB)){
+					return Types.CLOB;
+				}
+				else {
+					return Types.LONGVARCHAR;
+				}
+			} else if(field.isAnnotationPresent(Polymorphic.class)){
+				return Types.BLOB;
+		    }else {				
+				throw new SienaRestrictedApiException(DB, "createColumn", "Unsupported type for field "
+						+type.getName()+"."+field.getName());
+			}
 		}
 	}
 	
-	public static void setObject(PreparedStatement ps, int index, Object obj) throws SQLException {
-		if(obj == null) ps.setNull(index, JdbcDBUtils.toSqlType(obj));
-		
-		Class<?> type = obj.getClass();
-		
-		if(type == Byte.class         || type == Byte.TYPE)    ps.setByte(index, (Byte)obj);
-		else if(type == Short.class   || type == Short.TYPE)   ps.setShort(index, (Short)obj);
-		else if(type == Integer.class || type == Integer.TYPE) ps.setInt(index, (Integer)obj);
-		else if(type == Long.class    || type == Long.TYPE)    ps.setLong(index, (Long)obj);
-		else if(type == Float.class   || type == Float.TYPE)   ps.setFloat(index, (Float)obj);
-		else if(type == Double.class  || type == Double.TYPE)  ps.setDouble(index, (Double)obj);
-		else if(type == String.class) {
-			ps.setString(index, (String)obj);
+	public static void setObject(PreparedStatement ps, int index, Object value, Field field, String DB) throws SQLException {
+		if(value == null) {
+			ps.setNull(index, JdbcDBUtils.toSqlType(value, field, DB));
+			return;
 		}
-		else if(type == Boolean.class || type == Boolean.TYPE) ps.setBoolean(index, (Boolean)obj);
-		else if(type == Date.class) {
-			java.sql.Date d = new java.sql.Date(((Date)obj).getTime());			
-			ps.setDate(index, d);
+		
+		Class<?> type = field.getType();
+		
+		if(type == Byte.class         || type == Byte.TYPE)    ps.setByte(index, (Byte)value);
+		else if(type == Short.class   || type == Short.TYPE)   ps.setShort(index, (Short)value);
+		else if(type == Integer.class || type == Integer.TYPE) ps.setInt(index, (Integer)value);
+		else if(type == Long.class    || type == Long.TYPE)    ps.setLong(index, (Long)value);
+		else if(type == Float.class   || type == Float.TYPE)   ps.setFloat(index, (Float)value);
+		else if(type == Double.class  || type == Double.TYPE)  ps.setDouble(index, (Double)value);
+		else if(type == String.class) {
+			ps.setString(index, (String)value);
+		}
+		else if(type == Boolean.class || type == Boolean.TYPE) ps.setBoolean(index, (Boolean)value);
+		else if(type == Date.class) {						
+			if(field.getAnnotation(DateTime.class) != null){
+				java.sql.Timestamp ts = new java.sql.Timestamp(((Date)value).getTime());
+				ps.setTimestamp(index, ts);
+			}
+			else if(field.getAnnotation(Time.class) != null){
+				java.sql.Time ts = new java.sql.Time(((Date)value).getTime());
+				ps.setTime(index, ts);
+			}
+			else if(field.getAnnotation(SimpleDate.class) != null){
+				java.sql.Date d = new java.sql.Date(((Date)value).getTime());
+				ps.setDate(index, d);
+			}
+			else {
+				java.sql.Timestamp ts = new java.sql.Timestamp(((Date)value).getTime());
+				ps.setTimestamp(index, ts);
+			}			
 		} else if(type == Json.class) {
-			ps.setString(index, (String)obj);
+			ps.setString(index, (String)value);
 		} else if(type == byte[].class){
-			// TODO
+			ByteArrayInputStream bis = new ByteArrayInputStream((byte[])value);
+			ps.setBlob(index, bis);
 		} else if(Enum.class.isAssignableFrom(type)){
-			ps.setString(index, (String)obj);
+			ps.setString(index, (String)value);
 		} else if(type == BigDecimal.class){						
-			// TODO
+			DecimalPrecision an = field.getAnnotation(DecimalPrecision.class);
+			if(an == null) {
+				ps.setObject(index, value);
+			}
+			else {
+				if(an.storageType() == DecimalPrecision.StorageType.NATIVE){
+					ps.setBigDecimal(index, (BigDecimal)value);
+				}else if(an.storageType() == DecimalPrecision.StorageType.STRING) {
+					ps.setString(index, ((BigDecimal)value).toPlainString());
+				}else if(an.storageType() == DecimalPrecision.StorageType.DOUBLE) {
+					ps.setDouble(index, ((BigDecimal)value).doubleValue());
+				}else {
+					ps.setBigDecimal(index, (BigDecimal)value);
+				}
+			}
 		}
 		else {
-			// TODO
+			Embedded embedded = field.getAnnotation(Embedded.class);
+			if(embedded != null) {
+				if("h2".equals(DB)){
+					StringReader reader = new StringReader((String)value);
+					ps.setClob(index, reader);
+				}
+				else {
+					ps.setString(index, (String)value);
+				}
+			} else if(field.isAnnotationPresent(Polymorphic.class)){
+				ByteArrayInputStream bis = new ByteArrayInputStream((byte[])value);
+				ps.setBlob(index, bis);
+		    }else {				
+				throw new SienaRestrictedApiException(DB, "createColumn", "Unsupported type for field "
+						+type.getName()+"."+field.getName());
+			}
 		}
 	}
 }
