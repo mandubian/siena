@@ -15,6 +15,7 @@ import siena.PersistenceManager;
 import siena.Query;
 import siena.base.test.model.Discovery4Search;
 import siena.base.test.model.Discovery4Search2;
+import siena.base.test.model.TextModel;
 import siena.jdbc.H2PersistenceManager;
 import siena.jdbc.PostgresqlPersistenceManager;
 import siena.jdbc.ddl.DdlGenerator;
@@ -1728,4 +1729,16 @@ public class H2Test extends BaseTest {
 		super.testTransactionSaveBatchFailure();
 	}
 
+    public void testTextModel() {
+        TextModel model = new TextModel();
+        model.text = "Lorum Ipsum";
+
+        pm.insert(model);
+
+        Query<TextModel> query = pm.createQuery(TextModel.class);
+
+        List<TextModel> models = pm.fetch(query);
+        assertEquals(1, models.size());
+        assertEquals("Lorum Ipsum", models.get(0).text);
+    }
 }

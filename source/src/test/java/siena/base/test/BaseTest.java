@@ -54,6 +54,7 @@ import siena.base.test.model.PersonStringAutoIncID;
 import siena.base.test.model.PersonStringID;
 import siena.base.test.model.PersonUUID;
 import siena.base.test.model.PolymorphicModel;
+import siena.base.test.model.TextModel;
 import siena.base.test.model.TransactionAccountFrom;
 import siena.base.test.model.TransactionAccountTo;
 import siena.core.PersistenceManagerLifeCycleWrapper;
@@ -126,6 +127,7 @@ public abstract class BaseTest extends TestCase {
 		classes.add(BigDecimalDoubleModel.class);
 		classes.add(TransactionAccountFrom.class);
 		classes.add(TransactionAccountTo.class);
+        classes.add(TextModel.class);
 
 		pm = createPersistenceManager(classes);
 		
