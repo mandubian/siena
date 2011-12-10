@@ -216,7 +216,7 @@ public class JdbcMappingUtils {
 				throw new SienaException(e);
 			}
 		} 
-		
+
 		if(field.getAnnotation(Embedded.class) != null && value != null && java.sql.Clob.class.isAssignableFrom(value.getClass())) {
 			java.sql.Clob clob = (java.sql.Clob)value;
 			try {
@@ -225,7 +225,19 @@ public class JdbcMappingUtils {
 			} catch (SQLException e) {
 				throw new SienaException(e);
 			}
-		} 
+		}
+
+        // issue https://github.com/mandubian/siena/issues/5
+        if (value != null && java.sql.Clob.class.isAssignableFrom(value.getClass())) {
+            java.sql.Clob clob = (java.sql.Clob) value;
+            try {
+                // @see http://osdir.com/ml/h2-database/2011-06/msg00170.html
+                return clob.getSubString(1, (int) clob.length());
+            } catch (SQLException e) {
+                throw new SienaException(e);
+            }
+        }
+
 		
 		if(field.isAnnotationPresent(Polymorphic.class)){
 			try {
