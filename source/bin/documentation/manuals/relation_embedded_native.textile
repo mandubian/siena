@@ -1,5 +1,0 @@
-h1(#title). Aggregated Relations In Siena
-
-h2(#summary). Summary
-
-bq. UNDER CONSTRUCTION
