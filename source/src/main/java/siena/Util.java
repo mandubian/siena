@@ -275,20 +275,17 @@ public class Util {
 	}
 	
 	public static void setField(Object object, Field f, Object value) {
-		boolean wasAccess = true;
-		if(!f.isAccessible()){
-			f.setAccessible(true);
-			wasAccess = false;
-		}
-		try {
-			f.set(object, value);
-		} catch (Exception e) {
-			throw new SienaException(e);
-		} finally {
-			if(!wasAccess)
-				f.setAccessible(false);
-		}
-	}
+		try { 
+				f.set(object, value); 
+		} catch (Exception e) { 
+			try { 
+				f.setAccessible(true); 
+			  f.set(object, value);  
+		} catch (Exception e2) { 
+			 	throw new SienaException(e2); 
+			} 
+		} 
+	} 
 	
 	public static void setFromObject(Object object, Field f, Object value) {
 		setField(object, f, fromObject(f, value));
