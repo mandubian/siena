@@ -46,7 +46,7 @@ public class GaePersistenceManagerAsync extends AbstractPersistenceManagerAsync 
 	/*
 	 * properties are not used but keeps it in case of...
 	 */
-	private Properties props;
+	protected Properties props;
 	
 	public static final String DB = "GAE_ASYNC";
 

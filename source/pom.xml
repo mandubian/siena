@@ -223,6 +223,10 @@
 			<url>https://repository.apache.org/content/repositories/snapshots</url>
 			<snapshots><enabled>true</enabled></snapshots>
 		</repository>
+		<repository>
+            <id>objectify-appengine</id>
+            <url>http://objectify-appengine.googlecode.com/svn/maven</url>
+        </repository>
 	</repositories>
 
 
@@ -355,6 +359,13 @@
 			<artifactId>httpcore</artifactId>
 			<version>4.1.1</version>
 		</dependency>
+		
+		<!-- Objectify dependencies -->
+        <dependency>
+            <groupId>com.googlecode.objectify</groupId>
+            <artifactId>objectify</artifactId>
+            <version>3.1</version>
+        </dependency>
 	</dependencies>
 
 	<profiles>
