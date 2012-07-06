@@ -57,19 +57,31 @@ import com.google.appengine.api.datastore.QueryResultList;
 import com.google.appengine.api.datastore.Transaction;
 
 import com.googlecode.objectify.cache.CachingDatastoreServiceFactory;
+import com.googlecode.objectify.cache.EntityMemcache;
 
 public class GaeCachingPersistenceManager extends GaePersistenceManager {
+    
+    protected EntityMemcache entityMemcache;
+
+    public GaeCachingPersistenceManager() {
+        super();
+    }
+    
+    public GaeCachingPersistenceManager(EntityMemcache em) {
+        super();
+        entityMemcache = em;
+    }
 
     @Override
 	public void init(Properties p) {
-		ds = CachingDatastoreServiceFactory.getDatastoreService();
+		ds = entityMemcache == null ? CachingDatastoreServiceFactory.getDatastoreService() : CachingDatastoreServiceFactory.getDatastoreService(entityMemcache);
 		props = p;
 	}
 
     @Override
 	public <T> PersistenceManagerAsync async() {
 		if(asyncPm==null){
-			asyncPm = new GaeCachingPersistenceManagerAsync();
+			asyncPm = new GaeCachingPersistenceManagerAsync(entityMemcache);
 			asyncPm.init(props);
 		}
 		return asyncPm;		
