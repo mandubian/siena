@@ -163,6 +163,8 @@
 		<hbase.version>0.21.0-SNAPSHOT</hbase.version>
 		<postgres.version>8.4-702.jdbc4</postgres.version>
 		<drizzle.version>1.0</drizzle.version>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 	</properties>
 
 	<build>
