@@ -182,7 +182,7 @@ public class GaeMappingUtils {
 		else throw new SienaException("Field " + idField.getName() + " is not an @Id field");
 	}
 	
-	protected static Key getKey(Object obj) {
+	public static Key getKey(Object obj) {
 		Class<?> clazz = obj.getClass();
 		ClassInfo info = ClassInfo.getClassInfo(clazz);
 		
@@ -227,7 +227,7 @@ public class GaeMappingUtils {
 		}
 	}
 	
-	protected static Key getKeyFromParent(Object obj, Key parentKey, ClassInfo parentInfo, Field parentField) {
+	public static Key getKeyFromParent(Object obj, Key parentKey, ClassInfo parentInfo, Field parentField) {
 		Class<?> clazz = obj.getClass();
 		ClassInfo info = ClassInfo.getClassInfo(clazz);
 		
@@ -276,7 +276,7 @@ public class GaeMappingUtils {
 		}
 	}
 	
-	protected static Key makeKeyFromId(Class<?> clazz, Object idVal) {
+	public static Key makeKeyFromId(Class<?> clazz, Object idVal) {
 		if(idVal == null)
 			throw new SienaException("makeKeyFromId with Id null");
 		
@@ -318,11 +318,11 @@ public class GaeMappingUtils {
 		}
 	}
 	
-	protected static Key makeKey(Object object) {
+	public static Key makeKey(Object object) {
 		return makeKey(ClassInfo.getClassInfo(object.getClass()), object);
 	}
 	
-	protected static Key makeKey(ClassInfo info, Object object) {
+	public static Key makeKey(ClassInfo info, Object object) {
 		Field idField = info.getIdField();
 		Object idVal = Util.readField(object, idField);
 		if(idVal == null)
@@ -331,7 +331,7 @@ public class GaeMappingUtils {
 		return makeKeyFromId(object.getClass(), idVal);
 	}
 
-	protected static Key makeKeyFromParent(ClassInfo info, Object object, Key parentKey, ClassInfo parentInfo, Field parentField) {
+	public static Key makeKeyFromParent(ClassInfo info, Object object, Key parentKey, ClassInfo parentInfo, Field parentField) {
 		try {
 			Field idField = info.getIdField();
 			Object idVal = Util.readField(object, idField);
