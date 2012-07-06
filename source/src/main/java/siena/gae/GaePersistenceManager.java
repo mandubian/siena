@@ -58,8 +58,8 @@ import com.google.appengine.api.datastore.Transaction;
 
 public class GaePersistenceManager extends AbstractPersistenceManager {
 
-	private DatastoreService ds;
-	private PersistenceManagerAsync asyncPm;
+	protected DatastoreService ds;
+	protected PersistenceManagerAsync asyncPm;
 	/*
 	 * properties are not used but keeps it in case of...
 	 */
