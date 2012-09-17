@@ -12,6 +12,7 @@ import siena.core.SienaIterablePerPage;
 import siena.core.batch.BaseBatch;
 import siena.core.batch.Batch;
 import siena.core.options.PmOption;
+import siena.core.options.PmOptionStickiness;
 import siena.core.options.QueryOption;
 import siena.core.options.QueryOptionFetchType;
 import siena.core.options.QueryOptionOffset;
@@ -19,6 +20,7 @@ import siena.core.options.QueryOptionState;
 
 public abstract class AbstractPersistenceManager implements PersistenceManager {
 	protected ThreadLocal<Map<Integer, PmOption>> options = new ThreadLocal<Map<Integer, PmOption>>();
+	protected Map<Integer, PmOption> optionsSticky = new HashMap<Integer, PmOption>();
 	
 	public <T> Query<T> createQuery(Class<T> clazz) {
 		return new BaseQuery<T>(this, clazz);
@@ -32,11 +34,21 @@ public abstract class AbstractPersistenceManager implements PersistenceManager {
 		return new BaseBatch<T>(this, clazz);
 	}
 
-	public PersistenceManager option(PmOption opt) {
-		Map<Integer, PmOption> map = options.get(); 
-		if(map == null){
-			map = new HashMap<Integer, PmOption>();
-			options.set(map);
+	public PersistenceManager option(PmOption opt)
+	{
+		return option(opt, PmOptionStickiness.STICKY);
+	}
+	
+    public PersistenceManager option(PmOption opt, PmOptionStickiness stick) {
+        Map<Integer, PmOption> map = optionsSticky;
+        
+        if (PmOptionStickiness.NOT_STICKY.equals(stick))
+        {
+		    map = options.get(); 
+		    if(map == null){
+			    map = new HashMap<Integer, PmOption>();
+			    options.set(map);
+		     }
 		}
 		map.put(opt.type, opt);
 		
@@ -44,19 +56,33 @@ public abstract class AbstractPersistenceManager implements PersistenceManager {
 	}
 	
 	public PmOption option(int type){
-		Map<Integer, PmOption> map = options.get(); 
-		if(map == null){
-			return null;
-		}
-		return map.get(type);
+		return options().get(type);
 	}
 	
 	public Map<Integer, PmOption> options() {
-		return options.get();
+		Map<Integer, PmOption> res = new HashMap<Integer, PmOption>();
+		res.putAll(optionsSticky);
+		if (options.get() != null)
+		{
+			res.putAll(options.get());
+		}
+		return res;
 	}
 
-	public void resetOptions() {
-		options.remove();
+	public void resetOptions(PmOptionStickiness stick) {
+		if (PmOptionStickiness.NOT_STICKY.equals(stick))
+        {
+        	options.remove();
+        }
+        else
+        {
+            optionsSticky.clear();
+        }
+	}
+
+	public void resetOptions()
+	{
+		resetOptions(PmOptionStickiness.STICKY);
 	}
 
 	public <T> Many4PM<T> createMany(Class<T> clazz) {
