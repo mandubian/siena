@@ -37,11 +37,11 @@ public class BaseBatch<T> implements Batch<T> {
 	}
 	
 	public int deleteByKeys(Object... keys){
-		return pm.delete(clazz, keys);
+		return pm.deleteByKeys(clazz, keys);
 	}
 
 	public int deleteByKeys(Iterable<?> keys){
-		return pm.delete(clazz, keys);
+		return pm.deleteByKeys(clazz, keys);
 	}
 
 	public int update(Object... models) {
