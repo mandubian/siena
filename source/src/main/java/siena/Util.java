@@ -228,7 +228,7 @@ public class Util {
 			else if(Long.TYPE==type || Long.class==type)    return number.longValue();
 			else if(Float.TYPE==type || Float.class==type)   return number.floatValue();
 			else if(Double.TYPE==type || Double.class==type)  return number.doubleValue();
-			else if(Boolean.TYPE==type || Boolean.class==type) return number!=(Number)0 ? true:false;
+			else if(Boolean.TYPE==type || Boolean.class==type) return number.byteValue() != 0;
 			else if(BigDecimal.class==type) return (BigDecimal)value;
 		} 
 		

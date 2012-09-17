@@ -2,8 +2,7 @@ package siena.base.test;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
-import java.util.List;
-import java.util.Properties;
+import java.util.*;
 
 import org.apache.commons.dbcp.BasicDataSource;
 import org.apache.ddlutils.Platform;
@@ -13,12 +12,12 @@ import org.h2.jdbcx.JdbcDataSource;
 
 import siena.PersistenceManager;
 import siena.Query;
-import siena.base.test.model.Discovery4Search;
-import siena.base.test.model.Discovery4Search2;
-import siena.base.test.model.TextModel;
+import siena.base.test.model.*;
 import siena.jdbc.H2PersistenceManager;
 import siena.jdbc.PostgresqlPersistenceManager;
 import siena.jdbc.ddl.DdlGenerator;
+
+import static siena.Json.map;
 
 public class H2Test extends BaseTest {
 	private static H2PersistenceManager pm;
@@ -810,6 +809,19 @@ public class H2Test extends BaseTest {
 		// TODO Auto-generated method stub
 		super.testDataTypesNotNull();
 	}
+
+    public void testDataTypesNotNullWithANotherBoolean() {
+        DataTypes dataTypes = new DataTypes();
+        dataTypes.boolBool = Boolean.FALSE;
+
+        pm.insert(dataTypes);
+
+        // to test that fields are read back correctly
+        pm.createQuery(DataTypes.class).filter("id", dataTypes.id).get();
+
+        DataTypes same = pm.createQuery(DataTypes.class).get();
+        assertEqualsDataTypes(dataTypes, same);
+    }
 
 	@Override
 	public void testQueryDelete() {

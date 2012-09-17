@@ -1445,7 +1445,7 @@ public abstract class BaseTest extends TestCase {
 		assertEqualsDataTypes(dataTypes, same);
 	}
 	
-	private void assertEqualsDataTypes(DataTypes dataTypes, DataTypes same) {
+	protected void assertEqualsDataTypes(DataTypes dataTypes, DataTypes same) {
 		assertEquals(dataTypes.id, same.id);
 		assertEquals(dataTypes.typeByte, same.typeByte);
 		assertEquals(dataTypes.typeShort, same.typeShort);
