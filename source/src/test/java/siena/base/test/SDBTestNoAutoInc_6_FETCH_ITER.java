@@ -18,20 +18,8 @@ public class SDBTestNoAutoInc_6_FETCH_ITER extends BaseTestNoAutoInc_6_FETCH_ITE
 	public PersistenceManager createPersistenceManager(List<Class<?>> classes)
 			throws Exception {
 		
-		Properties p = new Properties();
-		// don't want to give my AWS ID/secrets :D
-	    //p.load(new FileInputStream("/home/pascal/work/mandubian/aws/siena-aws.properties"));
-		p.load(new FileInputStream("/home/mandubian/work/aws/siena-aws.properties"));
-
-		
-		//p.setProperty("implementation", "siena.sdb.SdbPersistenceManager");
-		//p.setProperty("awsAccessKeyId", "");
-		//p.setProperty("awsSecretAccessKey", "");
-		//p.setProperty("prefix", "siena_devel_");
-		
 		SdbPersistenceManager sdb = new SdbPersistenceManager();
-		sdb.init(p);
-		
+		sdb.init(SimpleDBConfig.getSienaAWSProperties());
 		return sdb;
 	}
 
