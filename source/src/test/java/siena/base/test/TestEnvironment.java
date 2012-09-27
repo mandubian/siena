@@ -47,4 +47,10 @@ public class TestEnvironment implements Environment {
 		return new HashMap<String, Object>();
 	}
 
+	@Override
+	public long getRemainingMillis() {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+
 }
