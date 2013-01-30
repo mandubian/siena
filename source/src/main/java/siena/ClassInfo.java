@@ -461,7 +461,8 @@ public class ClassInfo {
 		if((modifiers & Modifier.TRANSIENT) == Modifier.TRANSIENT 
 				|| (modifiers & Modifier.STATIC) == Modifier.STATIC 
 				|| field.isSynthetic() 
-				|| field.getType() == Class.class) return true;
+				|| field.getType() == Class.class
+				|| field.getAnnotation(Ignore.class) != null) return true;
 		return false;
 	}
 	private String getTableName(Class<?> clazz) {

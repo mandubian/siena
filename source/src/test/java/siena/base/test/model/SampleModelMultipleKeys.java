@@ -6,6 +6,7 @@ import siena.Generator;
 import siena.Id;
 import siena.Model;
 import siena.Query;
+import siena.Ignore;
 
 public class SampleModelMultipleKeys extends Model {
 	
@@ -32,6 +33,8 @@ public class SampleModelMultipleKeys extends Model {
 	public Query<SampleModelMultipleKeys> query;
 	public Class<?> clazz;
 	public transient String foobar;
+	@Ignore
+	public String ignoredData;
 	
 	public void setPrivateField(String privateField) {
 		this.privateField = privateField;

@@ -23,6 +23,11 @@ public class ClassInfoTest extends TestCase {
 		assertEquals("privateField", fields.get(2).getName());
 		assertEquals("publicField", fields.get(3).getName());
 		assertEquals("relationship", fields.get(4).getName());
+		
+		assertFalse(fields.contains("query"));
+		assertFalse(fields.contains("clazz"));
+		assertFalse(fields.contains("foobar"));
+		assertFalse(fields.contains("ignoredData"));
 
 		fields = info.generatedKeys;
 		assertEquals(1, fields.size());
