@@ -88,7 +88,7 @@ It's very useful because you don't need to foresee your model will be aggregated
  
 bq. The aggregator reference is managed by Siena itself and you don't have to deal with it neither declare it in your model.
 
-p(note). **Note** Nevertheless, if you absolutely want to access your own aggregator, it's possible. Go to the "aggregated relation page":./relation_aggregated.html.
+p(note). **Note** Nevertheless, if you absolutely want to access your own aggregator, it's possible. Go to the "aggregated relation page":./relation_aggregated.textile.
 
 ==<br/>==
 
