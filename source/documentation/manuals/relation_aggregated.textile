@@ -1,4 +1,13 @@
 h1(#title). Aggregated Relations In Siena
 
-bq.. UNDER CONSTRUCTION
-TO BE CONTINUED...
+
+h2(#title). How to access aggregator parent 
+
+https://groups.google.com/d/msg/siena-discuss/42Kv0-y80dA/lJTmrY2m9MYJ
+
+as far as I can remember, you have to declare your own aggregator and it will override the one in Model
+
+@Aggregator 
+private Relation relation;
+
+having your own aggregator allows to access the relation directly and do some specific things...
