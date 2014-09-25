@@ -11,3 +11,16 @@ as far as I can remember, you have to declare your own aggregator and it will ov
 private Relation relation;
 
 having your own aggregator allows to access the relation directly and do some specific things...
+
+PS Actually that throws an error, it looks like both the parent relation and the child relation are present and Siena throws an exception, no more than one Relation is field is allowed. I suggest changing the visibility of relation from private to protected so that children can access their parent.
+Also Relation is not typesafe, so some type parameters would nice.
+
+
+h2(#title). How to query aggregated children
+
+That's special, see BaseAggregatedTest. You've got to call all().aggregated()!
+
+children = AggregateChildModel.all().aggregated(god, "children").fetch();
+
+
+
