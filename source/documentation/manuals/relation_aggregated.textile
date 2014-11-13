@@ -23,4 +23,34 @@ That's special, see BaseAggregatedTest. You've got to call all().aggregated()!
 children = AggregateChildModel.all().aggregated(god, "children").fetch();
 
 
+h2(#title). Improvements on ancestor paths
+
+Now more than one level is supported and Keys are computed recursively, see:
+https://github.com/siena/siena/commits/async
+
+Also I'm interested in performing queries on grandparent with filtering.
+I've tried with GAE's dastore API and they work, quite a powerful feature.
+There's one thing stopping Siena from supporting it and that is the way Siena works out the entity kind when ancestor paths are involved, see GaeMappingUtils.getKindWithAncestorField:
+
+	public static String getKindWithAncestorField(ClassInfo childInfo, ClassInfo parentInfo, Field field){
+              return childInfo.tableName + ":" + parentInfo.tableName + ":" + ClassInfo.getSingleColumnName(field);
+	}
+
+When we save a child, the Kind name is built by appending the parent class name and the related aggregated One or Many field.
+That allows Siena to discriminate between aggregated entities that are bound to One vs Many.
+But that also prevents us from performing grandpa filtered queries. 
+If aggregated entities were saved with just their table name as a Kind, then we could just simply add a Many relation to Grandpa and perform real "ancestor" queries, rather than just "parent" queries.
+
+I don't think that's a strong reason to change the Entity Kinds for aggregated entities since all the required information so discriminate between parent classes is in the Key.
+The only problem is that a One relation is present with Many relation to the same type of descendant entity.
+In this case the linked One entity could simply become a recorded key property in the parent class.
+The remaining problem is that if we add a One child, and then query for Many, that one child would also be returned in the Many query. Too bad.
+
+So I'm tempted to change the aggregated entity kind but that requires some work.
+
+In this branch I've introduced some other breaking changes in this branch.
+Now manual long ids are saves as long instead of being converted to/from String ids. That ensures that the ids are ordered naturally, useful for time series. I'm not sure if the same would necessarily happen with String ids.
+That leaves the problem that an id could be in use. But really, when are we going to use manual and automatically generated IDs for the same kind??
+
+
 
