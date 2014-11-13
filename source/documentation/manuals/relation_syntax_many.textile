@@ -124,7 +124,7 @@ p(note). *Note* using @asQuery()@ has no effect when inserting because it would 
 
 ==<br/>==
 
-h3. <a name="relation-syntax-many-code-fetch">Retrieve the parent & get the children from parent with @gasList()@</a>
+h3. <a name="relation-syntax-many-code-fetch">Retrieve the parent & get the children from parent with @asList()@</a>
 
 bc.. // gets the dog
 Dog pluto = Dog.getByName("Pluto");
