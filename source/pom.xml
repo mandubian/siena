@@ -168,7 +168,7 @@
 	</reporting>
 
 	<properties>
-		<mysql.version>5.1.6</mysql.version>
+		<mysql.version>8.0.28</mysql.version>
 		<gae.version>1.7.1</gae.version>
 		<hbase.version>0.21.0-SNAPSHOT</hbase.version>
 		<postgres.version>8.4-702.jdbc4</postgres.version>
